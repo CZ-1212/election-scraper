@@ -8,10 +8,8 @@ import time
 import json
 import os
 import re
-import secrets
 from datetime import datetime, timedelta
 from pathlib import Path
-from urllib.parse import urlparse
 import schedule
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -33,120 +31,16 @@ INTERVAL_MINUTES = 30
 DATA_DIR.mkdir(exist_ok=True)
 
 
-# Security: Allowed domains for URL validation
-ALLOWED_DOMAINS = [
-    'results.enr.clarityelections.com',
-    'clarityelections.com',
-    'livevoterturnout.com',
-    'sfelections.org',
-    'santacruzcountyca.gov'
-]
-
-# Security: Allowed file extensions
-ALLOWED_FILE_EXTENSIONS = {'xml', 'csv', 'xls', 'json'}
-
-
-class RateLimiter:
-    """Rate limiter to prevent overwhelming election servers"""
-    
-    # Per-domain rate limits (seconds between requests)
-    DOMAIN_LIMITS = {
-        'results.enr.clarityelections.com': 3.0,
-        'clarityelections.com': 3.0,
-        'livevoterturnout.com': 2.0,
-        'sfelections.org': 2.0,
-        'santacruzcountyca.gov': 1.5,
-    }
-    
-    def __init__(self, domain=None):
-        self.domain = domain
-        self.min_interval = self.DOMAIN_LIMITS.get(domain, 2.0)
-        self.last_request = 0
-    
-    def wait(self):
-        """Enforce minimum delay between requests"""
-        elapsed = time.time() - self.last_request
-        if elapsed < self.min_interval:
-            wait_time = self.min_interval - elapsed
-            time.sleep(wait_time)
-        self.last_request = time.time()
-
-
-def validate_url(url):
-    """
-    Validate URL against whitelist of allowed domains.
-    Prevents SSRF attacks when code is shared publicly.
-    """
-    try:
-        parsed = urlparse(url)
-        
-        # Check scheme
-        if parsed.scheme not in ['http', 'https']:
-            raise ValueError(f"Invalid URL scheme '{parsed.scheme}'. Only http and https allowed.")
-        
-        # Check for localhost/internal IPs (prevent accidents)
-        if parsed.netloc in ['localhost', '127.0.0.1', '0.0.0.0', '::1']:
-            raise ValueError(f"Internal URLs not allowed: {parsed.netloc}")
-        
-        # Check domain against whitelist (flexible matching for subdomains)
-        is_allowed = False
-        for allowed_domain in ALLOWED_DOMAINS:
-            if parsed.netloc == allowed_domain or parsed.netloc.endswith('.' + allowed_domain):
-                is_allowed = True
-                break
-        
-        if not is_allowed:
-            raise ValueError(
-                f"Domain '{parsed.netloc}' not in allowed list. "
-                f"Allowed domains: {', '.join(ALLOWED_DOMAINS)}"
-            )
-        
-        return url
-    except Exception as e:
-        raise ValueError(f"URL validation failed: {e}")
-
-
-def validate_and_secure_filepath(base_dir, filename, extension):
-    """
-    Validate file path to prevent path traversal attacks.
-    Returns a secure filepath with random suffix.
-    """
-    # Validate extension
-    if extension not in ALLOWED_FILE_EXTENSIONS:
-        raise ValueError(f"File extension '{extension}' not allowed. Allowed: {ALLOWED_FILE_EXTENSIONS}")
-    
-    # Create secure filename with random suffix
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    random_suffix = secrets.token_hex(8)
-    secure_filename = f"{filename}_{timestamp}_{random_suffix}.{extension}"
-    
-    # Construct full path
-    filepath = Path(base_dir) / secure_filename
-    filepath = filepath.resolve()
-    
-    # Verify path is within base directory (prevent path traversal)
-    base_dir_resolved = Path(base_dir).resolve()
-    if not filepath.is_relative_to(base_dir_resolved):
-        raise ValueError(f"Path traversal attempt detected: {filepath}")
-    
-    return filepath
-
-
 class ClarityScraper:
     """Scraper for Clarity Elections websites"""
     
     def __init__(self, url, reuse_driver=None, save_files=True):
-        # Security: Validate URL before use
-        self.url = validate_url(url)
-        self.base_url = self._extract_base_url(self.url)
+        self.url = url
+        self.base_url = self._extract_base_url(url)
         self.driver = reuse_driver  # Allow driver reuse
         self.owns_driver = reuse_driver is None  # Track if we should close driver
         self.session = self._create_session()  # HTTP session with connection pooling
         self.save_files = save_files  # Control whether to save files
-        
-        # Security: Initialize rate limiter for this domain
-        parsed_url = urlparse(self.url)
-        self.rate_limiter = RateLimiter(parsed_url.netloc)
         
     def _extract_base_url(self, url):
         """Extract base URL from the full URL"""
@@ -156,9 +50,6 @@ class ClarityScraper:
     def _create_session(self):
         """Create HTTP session with connection pooling and retry strategy"""
         session = requests.Session()
-        
-        # Security: Explicitly enforce SSL certificate verification
-        session.verify = True
         
         # Configure retry strategy for resilience
         retry_strategy = Retry(
@@ -379,15 +270,10 @@ class ClarityScraper:
             
             for endpoint in potential_endpoints:
                 try:
-                    # Security: Rate limit requests
-                    self.rate_limiter.wait()
-                    
-                    # Security: Explicit SSL verification
                     response = self.session.get(
                         endpoint,
                         headers={'Referer': self.url},
-                        timeout=10,
-                        verify=True
+                        timeout=10
                     )
                     if response.status_code == 200:
                         return response.json()
@@ -667,20 +553,15 @@ class ClarityScraper:
     def download_report(self, report_url, report_type):
         """Download a structured data report file"""
         try:
-            # Security: Rate limit requests
-            self.rate_limiter.wait()
-            
-            # Security: Explicit SSL verification
             response = self.session.get(
                 report_url,
                 headers={'Referer': self.url},
-                timeout=30,
-                verify=True
+                timeout=30
             )
             
             if response.status_code == 200:
-                # Security: Use secure filepath with validation
-                filename = validate_and_secure_filepath(DATA_DIR, "report", report_type)
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = DATA_DIR / f"report_{timestamp}.{report_type}"
                 
                 with open(filename, 'wb') as f:
                     f.write(response.content)
@@ -741,8 +622,8 @@ class ClarityScraper:
         
         # Save results to JSON file only if enabled
         if self.save_files:
-            # Security: Use secure filepath with validation
-            output_file = validate_and_secure_filepath(DATA_DIR, "scrape", "json")
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_file = DATA_DIR / f"scrape_{timestamp}.json"
             
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(results, f, indent=2, ensure_ascii=False)

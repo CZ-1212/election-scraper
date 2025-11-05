@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Quick test of Clarity sites with bug fix"""
 
-from clarity_scraper import ClarityScraper
+from clarity_scraper import ClarityScraper, validate_and_secure_filepath
 import json
 from pathlib import Path
 
@@ -70,7 +70,9 @@ for i, (county, url) in enumerate(CLARITY_SITES.items(), 1):
         # Save
         data_dir = Path("data")
         data_dir.mkdir(exist_ok=True)
-        output_file = data_dir / f"{county}_clarity_fixed.json"
+        
+        # Security: Use secure filepath with validation
+        output_file = validate_and_secure_filepath(data_dir, f"{county}_clarity_fixed", "json")
         with open(output_file, 'w') as f:
             json.dump(result, f, indent=2)
         print(f"\n  💾 Saved: {output_file}")

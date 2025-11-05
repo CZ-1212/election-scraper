@@ -10,7 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from multi_platform_scraper import (
     LiveVoterTurnoutScraper,
-    SantaCruzScraper
+    SantaCruzScraper,
+    validate_and_secure_filepath
 )
 
 # Only the 3 working non-Clarity sites
@@ -55,10 +56,11 @@ def scrape_county(county_name, county_info):
             result['scrape_duration'] = duration
             
             # Save result
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             data_dir = Path("data")
             data_dir.mkdir(exist_ok=True)
-            output_file = data_dir / f"{county_name}_working_{timestamp}.json"
+            
+            # Security: Use secure filepath with validation
+            output_file = validate_and_secure_filepath(data_dir, f"{county_name}_working", "json")
             
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(result, f, indent=2, ensure_ascii=False)
@@ -144,8 +146,11 @@ def main():
             print(f"  ❌ {result['county']:15} | FAILED")
     
     # Save summary
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    summary_file = Path("data") / f"working_summary_{timestamp}.json"
+    data_dir = Path("data")
+    data_dir.mkdir(exist_ok=True)
+    
+    # Security: Use secure filepath with validation
+    summary_file = validate_and_secure_filepath(data_dir, "working_summary", "json")
     
     summary = {
         'timestamp': datetime.now().isoformat(),
