@@ -1,0 +1,27 @@
+{
+  "scrape_timestamp": "2025-11-05T10:30:46.610938",
+  "json_data": null,
+  "selenium_data": {
+    "timestamp": "2025-11-05T10:30:54.139468",
+    "url": "https://results.enr.clarityelections.com/CA/Contra_Costa/124407/web.345435/#/summary",
+    "page_title": "Election Night Reporting",
+    "voter_turnout": {
+      "ballots_cast": 279868,
+      "registered_voters": 730646,
+      "turnout_percentage": 100.0
+    },
+    "contests": [
+      {
+        "title": "PROPOSITION 50",
+        "precincts_reporting": "Precincts Reporting",
+        "choices": [
+          "Yes\n70.67% 197,522",
+          "No\n29.33% 81,963",
+          "Vote Cast 279,485"
+        ]
+      }
+    ],
+    "last_updated": "Tuesday, November 4, 2025, 11:04:34 PM"
+  },
+  "reports": []
+}

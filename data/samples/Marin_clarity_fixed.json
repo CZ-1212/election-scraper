@@ -1,0 +1,87 @@
+{
+  "scrape_timestamp": "2025-11-05T10:32:57.863169",
+  "json_data": null,
+  "selenium_data": {
+    "timestamp": "2025-11-05T10:33:03.261188",
+    "url": "https://results.enr.clarityelections.com/CA/Marin/124182/web.345435/#/summary",
+    "page_title": "Election Night Reporting",
+    "voter_turnout": {
+      "ballots_cast": 82605,
+      "registered_voters": 173865,
+      "turnout_percentage": 100.0
+    },
+    "contests": [
+      {
+        "title": "Town of Fairfax Recall of LISEL BLASH",
+        "precincts_reporting": "Precincts Reporting 100%",
+        "choices": [
+          "Yes\n45.72% 1,282",
+          "No\n54.28% 1,522",
+          "Vote Cast 2,804",
+          "Yes\n46.26% 1,292",
+          "No\n53.74% 1,501",
+          "Vote Cast 2,793",
+          "Yes\n80.61% 66,499",
+          "No\n19.39% 15,992",
+          "Vote Cast 82,491",
+          "Yes\n53.17% 67",
+          "No\n46.83% 59",
+          "Vote Cast 126",
+          "Yes\n74.87% 1,734",
+          "No\n25.13% 582",
+          "Vote Cast 2,316",
+          "Yes\n55.85% 1,308",
+          "No\n44.15% 1,034",
+          "Vote Cast 2,342"
+        ]
+      },
+      {
+        "title": "Town of Fairfax Recall of STEPHANIE HELLMAN",
+        "precincts_reporting": "Precincts Reporting 100%",
+        "choices": [
+          "Yes\n46.26% 1,292",
+          "No\n53.74% 1,501",
+          "Vote Cast 2,793"
+        ]
+      },
+      {
+        "title": "Proposition 50",
+        "precincts_reporting": "Precincts Reporting 100%",
+        "choices": [
+          "Yes\n80.61% 66,499",
+          "No\n19.39% 15,992",
+          "Vote Cast 82,491"
+        ]
+      },
+      {
+        "title": "Measure I Petaluma Joint Union High School District",
+        "precincts_reporting": "Precincts Reporting 100%",
+        "choices": [
+          "Yes\n53.17% 67",
+          "No\n46.83% 59",
+          "Vote Cast 126"
+        ]
+      },
+      {
+        "title": "Measure J City of Sausalito",
+        "precincts_reporting": "Precincts Reporting 100%",
+        "choices": [
+          "Yes\n74.87% 1,734",
+          "No\n25.13% 582",
+          "Vote Cast 2,316"
+        ]
+      },
+      {
+        "title": "Measure K City of Sausalito",
+        "precincts_reporting": "Precincts Reporting 100%",
+        "choices": [
+          "Yes\n55.85% 1,308",
+          "No\n44.15% 1,034",
+          "Vote Cast 2,342"
+        ]
+      }
+    ],
+    "last_updated": "Tuesday, November 4, 2025, 10:45:43 PM"
+  },
+  "reports": []
+}

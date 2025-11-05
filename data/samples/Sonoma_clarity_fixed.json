@@ -1,0 +1,54 @@
+{
+  "scrape_timestamp": "2025-11-05T10:42:09.760795",
+  "json_data": null,
+  "selenium_data": {
+    "timestamp": "2025-11-05T10:42:14.784367",
+    "url": "https://results.enr.clarityelections.com/CA/Sonoma/124354/web.345435/#/summary",
+    "page_title": "Election Night Reporting",
+    "voter_turnout": {
+      "ballots_cast": 148944,
+      "registered_voters": 321131,
+      "turnout_percentage": 100.0
+    },
+    "contests": [
+      {
+        "title": "Timber Cove County Water District",
+        "precincts_reporting": "Precincts Reporting 100%",
+        "choices": [
+          "JOHN D. REA\n21.60% 27",
+          "JOHN F. GRAY\n20.80% 26",
+          "JESS WEBER\n37.60% 47",
+          "ROBERT LEICHTNER\n20.00% 25",
+          "Write-in\n0.00% 0",
+          "Vote Cast 125",
+          "YES\n74.16% 110,301",
+          "NO\n25.84% 38,436",
+          "Vote Cast 148,737",
+          "YES\n60.49% 14,173",
+          "NO\n39.51% 9,257",
+          "Vote Cast 23,430"
+        ]
+      },
+      {
+        "title": "Proposition 50 - Special State Measure Redistricting",
+        "precincts_reporting": "Precincts Reporting73.08%",
+        "choices": [
+          "YES\n74.16% 110,301",
+          "NO\n25.84% 38,436",
+          "Vote Cast 148,737"
+        ]
+      },
+      {
+        "title": "Measure I - Petaluma Joint Union High School District Parcel Tax - 2/3 Vote To Pass",
+        "precincts_reporting": "Precincts Reporting74.55%",
+        "choices": [
+          "YES\n60.49% 14,173",
+          "NO\n39.51% 9,257",
+          "Vote Cast 23,430"
+        ]
+      }
+    ],
+    "last_updated": "Tuesday, November 4, 2025, 11:48:33 PM"
+  },
+  "reports": []
+}
