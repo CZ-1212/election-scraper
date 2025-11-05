@@ -318,7 +318,13 @@ Contributions are welcome! To add support for new counties:
 
 ## License
 
-MIT License - see LICENSE file for details.
+**Custom Non-Commercial License** - see LICENSE file for full details.
+
+**Key Restrictions:**
+- ✅ Free for personal, educational, and research use
+- ❌ **No resale or commercial use** without permission
+- ✅ Modifications allowed but must keep same restrictions
+- ✅ Attribution required
 
 This is an educational/research tool. Use responsibly and respect the terms of service of the websites you scrape.
 
