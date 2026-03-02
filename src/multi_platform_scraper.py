@@ -381,17 +381,24 @@ class LiveVoterTurnoutScraper(BaseScraper):
                                 ".//div[contains(., 'YES') or contains(., 'NO') or contains(., 'Yes') or contains(., 'No')]"
                             )
                             
+                            # Keywords that only appear in containers/headers, never in individual choice rows
+                            junk_strings = ['VOTE FOR', 'Candidate Name', 'Total Votes\n', 'Percentage\n']
                             seen_choices = set()
                             for choice in choice_elements:
                                 choice_text = choice.text.strip()
-                                # Filter out empty, header, or duplicate rows
-                                if (choice_text and len(choice_text) > 0 and 
+                                # Skip empty, header blobs, container divs, or duplicates
+                                if (choice_text and
+                                    any(char.isdigit() for char in choice_text) and
                                     not choice_text.startswith('Candidate') and
+                                    not any(s in choice_text for s in junk_strings) and
                                     choice_text not in seen_choices):
-                                    # Parse choice text to extract name, votes, percentage
-                                    if choice_text and any(char.isdigit() for char in choice_text):
-                                        contest_data['choices'].append(choice_text)
-                                        seen_choices.add(choice_text)
+                                    # Remove duplicate leading line caused by party column echoing candidate name
+                                    # e.g. "Yes\nYes\n101,892 54.11%" → "Yes\n101,892 54.11%"
+                                    lines = choice_text.split('\n')
+                                    if len(lines) >= 2 and lines[0].strip() == lines[1].strip():
+                                        choice_text = '\n'.join([lines[0]] + lines[2:])
+                                    contest_data['choices'].append(choice_text)
+                                    seen_choices.add(choice_text)
                         except:
                             pass
                         

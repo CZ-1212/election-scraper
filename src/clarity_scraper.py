@@ -486,8 +486,13 @@ class ClarityScraper:
             ]
             
             try:
-                contests = self.driver.find_elements(By.CSS_SELECTOR, ".contest, [class*='contest']")
-                
+                all_contest_elems = self.driver.find_elements(By.CSS_SELECTOR, ".contest, [class*='contest']")
+                # Skip parent containers that wrap other .contest elements — they bleed all child choices into one.
+                # Only check for exact .contest children (not [class*='contest']) to avoid false-positives on
+                # child elements like contest-title, contest-choice, etc.
+                contests = [c for c in all_contest_elems
+                            if not c.find_elements(By.CSS_SELECTOR, ".contest")]
+
                 for contest in contests:
                     contest_data = {
                         'title': None,
