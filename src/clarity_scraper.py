@@ -205,45 +205,41 @@ class ClarityScraper:
         options.add_argument('--disable-gpu')
         options.add_argument('--disable-popup-blocking')
         options.add_argument('--window-size=1920,1080')
-        
+
+        # Performance flags
+        options.add_argument('--disable-images')
+        options.add_argument('--blink-settings=imagesEnabled=false')
+        options.add_argument('--disable-plugins')
+        options.add_argument('--disable-software-rasterizer')
+        options.add_argument('--disable-background-networking')
+        options.add_argument('--disable-default-apps')
+        options.add_argument('--disable-sync')
+        options.add_argument('--disable-translate')
+        options.add_argument('--no-first-run')
+
+        # Eager page load strategy - don't wait for all resources
+        options.page_load_strategy = 'eager'
+
         self.driver = webdriver.Chrome(options=options)
         
         # Execute script to remove webdriver detection
         self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
-        self.driver.implicitly_wait(5)  # Reduced from 10s to 5s
+        self.driver.implicitly_wait(0)  # Set to 0 to prevent implicit wait hangs
         self.driver.set_page_load_timeout(20)  # Reduced from 30s to 20s
         
     def _smart_wait_for_content(self):
-        """Adaptive wait for page content to load"""
-        max_wait = 8  # Reduced from 15s to 8s
-        check_interval = 1  # Check every second
-        waited = 0
-        
-        while waited < max_wait:
-            # Check if content is loading by looking for key elements
-            try:
-                # Look for any meaningful content indicators
-                content_indicators = [
-                    ".contest", "[class*='contest']",  # Contest elements
-                    "[class*='turnout']", "[class*='result']",  # Results elements
-                    "h1", "h2", "h3",  # Headers that indicate content
-                ]
-                
-                for selector in content_indicators:
-                    elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
-                    if elements and any(el.text.strip() for el in elements):
-                        print(f"✓ Content detected after {waited}s")
-                        return
-                
-                time.sleep(check_interval)
-                waited += check_interval
-                
-            except Exception:
-                time.sleep(check_interval)
-                waited += check_interval
-        
-        print(f"⚠ Content wait timeout after {max_wait}s")
+        """Wait for JS-rendered content to appear."""
+        try:
+            WebDriverWait(self.driver, 8).until(
+                lambda d: any(
+                    d.find_elements(By.CSS_SELECTOR, sel)
+                    for sel in [".contest", "[class*='contest']", "[class*='turnout']", "[class*='result']", "h1", "h2", "h3"]
+                )
+            )
+            print("Content detected")
+        except TimeoutException:
+            print("Content wait timeout after 8s — continuing with available content")
 
     def _extract_last_updated(self):
         """Optimized extraction of last updated timestamp"""
@@ -416,9 +412,9 @@ class ClarityScraper:
                     print("  Attempting enhanced retry with longer delays...")
                     
                     # Try with longer wait and refresh
-                    time.sleep(30)  # Increased from 10s to 30s
+                    time.sleep(5)  # Reduced from 30s to 5s
                     self.driver.refresh()
-                    time.sleep(15)  # Increased from 5s to 15s
+                    time.sleep(3)  # Reduced from 15s to 3s
                     
                     # Check again
                     if "ERROR" in self.driver.title or "request could not be satisfied" in self.driver.page_source.lower():
@@ -606,7 +602,39 @@ class ClarityScraper:
                 print(f"Error extracting contests: {e}")
             
             # HTML snapshot removed to reduce file size
-            
+
+            # Check reports section using the same driver (avoids spawning a 2nd Chrome instance)
+            try:
+                reports_url = self.url.replace('#/summary', '#/reports')
+                print(f"Checking reports section: {reports_url}")
+                self.driver.get(reports_url)
+                WebDriverWait(self.driver, 5).until(
+                    EC.presence_of_element_located((By.TAG_NAME, "body"))
+                )
+
+                download_links = self.driver.find_elements(
+                    By.XPATH,
+                    "//a[contains(@href, '.xml') or contains(@href, '.csv') or contains(@href, '.xls')]"
+                )
+
+                reports = []
+                for link in download_links:
+                    href = link.get_attribute('href')
+                    reports.append({
+                        'text': link.text,
+                        'url': href,
+                        'type': href.split('.')[-1] if href else 'unknown'
+                    })
+
+                data['reports'] = reports
+                if reports:
+                    print(f"Found {len(reports)} downloadable reports")
+                else:
+                    print("No downloadable reports found")
+            except Exception as e:
+                print(f"Reports check failed (non-fatal): {e}")
+                data['reports'] = []
+
             return data
             
         except Exception as e:
@@ -710,34 +738,45 @@ class ClarityScraper:
         print("\n[1] Checking for JSON data endpoints...")
         json_data = self.check_for_json_data()
         if json_data:
-            print("✓ Found JSON data!")
+            print("JSON data found - skipping Selenium (JSON API is sufficient)")
             results['json_data'] = json_data
+
+            # Save results to JSON file only if enabled
+            if self.save_files:
+                output_file = validate_and_secure_filepath(DATA_DIR, "scrape", "json")
+
+                with open(output_file, 'w', encoding='utf-8') as f:
+                    json.dump(results, f, indent=2, ensure_ascii=False)
+
+                print(f"\nResults saved to: {output_file}")
+                print(f"{'='*60}\n")
+
+            return results
         else:
-            print("✗ No JSON endpoints found")
-        
-        # Try 2: Scrape with Selenium
+            print("No JSON endpoints found")
+
+        # Try 2: Scrape with Selenium (also checks reports section)
         print("\n[2] Scraping with Selenium...")
         selenium_data = self.scrape_with_selenium()
         if selenium_data:
-            print(f"✓ Scraped {len(selenium_data.get('contests', []))} contests")
+            print(f"Scraped {len(selenium_data.get('contests', []))} contests")
             results['selenium_data'] = selenium_data
+
+            # Get reports from selenium_data (merged into scrape_with_selenium)
+            reports = selenium_data.get('reports', [])
+            if reports:
+                print(f"Found {len(reports)} reports")
+                results['reports'] = reports
+
+                # Download the first XML or CSV report
+                for report in reports:
+                    if report['type'] in ['xml', 'csv']:
+                        self.download_report(report['url'], report['type'])
+                        break
+            else:
+                print("No reports found")
         else:
-            print("✗ Selenium scraping failed")
-        
-        # Try 3: Check for downloadable reports
-        print("\n[3] Checking for downloadable reports...")
-        reports = self.check_reports_section()
-        if reports:
-            print(f"✓ Found {len(reports)} reports")
-            results['reports'] = reports
-            
-            # Download the first XML or CSV report
-            for report in reports:
-                if report['type'] in ['xml', 'csv']:
-                    self.download_report(report['url'], report['type'])
-                    break
-        else:
-            print("✗ No reports found")
+            print("Selenium scraping failed")
         
         # Save results to JSON file only if enabled
         if self.save_files:

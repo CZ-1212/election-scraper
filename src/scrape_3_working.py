@@ -8,6 +8,7 @@ import json
 import time
 from datetime import datetime
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from multi_platform_scraper import (
     LiveVoterTurnoutScraper,
     SantaCruzScraper,
@@ -110,14 +111,15 @@ def main():
     
     results = []
     start_time = time.time()
-    
-    for county_name, county_info in WORKING_SITES.items():
-        result = scrape_county(county_name, county_info)
-        results.append(result)
-        
-        if county_name != list(WORKING_SITES.keys())[-1]:
-            print(f"\n⏱️  Waiting 3s...")
-            time.sleep(3)
+
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        futures = {
+            executor.submit(scrape_county, county_name, county_info): county_name
+            for county_name, county_info in WORKING_SITES.items()
+        }
+        for future in as_completed(futures):
+            result = future.result()
+            results.append(result)
     
     total_time = time.time() - start_time
     total_minutes = int(total_time // 60)

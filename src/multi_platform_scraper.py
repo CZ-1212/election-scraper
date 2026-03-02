@@ -188,8 +188,16 @@ class BaseScraper:
         options.add_argument('--disable-gpu')
         options.add_argument('--disable-plugins')  # Added from fixed scraper
         options.add_argument('--disable-images')   # Added from fixed scraper - faster
+        options.add_argument('--disable-software-rasterizer')
+        options.add_argument('--disable-background-networking')
+        options.add_argument('--disable-default-apps')
+        options.add_argument('--disable-sync')
+        options.add_argument('--disable-translate')
+        options.add_argument('--no-first-run')
+        options.add_argument('--blink-settings=imagesEnabled=false')
         options.add_argument('--window-size=1920,1080')
-        
+        options.page_load_strategy = 'eager'
+
         self.driver = webdriver.Chrome(options=options)
         
         # PROVEN stealth script from fixed_multi_platform_scraper.py
@@ -201,7 +209,7 @@ class BaseScraper:
         """
         self.driver.execute_script(stealth_script)
         
-        self.driver.implicitly_wait(3)
+        self.driver.implicitly_wait(0)
         self.driver.set_page_load_timeout(30)
         
     def close_driver(self):
@@ -229,9 +237,17 @@ class LiveVoterTurnoutScraper(BaseScraper):
             
             print(f"[{self.county_name}] Loading LiveVoterTurnout.com page...")
             self.driver.get(self.url)
-            
-            # Wait for page to load
-            time.sleep(3)  # Reduced from 5s
+
+            # Wait for page to load with explicit waits instead of sleep
+            try:
+                WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((By.TAG_NAME, "body"))
+                )
+                WebDriverWait(self.driver, 10).until(
+                    lambda d: len(d.find_element(By.TAG_NAME, "body").text) > 100
+                )
+            except TimeoutException:
+                pass  # Continue with whatever loaded
             
             data = {
                 'timestamp': datetime.now().isoformat(),
@@ -421,9 +437,14 @@ class SFElectionsScraper(BaseScraper):
             print(f"[{self.county_name}] Loading SF Elections page with stealth...")
             self.driver.get(self.url)
             
-            # Use proven wait time from fixed_multi_platform_scraper.py
-            print(f"[{self.county_name}] Waiting 8 seconds for content (proven time)...")
-            time.sleep(8)
+            # Wait for content with explicit wait instead of fixed sleep
+            print(f"[{self.county_name}] Waiting for content to load...")
+            try:
+                WebDriverWait(self.driver, 10).until(
+                    lambda d: len(d.find_element(By.TAG_NAME, "body").text) > 1000
+                )
+            except TimeoutException:
+                pass  # Continue with whatever loaded
             
             # Check content length
             try:
@@ -561,184 +582,305 @@ class SFElectionsScraper(BaseScraper):
 class SantaCruzScraper(BaseScraper):
     """Scraper for Santa Cruz County elections site"""
     
-    def scrape(self):
-        """Scrape Santa Cruz County site"""
+    def _parse_soup(self, soup):
+        """Parse BeautifulSoup object directly using HTML structure (used by requests path)."""
+        data = {
+            'timestamp': datetime.now().isoformat(),
+            'url': self.url,
+            'county_name': self.county_name,
+            'page_title': soup.title.string if soup.title else '',
+            'last_updated': None,
+            'voter_turnout': {},
+            'contests': []
+        }
+
+        # Use flat text for turnout and timestamp (these regex patterns still work)
+        page_text = soup.get_text()
+        timestamp_match = re.search(r'(\d{1,2}/\d{1,2}/\d{4}\s+\d{1,2}:\d{2}:\d{2}\s+[AP]M)', page_text)
+        if timestamp_match:
+            data['last_updated'] = timestamp_match.group(1)
+
+        print(f"[{self.county_name}] Extracting voter turnout data...")
         try:
-            # Security: Rate limit requests
-            self.rate_limiter.wait()
-            
+            in_person_match = re.search(r'Total In Person[:\s]*(\d+(?:,\d+)*)\s*\(([^)]+)\)', page_text)
+            if in_person_match:
+                data['voter_turnout']['in_person'] = int(in_person_match.group(1).replace(',', ''))
+
+            mail_match = re.search(r'Total Vote by Mail[:\s]*(\d+(?:,\d+)*)\s*\(([^)]+)\)', page_text)
+            if mail_match:
+                data['voter_turnout']['vote_by_mail'] = int(mail_match.group(1).replace(',', ''))
+
+            total_match = re.search(r'Total Votes[:\s]*(\d+(?:,\d+)*)\s*\(([^)]+)\)', page_text)
+            if total_match:
+                data['voter_turnout']['ballots_cast'] = int(total_match.group(1).replace(',', ''))
+                turnout_pct = total_match.group(2)
+                if '%' in turnout_pct:
+                    data['voter_turnout']['turnout_percentage'] = float(turnout_pct.replace('%', ''))
+
+            registered_match = re.search(r'Total Registered Voters[:\s]*(\d+(?:,\d+)*)', page_text)
+            if registered_match:
+                data['voter_turnout']['registered_voters'] = int(registered_match.group(1).replace(',', ''))
+
+            print(f"[{self.county_name}] ✓ Voter turnout: {data['voter_turnout']}")
+        except Exception as e:
+            print(f"[{self.county_name}] ⚠ Error extracting voter turnout: {e}")
+
+        # Parse contests directly from HTML structure (NameRace_N / Race_N divs)
+        print(f"[{self.county_name}] Extracting contests...")
+        try:
+            race_num = 1
+            while True:
+                title_div = soup.find(id=f'NameRace_{race_num}')
+                results_div = soup.find(id=f'Race_{race_num}')
+                if not title_div or not results_div:
+                    break
+
+                # Extract title from the <a> tag (strip icon elements first)
+                title_link = title_div.find('a')
+                for icon in (title_link or title_div).find_all('i'):
+                    icon.decompose()
+                title = (title_link or title_div).get_text(strip=True)
+
+                contest_data = {
+                    'title': title,
+                    'choices': [],
+                    'undervotes': None,
+                    'overvotes': None,
+                    'total_votes': None
+                }
+
+                # Candidate rows: col[0]=name, col[1]=party, col[2]=votes (percentage)
+                for row in results_div.select('.table-candidate .content-row'):
+                    cols = row.select('.elec-num')
+                    if len(cols) >= 3:
+                        candidate = cols[0].get_text(strip=True)
+                        votes_text = cols[2].get_text(strip=True)
+                        if candidate and candidate.lower() not in ['candidate', 'write in candidate', 'write in', '']:
+                            votes_match = re.match(r'^(\d+(?:,\d+)*)\s*\(([^)]+%)\)$', votes_text)
+                            if votes_match:
+                                contest_data['choices'].append(
+                                    f"{candidate} | {votes_match.group(1)} | {votes_match.group(2)}"
+                                )
+
+                # Total votes from footer
+                footer = results_div.select_one('.mtable-footer')
+                if footer:
+                    footer_cols = footer.select('.elec-num')
+                    if len(footer_cols) >= 2:
+                        contest_data['total_votes'] = footer_cols[1].get_text(strip=True)
+
+                # Undervotes / overvotes
+                for row in results_div.select('.table-votes .content-row'):
+                    cols = row.select('.elec-num')
+                    if len(cols) >= 2:
+                        label = cols[0].get_text(strip=True).lower()
+                        value = cols[1].get_text(strip=True)
+                        if 'under' in label:
+                            contest_data['undervotes'] = value
+                        elif 'over' in label:
+                            contest_data['overvotes'] = value
+
+                if contest_data['choices']:
+                    data['contests'].append(contest_data)
+                race_num += 1
+
+            print(f"[{self.county_name}] ✓ Extracted {len(data['contests'])} contests")
+        except Exception as e:
+            print(f"[{self.county_name}] ⚠ Error extracting contests: {e}")
+
+        return data
+
+    def _parse_page_text(self, page_text, page_title=None):
+        """Parse page text to extract election data (used by Selenium fallback path)"""
+        data = {
+            'timestamp': datetime.now().isoformat(),
+            'url': self.url,
+            'county_name': self.county_name,
+            'page_title': page_title or '',
+            'last_updated': None,
+            'voter_turnout': {},
+            'contests': []
+        }
+
+        # Extract last updated time from page
+        timestamp_match = re.search(r'(\d{1,2}/\d{1,2}/\d{4}\s+\d{1,2}:\d{2}:\d{2}\s+[AP]M)', page_text)
+        if timestamp_match:
+            data['last_updated'] = timestamp_match.group(1)
+
+        # Extract voter turnout from "Registration and Turn out" section
+        print(f"[{self.county_name}] Extracting voter turnout data...")
+        try:
+            section_text = page_text
+
+            # Extract Total In Person
+            in_person_match = re.search(r'Total In Person[:\s]*(\d+(?:,\d+)*)\s*\(([^)]+)\)', section_text)
+            if in_person_match:
+                data['voter_turnout']['in_person'] = int(in_person_match.group(1).replace(',', ''))
+
+            # Extract Total Vote by Mail
+            mail_match = re.search(r'Total Vote by Mail[:\s]*(\d+(?:,\d+)*)\s*\(([^)]+)\)', section_text)
+            if mail_match:
+                data['voter_turnout']['vote_by_mail'] = int(mail_match.group(1).replace(',', ''))
+
+            # Extract Total Votes
+            total_match = re.search(r'Total Votes[:\s]*(\d+(?:,\d+)*)\s*\(([^)]+)\)', section_text)
+            if total_match:
+                data['voter_turnout']['ballots_cast'] = int(total_match.group(1).replace(',', ''))
+                turnout_pct = total_match.group(2)
+                if '%' in turnout_pct:
+                    data['voter_turnout']['turnout_percentage'] = float(turnout_pct.replace('%', ''))
+
+            # Extract Total Registered Voters
+            registered_match = re.search(r'Total Registered Voters[:\s]*(\d+(?:,\d+)*)', section_text)
+            if registered_match:
+                data['voter_turnout']['registered_voters'] = int(registered_match.group(1).replace(',', ''))
+
+            print(f"[{self.county_name}] ✓ Voter turnout: {data['voter_turnout']}")
+        except Exception as e:
+            print(f"[{self.county_name}] ⚠ Error extracting voter turnout: {e}")
+
+        # Extract contests
+        print(f"[{self.county_name}] Extracting contests...")
+        try:
+            # Find contest titles - pattern like "50 - Congressional Redistricting (Vote for 1)"
+            # or "B - Workforce Housing Act (Vote for 1)"
+            contest_pattern = r'([A-Z0-9]+)\s*-\s*([^(]+?)\s*(?:-\s*[^(]+?)?\s*\(Vote for \d+\)'
+            contest_matches = re.finditer(contest_pattern, page_text)
+
+            contests_found = []
+            for match in contest_matches:
+                contest_number = match.group(1)
+                full_title = match.group(0)
+
+                # Skip if this is a registration section
+                if 'registration' in full_title.lower():
+                    continue
+
+                contests_found.append({
+                    'title': full_title,
+                    'match_start': match.start(),
+                    'match_end': match.end()
+                })
+
+            # For each contest, extract the choices that follow
+            for i, contest_info in enumerate(contests_found):
+                contest_data = {
+                    'title': contest_info['title'],
+                    'choices': [],
+                    'undervotes': None,
+                    'overvotes': None,
+                    'total_votes': None
+                }
+
+                # Get text between this contest and the next
+                start_pos = contest_info['match_end']
+                if i < len(contests_found) - 1:
+                    end_pos = contests_found[i+1]['match_start']
+                    contest_section = page_text[start_pos:end_pos]
+                else:
+                    contest_section = page_text[start_pos:start_pos+800]
+
+                # Find the "Total Votes:" marker to know where this contest ends
+                total_votes_pos = contest_section.find("Total Votes:")
+                if total_votes_pos > 0:
+                    contest_section = contest_section[:total_votes_pos+100]
+
+                # Extract choices - candidate name and votes are on SEPARATE lines
+                lines = contest_section.split('\n')
+
+                seen_candidates = set()
+                j = 0
+                while j < len(lines):
+                    line = lines[j].strip()
+
+                    # Check if this line is a votes line: "57514 (77.77%)"
+                    votes_match = re.match(r'^(\d+(?:,\d+)*)\s*\(([^)]+%)\)$', line)
+                    if votes_match and j > 0:
+                        candidate = lines[j-1].strip()
+
+                        if candidate.lower() not in ['candidate', 'party', 'total', 'write in candidate', 'write in', ''] and candidate:
+                            votes = votes_match.group(1)
+                            percentage = votes_match.group(2)
+
+                            if candidate not in seen_candidates:
+                                seen_candidates.add(candidate)
+                                choice_str = f"{candidate} | {votes} | {percentage}"
+                                contest_data['choices'].append(choice_str)
+
+                    j += 1
+
+                # Extract total votes
+                total_match = re.search(r'Total Votes:\s*(\d+(?:,\d+)*)', contest_section[:500])
+                if total_match:
+                    contest_data['total_votes'] = total_match.group(1)
+
+                # Extract undervotes
+                under_match = re.search(r'Undervotes\s+(\d+(?:,\d+)*)', contest_section[:500])
+                if under_match:
+                    contest_data['undervotes'] = under_match.group(1)
+
+                # Extract overvotes
+                over_match = re.search(r'Overvotes\s+(\d+(?:,\d+)*)', contest_section[:500])
+                if over_match:
+                    contest_data['overvotes'] = over_match.group(1)
+
+                if contest_data['choices']:
+                    data['contests'].append(contest_data)
+
+            print(f"[{self.county_name}] ✓ Extracted {len(data['contests'])} contests")
+
+        except Exception as e:
+            print(f"[{self.county_name}] ⚠ Error extracting contests: {e}")
+
+        return data
+
+    def scrape(self):
+        """Scrape Santa Cruz County site - tries requests first, falls back to Selenium"""
+        # Security: Rate limit requests
+        self.rate_limiter.wait()
+
+        # Try requests + BeautifulSoup first (avoids launching Chrome)
+        try:
+            print(f"[{self.county_name}] Trying requests-based fetch (no Selenium)...")
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            }
+            response = requests.get(self.url, timeout=15, headers=headers, verify=True)
+            response.raise_for_status()
+
+            if "Total Registered Voters" in response.text:
+                print(f"[{self.county_name}] ✓ Requests fetch successful, parsing with BeautifulSoup...")
+                soup = BeautifulSoup(response.text, 'html.parser')
+                return self._parse_soup(soup)
+            else:
+                print(f"[{self.county_name}] Requests fetch did not contain expected data, falling back to Selenium...")
+        except Exception as e:
+            print(f"[{self.county_name}] Requests fetch failed ({e}), falling back to Selenium...")
+
+        # Fall back to Selenium
+        try:
             if not self.driver:
                 self.setup_driver()
-            
-            print(f"[{self.county_name}] Loading Santa Cruz County page...")
+
+            print(f"[{self.county_name}] Loading Santa Cruz County page with Selenium...")
             self.driver.get(self.url)
-            
-            # Wait for page to load
-            time.sleep(3)  # Reduced from 5s
-            
-            data = {
-                'timestamp': datetime.now().isoformat(),
-                'url': self.url,
-                'county_name': self.county_name,
-                'page_title': self.driver.title,
-                'last_updated': None,
-                'voter_turnout': {},
-                'contests': []
-            }
-            
-            # Extract last updated time from page
+
+            # Wait for page to load with explicit waits instead of sleep
             try:
-                page_text = self.driver.find_element(By.TAG_NAME, 'body').text
-                # Look for timestamp pattern like "11/4/2025 8:05:00 PM"
-                timestamp_match = re.search(r'(\d{1,2}/\d{1,2}/\d{4}\s+\d{1,2}:\d{2}:\d{2}\s+[AP]M)', page_text)
-                if timestamp_match:
-                    data['last_updated'] = timestamp_match.group(1)
-            except:
+                WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((By.TAG_NAME, "body"))
+                )
+                WebDriverWait(self.driver, 10).until(
+                    lambda d: len(d.find_element(By.TAG_NAME, "body").text) > 100
+                )
+            except TimeoutException:
                 pass
-            
-            # Extract voter turnout from "Registration and Turn out" section
-            print(f"[{self.county_name}] Extracting voter turnout data...")
-            try:
-                # Get full page text - Santa Cruz doesn't use panels, data is in plain text
-                page_text = self.driver.find_element(By.TAG_NAME, 'body').text
-                section_text = page_text  # Use full page text directly
-                
-                # Extract Total In Person
-                in_person_match = re.search(r'Total In Person[:\s]*(\d+(?:,\d+)*)\s*\(([^)]+)\)', section_text)
-                if in_person_match:
-                    data['voter_turnout']['in_person'] = int(in_person_match.group(1).replace(',', ''))
-                
-                # Extract Total Vote by Mail
-                mail_match = re.search(r'Total Vote by Mail[:\s]*(\d+(?:,\d+)*)\s*\(([^)]+)\)', section_text)
-                if mail_match:
-                    data['voter_turnout']['vote_by_mail'] = int(mail_match.group(1).replace(',', ''))
-                
-                # Extract Total Votes
-                total_match = re.search(r'Total Votes[:\s]*(\d+(?:,\d+)*)\s*\(([^)]+)\)', section_text)
-                if total_match:
-                    data['voter_turnout']['ballots_cast'] = int(total_match.group(1).replace(',', ''))
-                    turnout_pct = total_match.group(2)
-                    if '%' in turnout_pct:
-                        data['voter_turnout']['turnout_percentage'] = float(turnout_pct.replace('%', ''))
-                
-                # Extract Total Registered Voters
-                registered_match = re.search(r'Total Registered Voters[:\s]*(\d+(?:,\d+)*)', section_text)
-                if registered_match:
-                    data['voter_turnout']['registered_voters'] = int(registered_match.group(1).replace(',', ''))
-                
-                print(f"[{self.county_name}] ✓ Voter turnout: {data['voter_turnout']}")
-            except Exception as e:
-                print(f"[{self.county_name}] ⚠ Error extracting voter turnout: {e}")
-            
-            # Extract contests
-            print(f"[{self.county_name}] Extracting contests...")
-            try:
-                # Santa Cruz doesn't use panels/tables - data is in plain text
-                # Parse from page text directly
-                page_text = self.driver.find_element(By.TAG_NAME, 'body').text
-                
-                # Find contest titles - pattern like "50 - Congressional Redistricting (Vote for 1)"
-                # or "B - Workforce Housing Act (Vote for 1)"
-                contest_pattern = r'([A-Z0-9]+)\s*-\s*([^(]+?)\s*(?:-\s*[^(]+?)?\s*\(Vote for \d+\)'
-                contest_matches = re.finditer(contest_pattern, page_text)
-                
-                contests_found = []
-                for match in contest_matches:
-                    contest_number = match.group(1)
-                    full_title = match.group(0)  # Use full matched text as title
-                    
-                    # Skip if this is a registration section
-                    if 'registration' in full_title.lower():
-                        continue
-                    
-                    contests_found.append({
-                        'title': full_title,
-                        'match_start': match.start(),
-                        'match_end': match.end()
-                    })
-                
-                # For each contest, extract the choices that follow
-                for i, contest_info in enumerate(contests_found):
-                    contest_data = {
-                        'title': contest_info['title'],
-                        'choices': [],
-                        'undervotes': None,
-                        'overvotes': None,
-                        'total_votes': None
-                    }
-                    
-                    # Get text between this contest and the next
-                    start_pos = contest_info['match_end']
-                    if i < len(contests_found) - 1:
-                        # End at the start of the next contest
-                        end_pos = contests_found[i+1]['match_start']
-                        contest_section = page_text[start_pos:end_pos]
-                    else:
-                        # Last contest - limit to reasonable section size
-                        contest_section = page_text[start_pos:start_pos+800]
-                    
-                    # Find the "Total Votes:" marker to know where this contest ends
-                    total_votes_pos = contest_section.find("Total Votes:")
-                    if total_votes_pos > 0:
-                        # Only look up to (and slightly after) the Total Votes line
-                        contest_section = contest_section[:total_votes_pos+100]
-                    
-                    # Extract choices - candidate name and votes are on SEPARATE lines
-                    # Format:
-                    #   Line 1: "Yes"
-                    #   Line 2: "57514 (77.77%)"
-                    lines = contest_section.split('\n')
-                    
-                    seen_candidates = set()
-                    i = 0
-                    while i < len(lines):
-                        line = lines[i].strip()
-                        
-                        # Check if this line is a votes line: "57514 (77.77%)"
-                        votes_match = re.match(r'^(\d+(?:,\d+)*)\s*\(([^)]+%)\)$', line)
-                        if votes_match and i > 0:
-                            # This is a votes line, get the candidate from previous line
-                            candidate = lines[i-1].strip()
-                            
-                            # Skip if it's a header word
-                            if candidate.lower() not in ['candidate', 'party', 'total', 'write in candidate', 'write in', ''] and candidate:
-                                votes = votes_match.group(1)
-                                percentage = votes_match.group(2)
-                                
-                                # Skip if already seen
-                                if candidate not in seen_candidates:
-                                    seen_candidates.add(candidate)
-                                    choice_str = f"{candidate} | {votes} | {percentage}"
-                                    contest_data['choices'].append(choice_str)
-                        
-                        i += 1
-                    
-                    # Extract total votes - pattern like "Total Votes: 74070"
-                    total_match = re.search(r'Total Votes:\s*(\d+(?:,\d+)*)', contest_section[:500])
-                    if total_match:
-                        contest_data['total_votes'] = total_match.group(1)
-                    
-                    # Extract undervotes
-                    under_match = re.search(r'Undervotes\s+(\d+(?:,\d+)*)', contest_section[:500])
-                    if under_match:
-                        contest_data['undervotes'] = under_match.group(1)
-                    
-                    # Extract overvotes
-                    over_match = re.search(r'Overvotes\s+(\d+(?:,\d+)*)', contest_section[:500])
-                    if over_match:
-                        contest_data['overvotes'] = over_match.group(1)
-                    
-                    # Only add contests that have actual choices (not just menu items)
-                    if contest_data['choices']:
-                        data['contests'].append(contest_data)
-                
-                print(f"[{self.county_name}] ✓ Extracted {len(data['contests'])} contests")
-                
-            except Exception as e:
-                print(f"[{self.county_name}] ⚠ Error extracting contests: {e}")
-            
-            return data
-            
+
+            page_text = self.driver.find_element(By.TAG_NAME, 'body').text
+            page_title = self.driver.title
+            return self._parse_page_text(page_text, page_title)
+
         except Exception as e:
             print(f"[{self.county_name}] ✗ Error during scraping: {e}")
             print(f"[{self.county_name}] Error type: {type(e).__name__}")
