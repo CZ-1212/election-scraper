@@ -3,7 +3,8 @@
 Run all 7 county scrapers in parallel (4 Clarity + 3 non-Clarity).
 """
 
-import json
+import csv
+import re
 import time
 from datetime import datetime
 from pathlib import Path
@@ -25,6 +26,55 @@ NON_CLARITY_SITES = {
     'San_Joaquin': {'url': 'https://www.livevoterturnout.com/ENR/sanjoaquincaenr/19/en/Index_19.html',       'scraper_class': LiveVoterTurnoutScraper},
     'Santa_Cruz':  {'url': 'https://www2.santacruzcountyca.gov/ElectionSites/ElectionResults/Results',       'scraper_class': SantaCruzScraper},
 }
+
+
+def parse_choice(choice):
+    """Parse a choice (string or dict) into (name, votes, pct) strings.
+
+    Handles the formats produced by each scraper:
+      - dict with 'name'/'votes'/'percentage' keys
+      - "Name | votes | pct%"          (Santa Cruz pipe-separated)
+      - "Name\\npct% votes"              (Clarity: e.g. "Yes\\n71.25% 294,137")
+      - "Name\\nvotes pct%"              (LiveVoterTurnout: e.g. "Yes\\n294,137 71.25%")
+    """
+    if isinstance(choice, dict):
+        return choice.get('name', ''), choice.get('votes', ''), choice.get('percentage', '')
+
+    s = str(choice).strip()
+
+    # Format: "Name | votes | pct" (Santa Cruz)
+    if ' | ' in s:
+        parts = [p.strip() for p in s.split(' | ')]
+        name = parts[0] if len(parts) > 0 else s
+        votes = parts[1] if len(parts) > 1 else ''
+        pct = parts[2] if len(parts) > 2 else ''
+        return name, votes, pct
+
+    # Multi-line: first line is name, second line has votes/pct in some order
+    lines = [l.strip() for l in s.split('\n') if l.strip()]
+    if len(lines) >= 2:
+        name = lines[0]
+        rest = lines[1]
+        # "71.25% 294,137" — pct first then votes (Clarity format)
+        m = re.match(r'^(\d+\.?\d*)%\s*([\d,]+)$', rest)
+        if m:
+            return name, m.group(2), m.group(1) + '%'
+        # "294,137 71.25%" — votes first then pct
+        m = re.match(r'^([\d,]+)\s+(\d+\.?\d*)%$', rest)
+        if m:
+            return name, m.group(1), m.group(2) + '%'
+        # "294,137 (71.25%)" — votes with pct in parens
+        m = re.match(r'^([\d,]+)\s+\((\d+\.?\d*)%\)$', rest)
+        if m:
+            return name, m.group(1), m.group(2) + '%'
+        return name, rest, ''
+
+    # Single line ending in a number (e.g. "Vote Cast 412,838") — split label from count
+    m = re.match(r'^(.+?)\s+([\d,]+)$', s)
+    if m:
+        return m.group(1), m.group(2), ''
+
+    return s, '', ''
 
 
 def scrape_clarity(county, url):
@@ -131,16 +181,31 @@ def main():
         else:
             print(f"  {status} {r['county']:15} | FAILED | {dur}")
 
-    # Save all county data into one combined file
-    combined_file = validate_and_secure_filepath(data_dir, "all_counties", "json")
-    with open(combined_file, 'w', encoding='utf-8') as f:
-        json.dump({
-            'timestamp': datetime.now().isoformat(),
-            'total_counties': total,
-            'successful': successful,
-            'total_time_seconds': total_time,
-            'counties': county_data,
-        }, f, indent=2, ensure_ascii=False)
+    # Save all county data as CSV — grouped by county, with a header block per county
+    combined_file = validate_and_secure_filepath(data_dir, "all_counties", "csv")
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    with open(combined_file, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        for county in sorted(county_data.keys()):
+            data = county_data[county]
+            if not data or data.get('success') is False:
+                continue
+            if 'selenium_data' in data:
+                vt = data['selenium_data'].get('voter_turnout', {})
+                contests = data['selenium_data'].get('contests', [])
+            else:
+                vt = data.get('voter_turnout', {})
+                contests = data.get('contests', [])
+            # County-level header + data
+            writer.writerow(['County', 'ballots_cast', 'registered_voters', 'turnout_percentage', 'Last-update'])
+            writer.writerow([county, vt.get('ballots_cast', ''), vt.get('registered_voters', ''),
+                             vt.get('turnout_percentage', ''), timestamp])
+            # Contest sub-header + rows
+            writer.writerow(['contest_title', 'choice_name', 'votes', 'vote_percentage'])
+            for contest in contests:
+                for choice in contest.get('choices', []):
+                    name, votes, pct = parse_choice(choice)
+                    writer.writerow([contest.get('title', ''), name, votes, pct])
     print(f"\n💾 All county data saved to: {combined_file.name}")
     print("=" * 70)
 
