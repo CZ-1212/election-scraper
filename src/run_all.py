@@ -62,6 +62,7 @@ def main():
 
     overall_start = time.time()
     results = []
+    county_data = {}  # Accumulates all county results for the combined file
 
     # Submit all 7 counties concurrently (2 Clarity workers + 3 non-Clarity workers)
     with ThreadPoolExecutor(max_workers=5) as executor:
@@ -82,17 +83,16 @@ def main():
             if error:
                 print(f"  ERROR: {error}")
                 results.append({'county': county, 'platform': platform, 'success': False, 'duration': duration, 'error': error})
+                county_data[county] = {'success': False, 'error': error}
                 continue
 
             if platform == 'clarity':
                 selenium_data = result.get('selenium_data', {}) if result else {}
                 vt = selenium_data.get('voter_turnout', {})
                 contests = selenium_data.get('contests', [])
-                filename_prefix = f"{county}_clarity"
             else:
                 vt = result.get('voter_turnout', {}) if result else {}
                 contests = result.get('contests', []) if result else []
-                filename_prefix = f"{county}_working"
 
             if vt:
                 print(f"  Ballots Cast: {vt.get('ballots_cast', 0):,}")
@@ -102,11 +102,7 @@ def main():
             for i, c in enumerate(contests[:3], 1):
                 print(f"    {i}. {c.get('title', '')[:65]} ({len(c.get('choices', []))} choices)")
 
-            # Save
-            output_file = validate_and_secure_filepath(data_dir, filename_prefix, "json")
-            with open(output_file, 'w', encoding='utf-8') as f:
-                json.dump(result, f, indent=2, ensure_ascii=False)
-            print(f"  💾 Saved: {output_file.name}")
+            county_data[county] = result
 
             results.append({
                 'county': county,
@@ -135,12 +131,17 @@ def main():
         else:
             print(f"  {status} {r['county']:15} | FAILED | {dur}")
 
-    # Save combined summary
-    summary_file = validate_and_secure_filepath(data_dir, "all_counties_summary", "json")
-    with open(summary_file, 'w', encoding='utf-8') as f:
-        json.dump({'timestamp': datetime.now().isoformat(), 'total_counties': total,
-                   'successful': successful, 'total_time_seconds': total_time, 'results': results}, f, indent=2)
-    print(f"\n💾 Summary: {summary_file.name}")
+    # Save all county data into one combined file
+    combined_file = validate_and_secure_filepath(data_dir, "all_counties", "json")
+    with open(combined_file, 'w', encoding='utf-8') as f:
+        json.dump({
+            'timestamp': datetime.now().isoformat(),
+            'total_counties': total,
+            'successful': successful,
+            'total_time_seconds': total_time,
+            'counties': county_data,
+        }, f, indent=2, ensure_ascii=False)
+    print(f"\n💾 All county data saved to: {combined_file.name}")
     print("=" * 70)
 
 

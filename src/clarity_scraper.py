@@ -331,22 +331,13 @@ class ClarityScraper:
                         turnout_data['registered_voters'] = int(registered_match.group(1).replace(',', ''))
                         break
                 
-                # Extract percentage (look for turnout percentage specifically)
-                percent_patterns = [
-                    r'Turnout[:\s]*(\d+\.?\d*)%',
-                    r'Voter Turnout[:\s]*(\d+\.?\d*)%',
-                    r'(\d+\.?\d*)%',  # Fallback: any percentage in section
-                ]
-                for pattern in percent_patterns:
-                    percent_match = re.search(pattern, section_text, re.IGNORECASE)
-                    if percent_match:
-                        turnout_data['turnout_percentage'] = float(percent_match.group(1))
-                        break
-            
-            # Calculate percentage if missing
-            if 'ballots_cast' in turnout_data and 'registered_voters' in turnout_data and 'turnout_percentage' not in turnout_data:
+            # Always calculate turnout from ballots/registered — more reliable than scraping
+            # the "100%" precincts-reporting figure that Clarity sites display prominently.
+            if 'ballots_cast' in turnout_data and 'registered_voters' in turnout_data:
                 if turnout_data['registered_voters'] > 0:
-                    turnout_data['turnout_percentage'] = round((turnout_data['ballots_cast'] / turnout_data['registered_voters']) * 100, 2)
+                    turnout_data['turnout_percentage'] = round(
+                        (turnout_data['ballots_cast'] / turnout_data['registered_voters']) * 100, 1
+                    )
             
             return turnout_data
             
