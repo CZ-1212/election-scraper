@@ -229,17 +229,31 @@ class ClarityScraper:
         self.driver.set_page_load_timeout(20)  # Reduced from 30s to 20s
         
     def _smart_wait_for_content(self):
-        """Wait for JS-rendered content to appear."""
+        """Wait for JS-rendered contest/turnout content to appear (max 30s).
+
+        We deliberately exclude generic tags like h1/h2/h3 because every SPA
+        shell renders those immediately — before any election data is injected
+        — causing a false-positive that lets the scraper proceed too early.
+        The selectors here are specific enough that a match means real data
+        is present.
+        """
+        CONTENT_SELECTORS = [
+            "[class*='contest']",
+            "[class*='turnout']",
+            "[class*='result']",
+            "[class*='summary']",
+            "table",
+        ]
         try:
-            WebDriverWait(self.driver, 8).until(
+            WebDriverWait(self.driver, 30).until(
                 lambda d: any(
                     d.find_elements(By.CSS_SELECTOR, sel)
-                    for sel in [".contest", "[class*='contest']", "[class*='turnout']", "[class*='result']", "h1", "h2", "h3"]
+                    for sel in CONTENT_SELECTORS
                 )
             )
             print("Content detected")
         except TimeoutException:
-            print("Content wait timeout after 8s — continuing with available content")
+            print("Content wait timeout after 30s — continuing with available content")
 
     def _extract_last_updated(self):
         """Optimized extraction of last updated timestamp"""
@@ -249,7 +263,7 @@ class ClarityScraper:
                 "//div[contains(., 'Last updated')]",
                 "//*[contains(text(), '2025') and (contains(text(), 'AM') or contains(text(), 'PM'))]",
                 "//time",
-                "//*[@class*='updated' or @class*='timestamp']"
+                "//*[contains(@class, 'updated') or contains(@class, 'timestamp')]"
             ]
             
             for selector in selectors:
@@ -331,6 +345,60 @@ class ClarityScraper:
                         turnout_data['registered_voters'] = int(registered_match.group(1).replace(',', ''))
                         break
                 
+                # Extract precincts — require the count to appear on a line with "Precincts Reporting"
+                # to avoid matching contest pagination like "0 of 6 contests".
+                precincts_patterns = [
+                    r'(\d+(?:,\d+)?)\s+of\s+(\d+(?:,\d+)?)\s+Precincts\s+Report',
+                    r'Precincts\s+Report\w*[:\s]+(\d+(?:,\d+)?)\s+of\s+(\d+(?:,\d+)?)',
+                ]
+                for pattern in precincts_patterns:
+                    m = re.search(pattern, section_text, re.IGNORECASE)
+                    if m:
+                        turnout_data['precincts_reported'] = f"{m.group(1)} of {m.group(2)} Precincts Reported"
+                        break
+
+            # If text parsing didn't find X of Y, use Selenium to find the donut chart
+            # container near the "Precincts Reporting" label and extract the X/Y count
+            # which appears as a sibling/child element (e.g. "930/930" below the label).
+            if 'precincts_reported' not in turnout_data:
+                try:
+                    label_elems = self.driver.find_elements(
+                        By.XPATH, "//*[contains(text(), 'Precincts Reporting')]"
+                    )
+                    for label_elem in label_elems:
+                        # Walk up to parent, then search all text within it for X/Y fraction
+                        for level in range(1, 4):
+                            try:
+                                ancestor = label_elem.find_element(
+                                    By.XPATH, ".//" + "/..".join([""] * (level + 1))
+                                )
+                            except Exception:
+                                # Simpler traversal: use JavaScript to get ancestor
+                                try:
+                                    ancestor = self.driver.execute_script(
+                                        "var e = arguments[0]; for(var i=0;i<%d;i++) e=e.parentElement; return e;" % level,
+                                        label_elem
+                                    )
+                                except Exception:
+                                    break
+                            if ancestor is None:
+                                break
+                            container_text = ancestor.text.strip()
+                            # Look for X/Y pattern (slash or "of")
+                            m = re.search(r'(\d[\d,]*)\s*[/]\s*(\d[\d,]*)', container_text)
+                            if m:
+                                a, b = m.group(1).replace(',', ''), m.group(2).replace(',', '')
+                                turnout_data['precincts_reported'] = f"{a} of {b} Precincts Reported"
+                                break
+                            m = re.search(r'(\d[\d,]+)\s+of\s+(\d[\d,]+)', container_text)
+                            if m:
+                                turnout_data['precincts_reported'] = f"{m.group(1)} of {m.group(2)} Precincts Reported"
+                                break
+                        if 'precincts_reported' in turnout_data:
+                            break
+                except Exception:
+                    pass
+
             # Always calculate turnout from ballots/registered — more reliable than scraping
             # the "100%" precincts-reporting figure that Clarity sites display prominently.
             if 'ballots_cast' in turnout_data and 'registered_voters' in turnout_data:
@@ -386,33 +454,94 @@ class ClarityScraper:
         
         return None
     
+    # CSS selectors used to identify individual contest blocks on Clarity SPAs.
+    # Clarity renders each contest as a Bootstrap card: <div class="card contest">.
+    # We try precise selectors first and fall back to the broad net.
+    _CONTEST_CARD_SELECTOR = "[class*='contest']"
+    _CONTEST_PRECISE_SELECTORS = [
+        ".card.contest",
+        ".contest.col-12",
+        "[class*='contest-container']",
+    ]
+
+    # Title selectors tried in priority order inside each contest card.
+    _TITLE_SELECTORS = [
+        ".contest-title",
+        "[class*='contest-name']",
+        "[class*='contest-header']",
+        "h2",
+        "h3",
+        "h4",
+        "[class*='title']",
+        "[class*='name']",
+    ]
+
+    def _find_contest_elements(self):
+        """Return contest card elements from the current page.
+
+        Clarity renders each contest as a Bootstrap card-level div, e.g.:
+          <div class="card contest"> or <div class="contest mb-3 col-12">
+
+        We try precise card-level selectors first.  If none match we fall back
+        to the broad [class*='contest'] net and filter out elements whose text
+        is clearly not a full contest card (empty, just a number, etc.).
+        """
+        # Try precise selectors first — these target the card level directly
+        # and avoid picking up sub-elements like contest-name or btn-contest.
+        for sel in self._CONTEST_PRECISE_SELECTORS:
+            elems = self.driver.find_elements(By.CSS_SELECTOR, sel)
+            elems = [e for e in elems if e.text.strip() and len(e.text.strip()) > 10]
+            if elems:
+                return elems
+
+        # Fallback: broad selector, keep only elements that look like full cards
+        # (have substantial text containing vote data).
+        all_elems = self.driver.find_elements(By.CSS_SELECTOR, self._CONTEST_CARD_SELECTOR)
+        result = []
+        for elem in all_elems:
+            try:
+                txt = elem.text.strip()
+                if not txt or len(txt) < 10:
+                    continue
+                # Must contain something that looks like vote data
+                if re.search(r'\d+\.?\d*%', txt):
+                    result.append(elem)
+            except Exception:
+                continue
+        return result
+
     def scrape_with_selenium(self):
-        """Scrape data using Selenium to handle JavaScript rendering"""
+        """Scrape data using Selenium to handle JavaScript rendering.
+
+        An overall 60-second hard cap is enforced so a single county can
+        never block the process indefinitely.
+        """
+        # Hard cap: the entire Selenium session must finish within 60 seconds.
+        SELENIUM_HARD_TIMEOUT = 60
+        deadline = time.time() + SELENIUM_HARD_TIMEOUT
+
+        def _timed_out():
+            return time.time() > deadline
+
         try:
             if not self.driver:
                 self.setup_driver()
             print(f"Loading page: {self.url}")
-            
+
             try:
                 self.driver.get(self.url)
-                
+
                 # Check if request was blocked by CloudFront
                 if "ERROR" in self.driver.title or "request could not be satisfied" in self.driver.title.lower():
-                    print("⚠ Request blocked by CloudFront (403 error)")
-                    print("  This is common on election night due to high traffic")
-                    print("  Attempting enhanced retry with longer delays...")
-                    
-                    # Try with longer wait and refresh
-                    time.sleep(5)  # Reduced from 30s to 5s
+                    print("Page blocked by CloudFront (403 error)")
+                    print("  Attempting retry with brief delay...")
+
+                    time.sleep(5)
                     self.driver.refresh()
-                    time.sleep(3)  # Reduced from 15s to 3s
-                    
-                    # Check again
+                    time.sleep(3)
+
                     if "ERROR" in self.driver.title or "request could not be satisfied" in self.driver.page_source.lower():
-                        print("✗ Still blocked by CloudFront after retry")
-                        print("  Returning partial data (voter turnout only, no contests)")
-                        
-                        # Try to extract at least voter turnout from cached/partial load
+                        print("Still blocked by CloudFront after retry")
                         data = {
                             'timestamp': datetime.now().isoformat(),
                             'url': self.url,
@@ -424,28 +553,34 @@ class ClarityScraper:
                         }
                         return data
                     else:
-                        print("✓ Retry successful after CloudFront block")
-                
-                print("✓ Page loaded successfully")
-                        
+                        print("Retry successful after CloudFront block")
+
+                print("Page loaded successfully")
+
             except Exception as e:
-                print(f"⚠ Page load issue: {e}")
-                # Continue anyway - page might be partially loaded
-            
-            # Smart wait for JavaScript to execute - adaptive timing
-            print("Waiting for JavaScript to execute (adaptive timing)...")
+                print(f"Page load issue: {e}")
+                # Continue — page may be partially loaded (eager strategy).
+
+            if _timed_out():
+                print("Hard timeout reached after page load — aborting")
+                return None
+
+            # Wait for JS-rendered content.
+            print("Waiting for JavaScript to execute...")
             self._smart_wait_for_content()
-            print("✓ Wait complete")
-            
-            # Look for contest elements (don't wait - just check)
-            print("Looking for contest elements...")
-            contest_elements = self.driver.find_elements(By.CSS_SELECTOR, ".contest, [class*='contest']")
-            if contest_elements:
-                print(f"✓ Found {len(contest_elements)} contest elements")
-            else:
-                print("⚠ No contest elements found - page may not have results yet")
-            
-            # Extract page data
+            print("Wait complete")
+
+            if _timed_out():
+                print("Hard timeout reached after content wait — aborting")
+                return None
+
+            # Quick recon — log element count before extraction.
+            contest_elements = self.driver.find_elements(By.CSS_SELECTOR, self._CONTEST_CARD_SELECTOR)
+            print(f"Raw [class*='contest'] element count: {len(contest_elements)}")
+            if not contest_elements:
+                print("No contest elements found — page may not have results yet")
+
+            # Build result skeleton.
             data = {
                 'timestamp': datetime.now().isoformat(),
                 'url': self.url,
@@ -453,186 +588,238 @@ class ClarityScraper:
                 'voter_turnout': {},
                 'contests': []
             }
-            
-            # Optimized last updated time extraction
+
             data['last_updated'] = self._extract_last_updated()
-            
-            # Optimized voter turnout extraction
+
             print("Looking for voter turnout data...")
             data['voter_turnout'] = self._extract_voter_turnout_optimized()
             if data['voter_turnout']:
-                print(f"✓ Extracted voter turnout data: {data['voter_turnout']}")
+                print(f"Extracted voter turnout data: {data['voter_turnout']}")
             else:
-                print("⚠ No voter turnout data extracted")
-            
-            # Extract contest information
-            # Patterns to skip (headers, instructions, etc.)
+                print("No voter turnout data extracted")
+
+            if _timed_out():
+                print("Hard timeout reached before contest extraction — returning partial data")
+                return data
+
+            # Extract contest information.
             skip_patterns = [
                 r'^STATE$',
                 r'^COUNTY$',
                 r'^LOCAL$',
                 r'^FEDERAL$',
                 r'^showing',
-                r'^\s*$'  # Empty
+                r'^\s*$',
             ]
-            
+
             try:
-                all_contest_elems = self.driver.find_elements(By.CSS_SELECTOR, ".contest, [class*='contest']")
-                # Skip parent containers that wrap other .contest elements — they bleed all child choices into one.
-                # Only check for exact .contest children (not [class*='contest']) to avoid false-positives on
-                # child elements like contest-title, contest-choice, etc.
-                contests = [c for c in all_contest_elems
-                            if not c.find_elements(By.CSS_SELECTOR, ".contest")]
+                contests = self._find_contest_elements()
+                print(f"Leaf contest elements after filtering: {len(contests)}")
 
                 for contest in contests:
+                    if _timed_out():
+                        print("Hard timeout hit during contest extraction — stopping early")
+                        break
+
                     contest_data = {
                         'title': None,
                         'precincts_reporting': None,
                         'choices': []
                     }
-                    
-                    # Get contest title
-                    try:
-                        title_elem = contest.find_element(By.CSS_SELECTOR, "h2, h3, .contest-title, [class*='title']")
-                        contest_data['title'] = title_elem.text
-                    except NoSuchElementException:
-                        pass
-                    
-                    # Skip non-contest headers
-                    if contest_data['title']:
-                        should_skip = False
-                        for pattern in skip_patterns:
-                            if re.match(pattern, contest_data['title'], re.IGNORECASE):
-                                should_skip = True
+
+                    # Attempt title extraction using priority-ordered selectors.
+                    for title_sel in self._TITLE_SELECTORS:
+                        try:
+                            title_elem = contest.find_element(By.CSS_SELECTOR, title_sel)
+                            candidate = title_elem.text.strip()
+                            if candidate:
+                                contest_data['title'] = candidate
                                 break
-                        
+                        except NoSuchElementException:
+                            continue
+
+                    # If CSS selectors found nothing, fall back to the first
+                    # non-empty line of the contest element's own text.
+                    if not contest_data['title']:
+                        try:
+                            lines = [l.strip() for l in contest.text.split('\n') if l.strip()]
+                            if lines:
+                                contest_data['title'] = lines[0]
+                        except Exception:
+                            pass
+
+                    # Skip navigation / section-header pseudo-contests.
+                    if contest_data['title']:
+                        should_skip = any(
+                            re.match(p, contest_data['title'], re.IGNORECASE)
+                            for p in skip_patterns
+                        )
                         if should_skip:
                             continue
-                    
-                    # Get precincts reporting with percentage
+
+                    # Precincts reporting.
                     try:
-                        # Try multiple approaches to get precincts reporting with percentage
                         precincts_selectors = [
                             ".//*[contains(text(), 'Precincts Reporting')]",
                             ".//div[contains(., 'Precincts Reporting')]",
-                            ".//span[contains(., 'Precincts Reporting')]"
+                            ".//span[contains(., 'Precincts Reporting')]",
                         ]
-                        
+
                         precincts_text = None
                         for selector in precincts_selectors:
                             try:
                                 precincts_elem = contest.find_element(By.XPATH, selector)
                                 full_text = precincts_elem.text.strip()
-                                
-                                # Check if we got the full text with percentage
+
                                 if 'Precincts Reporting' in full_text and '%' in full_text:
                                     precincts_text = full_text
                                     break
                                 elif 'Precincts Reporting' in full_text:
-                                    # Look for percentage in nearby elements or parent
                                     try:
                                         parent = precincts_elem.find_element(By.XPATH, "./..")
                                         parent_text = parent.text.strip()
                                         if '%' in parent_text:
-                                            # Extract the line containing both
                                             lines = parent_text.split('\n')
                                             for line in lines:
                                                 if 'Precincts Reporting' in line and '%' in line:
                                                     precincts_text = line.strip()
                                                     break
                                             if not precincts_text:
-                                                # Try to find percentage pattern near "Precincts Reporting"
                                                 match = re.search(r'Precincts Reporting\s*(\d+%)', parent_text)
                                                 if match:
                                                     precincts_text = f"Precincts Reporting {match.group(1)}"
-                                    except:
+                                    except Exception:
                                         pass
-                                    
+
                                     if not precincts_text:
-                                        precincts_text = full_text  # Fallback to original text
+                                        precincts_text = full_text
                                     break
                             except NoSuchElementException:
                                 continue
-                        
-                        # Format the precincts reporting text nicely
+
                         if precincts_text and 'Precincts Reporting' in precincts_text:
-                            # Add space before percentage if missing
-                            formatted_text = re.sub(r'Precincts Reporting(\d+%)', r'Precincts Reporting \1', precincts_text)
+                            formatted_text = re.sub(
+                                r'Precincts Reporting(\d+%)',
+                                r'Precincts Reporting \1',
+                                precincts_text
+                            )
                             contest_data['precincts_reporting'] = formatted_text
                         else:
                             contest_data['precincts_reporting'] = precincts_text
-                            
-                    except Exception as e:
+
+                    except Exception:
                         contest_data['precincts_reporting'] = None
-                    
-                    # Get choices/candidates
+
+                    # Choices / candidates.
+                    # Try CSS selectors first; fall back to parsing the contest's full text.
                     try:
-                        rows = contest.find_elements(By.CSS_SELECTOR, "tr, .choice, [class*='choice']")
+                        rows = contest.find_elements(By.CSS_SELECTOR, "tr, .choice, [class*='choice'], [class*='candidate']")
                         seen_choices = set()
                         for row in rows:
                             try:
                                 choice_text = row.text.strip()
-                                # Filter out empty, header, or duplicate choices
-                                if (choice_text and len(choice_text) > 0 and 
-                                    choice_text not in seen_choices and
-                                    not choice_text.startswith('Candidate') and
-                                    not choice_text.startswith('Choice') and
-                                    choice_text != 'Percentage Votes'):
+                                if (choice_text
+                                        and choice_text not in seen_choices
+                                        and not choice_text.startswith('Candidate')
+                                        and not choice_text.startswith('Choice')
+                                        and choice_text != 'Percentage Votes'):
                                     contest_data['choices'].append(choice_text)
                                     seen_choices.add(choice_text)
-                            except:
+                            except Exception:
                                 pass
                     except NoSuchElementException:
                         pass
-                    
+
+                    # Text-based fallback: parse the contest element's full text.
+                    # Clarity renders each choice as "Name\nXX.XX% X,XXX" or
+                    # "Name\nX,XXX XX.XX%" within the card text.
+                    if not contest_data['choices']:
+                        try:
+                            full_text = contest.text
+                            lines = [l.strip() for l in full_text.split('\n') if l.strip()]
+                            # Skip header lines, noise
+                            noise = {'Percentage', 'Votes', 'Percentage Votes', 'Map', 'Chart',
+                                     'Precincts Reporting', contest_data['title']}
+                            i = 0
+                            while i < len(lines):
+                                line = lines[i]
+                                if (line in noise
+                                        or 'Precincts' in line
+                                        or 'Vote For' in line
+                                        or 'Vote Cast' in line
+                                        or re.match(r'^\(?\d+\)?$', line)):
+                                    i += 1
+                                    continue
+                                # Look ahead for a line containing both a % and digits
+                                next_line = lines[i + 1] if i + 1 < len(lines) else ''
+                                m1 = re.search(r'(\d+\.?\d*)%\s*([\d,]+)', next_line)
+                                m2 = re.search(r'([\d,]+)\s+(\d+\.?\d*)%', next_line)
+                                if m1:
+                                    contest_data['choices'].append(f"{line}\n{m1.group(1)}% {m1.group(2)}")
+                                    i += 2
+                                elif m2:
+                                    contest_data['choices'].append(f"{line}\n{m2.group(1)} {m2.group(2)}%")
+                                    i += 2
+                                else:
+                                    i += 1
+                        except Exception:
+                            pass
+
                     if contest_data['title']:
                         data['contests'].append(contest_data)
-                
-                # Deduplicate contests
+
                 if data['contests']:
                     original_count = len(data['contests'])
                     data['contests'] = self._deduplicate_contests(data['contests'])
-                    print(f"✓ Extracted {original_count} contests, deduplicated to {len(data['contests'])} unique contests")
-                        
+                    print(f"Extracted {original_count} contests, deduplicated to {len(data['contests'])} unique contests")
+                else:
+                    print("0 contests extracted after filtering")
+
             except Exception as e:
                 print(f"Error extracting contests: {e}")
-            
-            # HTML snapshot removed to reduce file size
 
-            # Check reports section using the same driver (avoids spawning a 2nd Chrome instance)
-            try:
-                reports_url = self.url.replace('#/summary', '#/reports')
-                print(f"Checking reports section: {reports_url}")
-                self.driver.get(reports_url)
-                WebDriverWait(self.driver, 5).until(
-                    EC.presence_of_element_located((By.TAG_NAME, "body"))
-                )
+            # HTML snapshot removed to reduce file size.
 
-                download_links = self.driver.find_elements(
-                    By.XPATH,
-                    "//a[contains(@href, '.xml') or contains(@href, '.csv') or contains(@href, '.xls')]"
-                )
+            # Check reports section using the same driver.
+            if not _timed_out():
+                try:
+                    reports_url = self.url.replace('#/summary', '#/reports')
+                    print(f"Checking reports section: {reports_url}")
+                    self.driver.get(reports_url)
+                    # Wait up to 5s for body — always present, so this is just
+                    # a guard against a completely failed navigation.
+                    WebDriverWait(self.driver, 5).until(
+                        EC.presence_of_element_located((By.TAG_NAME, "body"))
+                    )
 
-                reports = []
-                for link in download_links:
-                    href = link.get_attribute('href')
-                    reports.append({
-                        'text': link.text,
-                        'url': href,
-                        'type': href.split('.')[-1] if href else 'unknown'
-                    })
+                    download_links = self.driver.find_elements(
+                        By.XPATH,
+                        "//a[contains(@href, '.xml') or contains(@href, '.csv') or contains(@href, '.xls')]"
+                    )
 
-                data['reports'] = reports
-                if reports:
-                    print(f"Found {len(reports)} downloadable reports")
-                else:
-                    print("No downloadable reports found")
-            except Exception as e:
-                print(f"Reports check failed (non-fatal): {e}")
+                    reports = []
+                    for link in download_links:
+                        href = link.get_attribute('href')
+                        reports.append({
+                            'text': link.text,
+                            'url': href,
+                            'type': href.split('.')[-1] if href else 'unknown'
+                        })
+
+                    data['reports'] = reports
+                    if reports:
+                        print(f"Found {len(reports)} downloadable reports")
+                    else:
+                        print("No downloadable reports found")
+                except Exception as e:
+                    print(f"Reports check failed (non-fatal): {e}")
+                    data['reports'] = []
+            else:
+                print("Hard timeout reached — skipping reports section")
                 data['reports'] = []
 
             return data
-            
+
         except Exception as e:
             print(f"Error during Selenium scraping: {e}")
             return None
@@ -751,9 +938,25 @@ class ClarityScraper:
         else:
             print("No JSON endpoints found")
 
-        # Try 2: Scrape with Selenium (also checks reports section)
+        # Try 2: Scrape with Selenium (also checks reports section).
+        # Retry once with a fresh driver if the first attempt returns 0 contests,
+        # since this can happen when the SPA hasn't fully bootstrapped yet.
         print("\n[2] Scraping with Selenium...")
         selenium_data = self.scrape_with_selenium()
+
+        if selenium_data is not None and len(selenium_data.get('contests', [])) == 0:
+            print("Got 0 contests on first attempt — retrying once with a fresh driver...")
+            # Ensure the previous driver is fully closed before creating a new one.
+            self.close_driver()
+            self.driver = None
+            self.owns_driver = True
+            time.sleep(3)  # Brief pause before retry.
+            selenium_data = self.scrape_with_selenium()
+            if selenium_data is not None:
+                print(f"Retry result: {len(selenium_data.get('contests', []))} contests")
+            else:
+                print("Retry failed — no data returned")
+
         if selenium_data:
             print(f"Scraped {len(selenium_data.get('contests', []))} contests")
             results['selenium_data'] = selenium_data

@@ -32,7 +32,14 @@ ALLOWED_DOMAINS = [
     'clarityelections.com',
     'livevoterturnout.com',
     'sfelections.org',
-    'santacruzcountyca.gov'
+    'santacruzcountyca.gov',
+    'alamedacountyca.gov',
+    'mendocinocounty.gov',
+    'co.mendocino.ca.us',
+    'countyofmonterey.gov',
+    'napacounty.gov',
+    'content.solanocounty.gov',
+    'solanocounty.gov'
 ]
 
 # Security: Allowed file extensions
@@ -51,6 +58,15 @@ class RateLimiter:
         'sfelections.org': 2.0,
         'santacruzcountyca.gov': 1.5,
         'www2.santacruzcountyca.gov': 1.5,
+        'alamedacountyca.gov': 2.0,
+        'mendocinocounty.gov': 2.0,
+        'www.mendocinocounty.gov': 2.0,
+        'co.mendocino.ca.us': 2.0,
+        'www.co.mendocino.ca.us': 2.0,
+        'countyofmonterey.gov': 2.0,
+        'www.countyofmonterey.gov': 2.0,
+        'napacounty.gov': 2.0,
+        'www.napacounty.gov': 2.0,
     }
     
     def __init__(self, domain=None):
@@ -217,7 +233,37 @@ class BaseScraper:
         if self.driver and self.owns_driver:
             self.driver.quit()
             self.driver = None
-    
+
+    def _fetch_with_retry(self, url, headers=None, timeout=20, verify=True, max_attempts=3, backoff=5):
+        """Fetch a URL via requests.get with retry on 5xx / connection / timeout errors.
+
+        Retries up to *max_attempts* times, sleeping *backoff* seconds between attempts.
+        Raises the last exception if all attempts fail.
+        """
+        last_exc = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                self.rate_limiter.wait()
+                resp = self.session.get(url, headers=headers, timeout=timeout, verify=verify)
+                resp.raise_for_status()
+                return resp
+            except requests.exceptions.HTTPError as e:
+                status = e.response.status_code if e.response is not None else 0
+                if status >= 500:
+                    last_exc = e
+                    if attempt < max_attempts:
+                        print(f"[{self.county_name}] HTTP {status} on attempt {attempt}/{max_attempts}, retrying in {backoff}s...")
+                        time.sleep(backoff)
+                    continue
+                raise  # 4xx errors — don't retry
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+                last_exc = e
+                if attempt < max_attempts:
+                    print(f"[{self.county_name}] {type(e).__name__} on attempt {attempt}/{max_attempts}, retrying in {backoff}s...")
+                    time.sleep(backoff)
+                continue
+        raise last_exc
+
     def scrape(self):
         """Main scraping method - to be implemented by subclasses"""
         raise NotImplementedError
@@ -225,16 +271,17 @@ class BaseScraper:
 
 class LiveVoterTurnoutScraper(BaseScraper):
     """Scraper for LiveVoterTurnout.com sites (San Mateo, San Joaquin)"""
-    
+
     def scrape(self):
         """Scrape LiveVoterTurnout.com site"""
+        data = None
         try:
             # Security: Rate limit requests
             self.rate_limiter.wait()
-            
+
             if not self.driver:
                 self.setup_driver()
-            
+
             print(f"[{self.county_name}] Loading LiveVoterTurnout.com page...")
             self.driver.get(self.url)
 
@@ -248,7 +295,7 @@ class LiveVoterTurnoutScraper(BaseScraper):
                 )
             except TimeoutException:
                 pass  # Continue with whatever loaded
-            
+
             data = {
                 'timestamp': datetime.now().isoformat(),
                 'url': self.url,
@@ -413,177 +460,153 @@ class LiveVoterTurnoutScraper(BaseScraper):
                 print(f"[{self.county_name}] ⚠ Error extracting contests: {e}")
             
             return data
-            
+
         except Exception as e:
             print(f"[{self.county_name}] ✗ Error during scraping: {e}")
             print(f"[{self.county_name}] Error type: {type(e).__name__}")
             import traceback
             print(f"[{self.county_name}] Traceback: {traceback.format_exc()}")
-            return None
+            return data  # return whatever partial data was collected before the failure
         finally:
             self.close_driver()
 
 
 class SFElectionsScraper(BaseScraper):
-    """Scraper for SF Elections website (sfelections.org)
-    
-    NOTE: SF Elections has JavaScript compatibility issues with Selenium.
-    Content loads in Browserbase cloud browser but not in local Selenium.
-    Using the proven stealth driver to try to improve loading.
+    """Scraper for SF Elections (sfelections.org).
+    Discovers the latest certified summary.xml from the detail page and parses
+    the SSRS XML report directly — no Selenium needed.
     """
-    
+
+    DETAIL_URL = 'https://sfelections.org/results/20251104w/detail.html'
+    BASE_URL   = 'https://www.sfelections.org'
+
     def scrape(self):
-        """Scrape SF Elections site"""
+        self.rate_limiter.wait()
+        partial_data = None
         try:
-            # Security: Rate limit requests
-            self.rate_limiter.wait()
-            
-            if not self.driver:
-                self.setup_driver()
-            
-            print(f"[{self.county_name}] Loading SF Elections page with stealth...")
-            self.driver.get(self.url)
-            
-            # Wait for content with explicit wait instead of fixed sleep
-            print(f"[{self.county_name}] Waiting for content to load...")
-            try:
-                WebDriverWait(self.driver, 10).until(
-                    lambda d: len(d.find_element(By.TAG_NAME, "body").text) > 1000
-                )
-            except TimeoutException:
-                pass  # Continue with whatever loaded
-            
-            # Check content length
-            try:
-                body = self.driver.find_element(By.TAG_NAME, 'body')
-                body_text = body.text
-                print(f"[{self.county_name}] Page has {len(body_text)} characters")
-                
-                if len(body_text) < 1000:
-                    print(f"[{self.county_name}] ⚠️ Insufficient content - JavaScript may not be loading")
-                    print(f"[{self.county_name}] (Known issue: SF Elections incompatible with Selenium)")
-                else:
-                    print(f"[{self.county_name}] ✅ Content loaded successfully!")
-            except:
-                print(f"[{self.county_name}] ⚠️ Could not read page content")
-            
-            data = {
-                'timestamp': datetime.now().isoformat(),
-                'url': self.url,
-                'county_name': self.county_name,
-                'page_title': self.driver.title,
-                'last_updated': None,
-                'voter_turnout': {},
-                'contests': [],
-                'precincts_reporting': None
-            }
-            
-            # Extract last updated time
-            try:
-                updated_elem = self.driver.find_element(By.XPATH, "//*[contains(text(), 'Last Update:')]")
-                data['last_updated'] = updated_elem.text.replace('Last Update:', '').strip()
-            except:
-                pass
-            
-            # Extract voter turnout
-            print(f"[{self.county_name}] Extracting voter turnout data...")
-            try:
-                page_text = self.driver.find_element(By.TAG_NAME, 'body').text
-                
-                # Extract number of ballots cast - direct pattern matching
-                ballots_match = re.search(r'Number of Ballots Cast[:\s]*(\d+(?:,\d+)*)', page_text, re.IGNORECASE)
-                if ballots_match:
-                    data['voter_turnout']['ballots_cast'] = int(ballots_match.group(1).replace(',', ''))
-                
-                # Extract voter registration total - direct pattern matching
-                registration_match = re.search(r'Voter registration total[:\s]*(\d+(?:,\d+)*)', page_text, re.IGNORECASE)
-                if registration_match:
-                    data['voter_turnout']['registered_voters'] = int(registration_match.group(1).replace(',', ''))
-                
-                # Extract current voter turnout - direct pattern matching
-                turnout_match = re.search(r'Current voter turnout[:\s]*(\d+\.?\d*)%', page_text, re.IGNORECASE)
-                if turnout_match:
-                    data['voter_turnout']['turnout_percentage'] = float(turnout_match.group(1))
-                
-                # Extract last update with better pattern
-                last_update_match = re.search(r'Last Update[:\s]*([^\n]+?)(?=Next Update|Voter registration|$)', page_text, re.IGNORECASE)
-                if last_update_match:
-                    data['last_updated'] = last_update_match.group(1).strip()
-                
-                # Extract precincts reporting
-                precincts_match = re.search(r'Precincts that have reported[^:]*:\s*(\d+)\s+of\s+(\d+)\s+\(([^)]+)\)', page_text)
-                if precincts_match:
-                    data['precincts_reporting'] = f"{precincts_match.group(1)} of {precincts_match.group(2)} ({precincts_match.group(3)})"
-                
-                print(f"[{self.county_name}] ✓ Voter turnout: {data['voter_turnout']}")
-            except Exception as e:
-                print(f"[{self.county_name}] ⚠ Error extracting voter turnout: {e}")
-            
-            # Extract contests
-            print(f"[{self.county_name}] Extracting contests...")
-            try:
-                # Look for proposition/measure sections with broader search
-                # SF Elections uses simple text structure
-                contest_elements = self.driver.find_elements(By.XPATH, 
-                    "//*[contains(text(), 'PROPOSITION') and (self::h2 or self::h3 or self::h4 or self::div)] | " +
-                    "//*[contains(text(), 'MEASURE') and (self::h2 or self::h3 or self::h4)]"
-                )
-                
-                for contest in contest_elements:
-                    try:
-                        contest_data = {
-                            'title': None,
-                            'description': None,
-                            'choices': []
-                        }
-                        
-                        # Get title
-                        contest_text = contest.text
-                        lines = contest_text.split('\n')
-                        
-                        # First line is typically the title
-                        if lines:
-                            contest_data['title'] = lines[0].strip()
-                        
-                        # Look for description or measure text
-                        try:
-                            desc_elem = contest.find_element(By.XPATH, ".//*[contains(text(), 'measure') or contains(@class, 'description')]")
-                            contest_data['description'] = desc_elem.text.strip()
-                        except:
-                            # Use subsequent lines as description if available
-                            if len(lines) > 1:
-                                contest_data['description'] = ' '.join(lines[1:3])
-                        
-                        # Extract vote counts from table
-                        try:
-                            rows = contest.find_elements(By.XPATH, ".//tr[td]")
-                            for row in rows:
-                                row_text = row.text.strip()
-                                if row_text and any(char.isdigit() for char in row_text):
-                                    contest_data['choices'].append(row_text)
-                        except:
-                            pass
-                        
-                        if contest_data['title'] and (contest_data['choices'] or contest_data['description']):
-                            data['contests'].append(contest_data)
-                    except:
-                        continue
-                
-                print(f"[{self.county_name}] ✓ Extracted {len(data['contests'])} contests")
-                
-            except Exception as e:
-                print(f"[{self.county_name}] ⚠ Error extracting contests: {e}")
-            
-            return data
-            
+            headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
+
+            # Find the most recent dated folder from the detail page
+            print(f"[{self.county_name}] Finding latest certified XML...")
+            r = self._fetch_with_retry(self.DETAIL_URL, headers=headers, timeout=20, verify=True)
+            soup = BeautifulSoup(r.text, 'html.parser')
+
+            xml_url = None
+            # Links are like /results/20251104/data/20251203/summary.xml — pick the latest date folder
+            candidates = []
+            for a in soup.find_all('a', href=True):
+                href = a['href']
+                m = re.search(r'/results/20251104/data/(\d+)/summary\.xml', href)
+                if m:
+                    candidates.append((m.group(1), href))
+            if candidates:
+                candidates.sort(key=lambda x: x[0], reverse=True)
+                latest_href = candidates[0][1]
+                xml_url = latest_href if latest_href.startswith('http') else self.BASE_URL + latest_href
+
+            if not xml_url:
+                print(f"[{self.county_name}] ✗ Could not find summary.xml URL")
+                return None
+
+            print(f"[{self.county_name}] Fetching XML: {xml_url}")
+            r = self._fetch_with_retry(xml_url, headers=headers, timeout=20, verify=True)
+            partial_data = self._parse_ssrs_xml(r.text)
+            return partial_data
+
         except Exception as e:
-            print(f"[{self.county_name}] ✗ Error during scraping: {e}")
-            print(f"[{self.county_name}] Error type: {type(e).__name__}")
+            print(f"[{self.county_name}] ✗ Error: {e}")
             import traceback
-            print(f"[{self.county_name}] Traceback: {traceback.format_exc()}")
-            return None
-        finally:
-            self.close_driver()
+            print(traceback.format_exc())
+            return partial_data
+
+    def _parse_ssrs_xml(self, xml_text):
+        import math, warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            soup = BeautifulSoup(xml_text, 'html.parser')
+
+        data = {
+            'timestamp': datetime.now().isoformat(),
+            'url': self.url,
+            'county_name': self.county_name,
+            'page_title': '',
+            'last_updated': None,
+            'voter_turnout': {},
+            'contests': [],
+        }
+
+        # Title (html.parser lowercases tag/attr names)
+        r = soup.find('report', attrs={'name': 'Title'})
+        if r:
+            data['page_title'] = r.get('textbox8', '').replace('\n', ' ').strip()
+
+        # --- Voter turnout (contest-level candidate aggregates) ---
+        print(f"[{self.county_name}] Extracting voter turnout data...")
+        try:
+            # Precincts
+            details = soup.find('details', attrs={'reported': True})
+            if details:
+                m = re.match(r'Precincts Reported: (\d+) of (\d+)', details['reported'])
+                if m:
+                    rep, tot = int(m.group(1)), int(m.group(2))
+                    data['voter_turnout']['precincts_reported'] = f"{rep} / {tot} ({rep/tot*100:.2f}%)"
+
+            # Turnout totals from the electorgroupid2 'Total' row
+            eg = soup.find('electorgroupid2', attrs={'electorgroupid2': 'Total'})
+            if eg:
+                data['voter_turnout']['ballots_cast'] = int(eg.get('ballots2', 0))
+                data['voter_turnout']['registered_voters'] = int(eg.get('textbox32', 0))
+                turnout_pct_raw = float(eg.get('textbox6', 0))
+                data['voter_turnout']['turnout_percentage'] = round(turnout_pct_raw * 100, 2)
+
+            # Election Day / VBM totals from details1 counting-group rows
+            for d1 in soup.find_all('details1'):
+                grp = d1.get('countinggroup1', '')
+                ballots = int(d1.get('ballots1', 0))
+                if 'Election Day' in grp or 'Polling' in grp:
+                    pass  # election_day not in uniform output
+                elif 'Vote by Mail' in grp or 'Mail' in grp:
+                    pass  # vote_by_mail not in uniform output
+
+            print(f"[{self.county_name}] ✓ Voter turnout: {data['voter_turnout']}")
+        except Exception as e:
+            print(f"[{self.county_name}] ⚠ Error extracting voter turnout: {e}")
+
+        # --- Contests ---
+        print(f"[{self.county_name}] Extracting contests...")
+        try:
+            for contest_group in soup.find_all('contestidgroup'):
+                title = contest_group.get('contestid', '').strip()
+                if not title:
+                    continue
+                contest = {'title': title, 'choices': []}
+                contest_total = 0
+                for ch in contest_group.find_all('chgroup'):
+                    t = ch.find('textbox13')
+                    if t:
+                        contest_total += int(t.get('vot8', 0))
+                for ch in contest_group.find_all('chgroup'):
+                    name_tag = ch.find('candidatenametextbox4')
+                    if not name_tag:
+                        continue
+                    cname = name_tag.get('candidatenametextbox4', '').strip()
+                    t = ch.find('textbox13')
+                    if t:
+                        votes = int(t.get('vot8', 0))
+                        pct = round(votes / contest_total * 100, 2) if contest_total else 0
+                        contest['choices'].append({
+                            'name': cname,
+                            'votes': str(votes),
+                            'percentage': f"{pct}%",
+                        })
+                if contest['choices']:
+                    data['contests'].append(contest)
+
+            print(f"[{self.county_name}] ✓ Extracted {len(data['contests'])} contests")
+        except Exception as e:
+            print(f"[{self.county_name}] ⚠ Error extracting contests: {e}")
+
+        return data
 
 
 class SantaCruzScraper(BaseScraper):
@@ -609,14 +632,6 @@ class SantaCruzScraper(BaseScraper):
 
         print(f"[{self.county_name}] Extracting voter turnout data...")
         try:
-            in_person_match = re.search(r'Total In Person[:\s]*(\d+(?:,\d+)*)\s*\(([^)]+)\)', page_text)
-            if in_person_match:
-                data['voter_turnout']['in_person'] = int(in_person_match.group(1).replace(',', ''))
-
-            mail_match = re.search(r'Total Vote by Mail[:\s]*(\d+(?:,\d+)*)\s*\(([^)]+)\)', page_text)
-            if mail_match:
-                data['voter_turnout']['vote_by_mail'] = int(mail_match.group(1).replace(',', ''))
-
             total_match = re.search(r'Total Votes[:\s]*(\d+(?:,\d+)*)\s*\(([^)]+)\)', page_text)
             if total_match:
                 data['voter_turnout']['ballots_cast'] = int(total_match.group(1).replace(',', ''))
@@ -718,16 +733,6 @@ class SantaCruzScraper(BaseScraper):
         print(f"[{self.county_name}] Extracting voter turnout data...")
         try:
             section_text = page_text
-
-            # Extract Total In Person
-            in_person_match = re.search(r'Total In Person[:\s]*(\d+(?:,\d+)*)\s*\(([^)]+)\)', section_text)
-            if in_person_match:
-                data['voter_turnout']['in_person'] = int(in_person_match.group(1).replace(',', ''))
-
-            # Extract Total Vote by Mail
-            mail_match = re.search(r'Total Vote by Mail[:\s]*(\d+(?:,\d+)*)\s*\(([^)]+)\)', section_text)
-            if mail_match:
-                data['voter_turnout']['vote_by_mail'] = int(mail_match.group(1).replace(',', ''))
 
             # Extract Total Votes
             total_match = re.search(r'Total Votes[:\s]*(\d+(?:,\d+)*)\s*\(([^)]+)\)', section_text)
@@ -853,8 +858,7 @@ class SantaCruzScraper(BaseScraper):
                 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             }
-            response = requests.get(self.url, timeout=15, headers=headers, verify=True)
-            response.raise_for_status()
+            response = self._fetch_with_retry(self.url, headers=headers, timeout=15, verify=True)
 
             if "Total Registered Voters" in response.text:
                 print(f"[{self.county_name}] ✓ Requests fetch successful, parsing with BeautifulSoup...")
@@ -866,6 +870,7 @@ class SantaCruzScraper(BaseScraper):
             print(f"[{self.county_name}] Requests fetch failed ({e}), falling back to Selenium...")
 
         # Fall back to Selenium
+        partial_data = None
         try:
             if not self.driver:
                 self.setup_driver()
@@ -886,16 +891,610 @@ class SantaCruzScraper(BaseScraper):
 
             page_text = self.driver.find_element(By.TAG_NAME, 'body').text
             page_title = self.driver.title
-            return self._parse_page_text(page_text, page_title)
+            partial_data = self._parse_page_text(page_text, page_title)
+            return partial_data
 
         except Exception as e:
             print(f"[{self.county_name}] ✗ Error during scraping: {e}")
             print(f"[{self.county_name}] Error type: {type(e).__name__}")
             import traceback
             print(f"[{self.county_name}] Traceback: {traceback.format_exc()}")
-            return None
+            return partial_data
         finally:
             self.close_driver()
+
+
+class MendocinoScraper(BaseScraper):
+    """Scraper for Mendocino County elections.
+    The county page embeds an iframe at co.mendocino.ca.us which serves
+    a Microsoft SSRS HTML report — fully static, no WAF, fetched directly.
+    """
+
+    IFRAME_URL = 'http://www.co.mendocino.ca.us/acr/cgi-bin/currentFR.pl'
+
+    def scrape(self):
+        self.rate_limiter.wait()
+        partial_data = None
+        try:
+            print(f"[{self.county_name}] Fetching Mendocino results (iframe source)...")
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            }
+            response = self._fetch_with_retry(self.IFRAME_URL, headers=headers, timeout=20, verify=False)
+            soup = BeautifulSoup(response.text, 'html.parser')
+            partial_data = self._parse(soup)
+            return partial_data
+        except Exception as e:
+            print(f"[{self.county_name}] ✗ Error: {e}")
+            import traceback
+            print(traceback.format_exc())
+            return partial_data
+
+    def _meta(self, soup, name):
+        tag = soup.find('meta', attrs={'name': name})
+        return tag['content'] if tag else None
+
+    def _parse(self, soup):
+        data = {
+            'timestamp': datetime.now().isoformat(),
+            'url': self.url,
+            'county_name': self.county_name,
+            'page_title': self._meta(soup, 'ElectionTitle') or '',
+            'last_updated': self._meta(soup, 'ReportGeneratedDate'),
+            'voter_turnout': {},
+            'contests': [],
+        }
+
+        # --- Voter turnout from meta tags ---
+        print(f"[{self.county_name}] Extracting voter turnout data...")
+        try:
+            registered = self._meta(soup, 'TotalRegisteredVoters')
+            ballots = self._meta(soup, 'TotalTabulatedBallots')
+            precincts_total = self._meta(soup, 'TotalPrecintsSplits')
+            precincts_reporting = self._meta(soup, 'TotalNumberReportingByPrecincts')
+
+            if registered:
+                data['voter_turnout']['registered_voters'] = int(registered.replace(',', ''))
+            if ballots:
+                data['voter_turnout']['ballots_cast'] = int(ballots.replace(',', ''))
+            if registered and ballots:
+                reg = int(registered.replace(',', ''))
+                cast = int(ballots.replace(',', ''))
+                if reg > 0:
+                    data['voter_turnout']['turnout_percentage'] = round(cast / reg * 100, 2)
+            if precincts_reporting and precincts_total:
+                data['voter_turnout']['precincts_reported'] = f"{precincts_reporting} of {precincts_total}"
+
+            print(f"[{self.county_name}] ✓ Voter turnout: {data['voter_turnout']}")
+        except Exception as e:
+            print(f"[{self.county_name}] ⚠ Error extracting voter turnout: {e}")
+
+        # --- Contests from HTML tables ---
+        # The SSRS report renders nested tables. Each contest appears as:
+        #   - A row with 1 cell containing the contest title (all-caps)
+        #   - Header row (Choice, Party, Election Day, Absentee, Total)
+        #   - Choice rows with 11 cells: [name, '', '', ed_votes, ed_pct, '', mail_votes, mail_pct, '', total_votes, total_pct]
+        print(f"[{self.county_name}] Extracting contests...")
+        try:
+            SKIP_LABELS = {'Cast Votes:', 'Undervotes:', 'Overvotes:', 'Choice', 'Party',
+                           'Total', 'Election Day Voting', 'Absentee Voting', ''}
+            current_title = None
+            current_choices = []
+
+            def flush(title, choices, out):
+                if title and choices:
+                    out.append({'title': title, 'choices': choices})
+
+            for table in soup.find_all('table'):
+                for row in table.find_all('tr'):
+                    cells = [td.get_text(strip=True) for td in row.find_all(['td', 'th'])]
+                    non_empty = [c for c in cells if c]
+
+                    # Contest title: single non-empty cell, all-caps, not a known header
+                    if (len(non_empty) == 1
+                            and non_empty[0].isupper()
+                            and non_empty[0] not in {'FINAL OFFICIAL REPORT - WEB',
+                                                     'MENDOCINO COUNTY, CALIFORNIA',
+                                                     'STATEWIDE SPECIAL ELECTION',
+                                                     'OFFICIAL RESULTS'}):
+                        flush(current_title, current_choices, data['contests'])
+                        current_title = non_empty[0]
+                        current_choices = []
+                        continue
+
+                    # Choice row: 11 cells, first cell is choice name
+                    if (len(cells) == 11
+                            and cells[0] not in SKIP_LABELS
+                            and cells[0]
+                            and cells[9]):  # total votes present
+                        current_choices.append({
+                            'name': cells[0],
+                            'votes': cells[9].replace(',', ''),
+                            'percentage': cells[10],
+                        })
+
+            flush(current_title, current_choices, data['contests'])
+
+            # Deduplicate by title (SSRS renders same tables multiple times)
+            seen_titles = set()
+            unique = []
+            for c in data['contests']:
+                if c['title'] not in seen_titles:
+                    seen_titles.add(c['title'])
+                    unique.append(c)
+            data['contests'] = unique
+
+            print(f"[{self.county_name}] ✓ Extracted {len(data['contests'])} contests")
+        except Exception as e:
+            print(f"[{self.county_name}] ⚠ Error extracting contests: {e}")
+
+        return data
+
+
+class AlamedaScraper(BaseScraper):
+    """Scraper for Alameda County custom election results site (requests + BeautifulSoup)."""
+
+    def scrape(self):
+        self.rate_limiter.wait()
+        partial_data = None
+        try:
+            print(f"[{self.county_name}] Fetching Alameda County results page...")
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            }
+            response = self._fetch_with_retry(self.url, headers=headers, timeout=20, verify=True)
+            soup = BeautifulSoup(response.text, 'html.parser')
+            partial_data = self._parse(soup)
+            return partial_data
+        except Exception as e:
+            print(f"[{self.county_name}] ✗ Error: {e}")
+            import traceback
+            print(traceback.format_exc())
+            return partial_data
+
+    def _parse(self, soup):
+        data = {
+            'timestamp': datetime.now().isoformat(),
+            'url': self.url,
+            'county_name': self.county_name,
+            'page_title': soup.title.string.strip() if soup.title else '',
+            'last_updated': None,
+            'voter_turnout': {},
+            'contests': [],
+        }
+
+        # --- Voter turnout ---
+        print(f"[{self.county_name}] Extracting voter turnout data...")
+        try:
+            # Total registration from "Total Registration:965876" label
+            reg_label = soup.find(id='totalRegLabel')
+            if reg_label:
+                m = re.search(r'Total Registration:\s*([\d,]+)', reg_label.get_text())
+                if m:
+                    data['voter_turnout']['registered_voters'] = int(m.group(1).replace(',', ''))
+
+            # Precinct reporting
+            reported_div = soup.select_one('#panelDtl0 .reported')
+            if reported_div:
+                data['voter_turnout']['precincts_reported'] = reported_div.get_text(strip=True)
+
+            # Turnout table rows inside panelDtl0
+            turnout_table = soup.select_one('#panelDtl0 table')
+            if turnout_table:
+                for row in turnout_table.select('tbody tr'):
+                    cells = row.find_all(['th', 'td'])
+                    if len(cells) < 3:
+                        continue
+                    label = cells[0].get_text(strip=True).lower()
+                    votes_text = cells[1].get_text(strip=True).replace(',', '')
+                    pct_text = cells[2].get_text(strip=True).replace('%', '').replace(' ', '')
+                    try:
+                        votes = int(votes_text)
+                        pct = float(pct_text)
+                    except ValueError:
+                        continue
+                    if 'total ballots' in label:
+                        data['voter_turnout']['ballots_cast'] = votes
+                        data['voter_turnout']['turnout_percentage'] = pct
+
+            print(f"[{self.county_name}] ✓ Voter turnout: {data['voter_turnout']}")
+        except Exception as e:
+            print(f"[{self.county_name}] ⚠ Error extracting voter turnout: {e}")
+
+        # --- Contests ---
+        print(f"[{self.county_name}] Extracting contests...")
+        try:
+            # Propositions table: #panelDtlProps — columns: Title, YES Votes, YES Pct, NO Votes, NO Pct
+            props_panel = soup.select_one('#panelDtlProps table tbody')
+            if props_panel:
+                for row in props_panel.select('tr'):
+                    cells = row.find_all(['th', 'td'])
+                    if len(cells) < 5:
+                        continue
+                    title = cells[0].get_text(strip=True)
+                    yes_votes = cells[1].get_text(strip=True).replace(',', '').strip()
+                    yes_pct = cells[2].get_text(strip=True).replace(' ', '')
+                    no_votes = cells[3].get_text(strip=True).replace(',', '').strip()
+                    no_pct = cells[4].get_text(strip=True).replace(' ', '')
+                    if not title:
+                        continue
+                    data['contests'].append({
+                        'title': title,
+                        'choices': [
+                            {'name': 'Yes', 'votes': yes_votes, 'percentage': yes_pct},
+                            {'name': 'No', 'votes': no_votes, 'percentage': no_pct},
+                        ]
+                    })
+
+            # Individual measure/race panels: each has class "panelDtl" with an h3 sibling for the title
+            for panel_btn in soup.select('button.list-group-item'):
+                h3 = panel_btn.find('h3', class_='racePanelHeading')
+                if not h3:
+                    continue
+                title = h3.get_text(strip=True)
+                # Skip the Registration & Turnout and Propositions panels already handled
+                if title in ('Registration & Turnout', 'Propositions'):
+                    continue
+
+                # Find the associated detail div via data-target
+                target_id = panel_btn.get('data-target', '').lstrip('#')
+                if not target_id:
+                    continue
+                detail_div = soup.find(id=target_id)
+                if not detail_div:
+                    continue
+
+                contest = {'title': title, 'choices': []}
+
+                # Precinct reporting & passing threshold
+                reported = detail_div.select_one('.reported')
+                if reported:
+                    contest['precincts_reported'] = reported.get_text(strip=True)
+                passing = detail_div.select_one('.passing')
+                if passing:
+                    contest['passing_requirement'] = passing.get_text(strip=True)
+
+                # Candidate/choice rows
+                for row in detail_div.select('table tbody tr'):
+                    cells = row.find_all(['th', 'td'])
+                    if len(cells) < 3:
+                        continue
+                    name = cells[0].get_text(strip=True)
+                    votes = cells[1].get_text(strip=True).replace(',', '').strip()
+                    pct = cells[2].get_text(strip=True).replace(' ', '')
+                    if name and votes:
+                        contest['choices'].append({'name': name, 'votes': votes, 'percentage': pct})
+
+                if contest['choices']:
+                    data['contests'].append(contest)
+
+            print(f"[{self.county_name}] ✓ Extracted {len(data['contests'])} contests")
+        except Exception as e:
+            print(f"[{self.county_name}] ⚠ Error extracting contests: {e}")
+
+        return data
+
+
+class NapaScraper(BaseScraper):
+    """Scraper for Napa County elections.
+    The results page links to a PDF Summary Report; we fetch and parse it with pdfplumber.
+    The PDF URL is discovered by scraping the election results page for the Nov 4 2025 election.
+    """
+
+    # Known stable PDF URL for the Nov 4, 2025 Statewide Special Election summary
+    SUMMARY_PDF_URL = 'https://www.napacounty.gov/DocumentCenter/View/39913/'
+
+    def scrape(self):
+        self.rate_limiter.wait()
+        partial_data = None
+        try:
+            import pdfplumber, io as _io
+            print(f"[{self.county_name}] Fetching Napa County summary PDF...")
+            headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
+            r = self._fetch_with_retry(self.SUMMARY_PDF_URL, headers=headers, timeout=20, verify=True)
+
+            with pdfplumber.open(_io.BytesIO(r.content)) as pdf:
+                text = '\n'.join(page.extract_text() or '' for page in pdf.pages)
+
+            partial_data = self._parse(text)
+            return partial_data
+        except Exception as e:
+            print(f"[{self.county_name}] ✗ Error: {e}")
+            import traceback
+            print(traceback.format_exc())
+            return partial_data
+
+    def _parse(self, text):
+        data = {
+            'timestamp': datetime.now().isoformat(),
+            'url': self.url,
+            'county_name': self.county_name,
+            'page_title': '',
+            'last_updated': None,
+            'voter_turnout': {},
+            'contests': [],
+        }
+
+        # --- Title ---
+        m = re.search(r'(Statewide Special Election.*?)\n', text)
+        if m:
+            data['page_title'] = m.group(1).strip()
+
+        # --- Voter turnout ---
+        print(f"[{self.county_name}] Extracting voter turnout data...")
+        try:
+            # "Total  52,409  86,390  60.67%"
+            m = re.search(r'Total\s+([\d,]+)\s+([\d,]+)\s+([\d.]+)%', text)
+            if m:
+                data['voter_turnout']['ballots_cast'] = int(m.group(1).replace(',', ''))
+                data['voter_turnout']['registered_voters'] = int(m.group(2).replace(',', ''))
+                data['voter_turnout']['turnout_percentage'] = float(m.group(3))
+
+            # Precincts
+            m = re.search(r'Precincts Reported:\s*([\d]+ of [\d]+ \([^)]+\))', text)
+            if m:
+                data['voter_turnout']['precincts_reported'] = m.group(1)
+
+            print(f"[{self.county_name}] ✓ Voter turnout: {data['voter_turnout']}")
+        except Exception as e:
+            print(f"[{self.county_name}] ⚠ Error extracting voter turnout: {e}")
+
+        # --- Contests ---
+        print(f"[{self.county_name}] Extracting contests...")
+        try:
+            # Contest block pattern: title, then candidate rows "NAME  [party]  votes  pct%"
+            # Split by "Total Votes" to isolate each contest
+            contest_blocks = re.split(r'Total Votes\s+[\d,]+', text)
+
+            # Find contest titles: lines like "State Proposition 50 (Vote for 1)"
+            title_pattern = re.compile(
+                r'((?:State\s+)?(?:Proposition|Measure|Assessment|Director|Board|District)\s+[^\n]+?\(Vote for\s+\d+\))',
+                re.IGNORECASE
+            )
+
+            for block in contest_blocks:
+                title_m = title_pattern.search(block)
+                if not title_m:
+                    continue
+                title = title_m.group(1).strip()
+                contest = {'title': title, 'choices': []}
+
+                # Choice rows after "Candidate  Party  Total"
+                choice_section = block[title_m.end():]
+                # Pattern: choice name (YES/NO or candidate), votes, pct
+                # Exclude header/summary rows
+                skip = {'Candidate', 'Total', 'Times Cast', 'Precincts Reported', 'Voters Cast'}
+                for cm in re.finditer(r'^([A-Z][A-Z0-9 /\-\.]+?)\s+([\d,]+)\s+([\d.]+)%', choice_section, re.MULTILINE):
+                    name = cm.group(1).strip()
+                    if name in skip or re.match(r'^\d', name):
+                        continue
+                    contest['choices'].append({
+                        'name': name,
+                        'votes': cm.group(2).replace(',', ''),
+                        'percentage': cm.group(3) + '%',
+                    })
+
+                if contest['choices']:
+                    data['contests'].append(contest)
+
+            print(f"[{self.county_name}] ✓ Extracted {len(data['contests'])} contests")
+        except Exception as e:
+            print(f"[{self.county_name}] ⚠ Error extracting contests: {e}")
+
+        return data
+
+
+class SolanoScraper(BaseScraper):
+    """Scraper for Solano County elections.
+    Results are published as a signed PDF. We fetch it directly and parse with pdfplumber.
+    PDF format: multi-column with Election Day / Vote by Mail / Provisional / Total columns.
+    """
+
+    PDF_URL = 'https://content.solanocounty.gov/sites/default/files/2026-01/Official_Summary_Results_-_SIGNED.pdf'
+
+    def scrape(self):
+        self.rate_limiter.wait()
+        partial_data = None
+        try:
+            import pdfplumber, io as _io
+            print(f"[{self.county_name}] Fetching Solano County summary PDF...")
+            headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
+            r = self._fetch_with_retry(self.PDF_URL, headers=headers, timeout=20, verify=True)
+
+            with pdfplumber.open(_io.BytesIO(r.content)) as pdf:
+                text = '\n'.join(page.extract_text() or '' for page in pdf.pages)
+
+            partial_data = self._parse(text)
+            return partial_data
+        except Exception as e:
+            print(f"[{self.county_name}] ✗ Error: {e}")
+            import traceback
+            print(traceback.format_exc())
+            return partial_data
+
+    def _parse(self, text):
+        data = {
+            'timestamp': datetime.now().isoformat(),
+            'url': self.url,
+            'county_name': self.county_name,
+            'page_title': 'Statewide Special Election - November 4, 2025',
+            'last_updated': None,
+            'voter_turnout': {},
+            'contests': [],
+        }
+
+        # --- Voter turnout ---
+        # "145294 of 277461 = 52.37%"
+        print(f"[{self.county_name}] Extracting voter turnout data...")
+        try:
+            m = re.search(r'([\d,]+) of ([\d,]+) = ([\d.]+)%', text)
+            if m:
+                data['voter_turnout']['ballots_cast'] = int(m.group(1).replace(',', ''))
+                data['voter_turnout']['registered_voters'] = int(m.group(2).replace(',', ''))
+                data['voter_turnout']['turnout_percentage'] = float(m.group(3))
+
+            # Precincts: "159 of 159 = 100.00%"
+            m2 = re.search(r'Precincts Reporting\s+(\d+) of (\d+) = ([\d.]+)%', text)
+            if m2:
+                data['voter_turnout']['precincts_reported'] = f"{m2.group(1)} / {m2.group(2)} ({m2.group(3)}%)"
+
+            print(f"[{self.county_name}] ✓ Voter turnout: {data['voter_turnout']}")
+        except Exception as e:
+            print(f"[{self.county_name}] ⚠ Error extracting voter turnout: {e}")
+
+        # --- Contests ---
+        # Format: contest title line, then header, then:
+        #   "YES  9,821  51.14%  80,903  65.42%  1,646  74.58%  92,370  63.67%"
+        # Columns: Choice [Party] | ED votes pct | VBM votes pct | Prov votes pct | Total votes pct
+        print(f"[{self.county_name}] Extracting contests...")
+        try:
+            # Find contest titles (all-caps lines like "STATE PROPOSITION 50")
+            contest_title_re = re.compile(r'^(STATE\s+PROPOSITION\s+\d+[^\n]*|MEASURE\s+[A-Z][^\n]*)', re.MULTILINE | re.IGNORECASE)
+            # Choice rows: name, then pairs of (votes pct%) repeated, last pair is total
+            # YES  9,821  51.14%  80,903  65.42%  1,646  74.58%  92,370  63.67%
+            choice_re = re.compile(
+                r'^(YES|NO|[A-Z][A-Z ]+?)\s+([\d,]+)\s+[\d.]+%\s+[\d,]+\s+[\d.]+%\s+[\d,]+\s+[\d.]+%\s+([\d,]+)\s+([\d.]+)%',
+                re.MULTILINE
+            )
+
+            titles = list(contest_title_re.finditer(text))
+            for i, tm in enumerate(titles):
+                end = titles[i+1].start() if i+1 < len(titles) else len(text)
+                block = text[tm.start():end]
+                contest = {'title': tm.group(1).strip(), 'choices': []}
+
+                for cm in choice_re.finditer(block):
+                    contest['choices'].append({
+                        'name': cm.group(1).strip(),
+                        'votes': cm.group(3).replace(',', ''),
+                        'percentage': cm.group(4) + '%',
+                    })
+                if contest['choices']:
+                    data['contests'].append(contest)
+
+            print(f"[{self.county_name}] ✓ Extracted {len(data['contests'])} contests")
+        except Exception as e:
+            print(f"[{self.county_name}] ⚠ Error extracting contests: {e}")
+
+        return data
+
+
+class MontereyCountyScraper(BaseScraper):
+    """Scraper for Monterey County elections.
+    The page is CloudFront-protected but renders election data via JS from an XML file
+    served at a /home/showdocument?id=XXXXX URL embedded in the page's JS.
+    Uses Selenium to load the page, extracts the XML URL, fetches XML via browser JS,
+    then parses it.
+    """
+
+    def scrape(self):
+        self.rate_limiter.wait()
+        partial_data = None
+        try:
+            if not self.driver:
+                self.setup_driver()
+
+            print(f"[{self.county_name}] Loading Monterey County election results page...")
+            self.driver.get(self.url)
+
+            # Wait for the page's JS to populate the `election` object
+            try:
+                WebDriverWait(self.driver, 20).until(
+                    lambda d: d.execute_script("return typeof election !== 'undefined' && election !== null && election.contests && election.contests.length > 0")
+                )
+            except TimeoutException:
+                print(f"[{self.county_name}] ⚠ Timed out waiting for election data, proceeding anyway")
+
+            # Extract the fully-built election object directly from JS context
+            import json as _json
+            raw = self.driver.execute_script("return JSON.stringify(election)")
+            if not raw:
+                print(f"[{self.county_name}] ✗ election object not found in page")
+                return None
+
+            election = _json.loads(raw)
+            partial_data = self._parse_election(election)
+            return partial_data
+
+        except Exception as e:
+            print(f"[{self.county_name}] ✗ Error: {e}")
+            import traceback
+            print(traceback.format_exc())
+            return partial_data
+        finally:
+            self.close_driver()
+
+    def _parse_election(self, election):
+        data = {
+            'timestamp': datetime.now().isoformat(),
+            'url': self.url,
+            'county_name': self.county_name,
+            'page_title': election.get('fullTitle', '').replace('\n', ' ').strip(),
+            'last_updated': election.get('publishedDate'),
+            'voter_turnout': {},
+            'contests': [],
+        }
+
+        # --- Voter turnout (contest-level aggregates match what the page displays) ---
+        print(f"[{self.county_name}] Extracting voter turnout data...")
+        try:
+            # Use the first contest's data — it aggregates candidate votes for VBM/PP/total
+            # which is what the page displays, matching the official Final Report numbers
+            contests_js = election.get('contests', [])
+            reporting = election.get('reporting', {})
+            turnout_js = election.get('turnout', {})
+
+            if contests_js:
+                c = contests_js[0]
+                data['voter_turnout']['ballots_cast'] = c.get('totalVotes')
+                data['voter_turnout']['registered_voters'] = c.get('registeredToVote')
+                pct = c.get('turnoutPercent', 0)
+                data['voter_turnout']['turnout_percentage'] = round(pct, 2)
+
+            # Precincts from reporting object
+            precincts = reporting.get('precinctsReported', '')
+            if precincts:
+                # Convert "171 of 171 (1)" → "171 / 171 (100.00%)"
+                m = re.match(r'(\d+) of (\d+)', precincts)
+                if m:
+                    rep, tot = int(m.group(1)), int(m.group(2))
+                    pct_str = f"{rep/tot*100:.2f}%" if tot else "0%"
+                    data['voter_turnout']['precincts_reported'] = f"{rep} / {tot} ({pct_str})"
+
+            print(f"[{self.county_name}] ✓ Voter turnout: {data['voter_turnout']}")
+        except Exception as e:
+            print(f"[{self.county_name}] ⚠ Error extracting voter turnout: {e}")
+
+        # --- Contests ---
+        print(f"[{self.county_name}] Extracting contests...")
+        try:
+            for c in election.get('contests', []):
+                contest = {'title': c.get('name', '').strip(), 'choices': []}
+                total_votes = c.get('totalVotes', 0) or 1  # avoid div/0
+                for cand in c.get('candidates', []):
+                    votes = cand.get('totalVotes', 0)
+                    contest['choices'].append({
+                        'name': cand.get('name', '').strip(),
+                        'votes': str(votes),
+                        'percentage': f"{round(votes / total_votes * 100, 2)}%",
+                    })
+                for wi in c.get('writeIns', []):
+                    votes = wi.get('totalVotes', 0)
+                    contest['choices'].append({
+                        'name': wi.get('name', '').strip(),
+                        'votes': str(votes),
+                        'percentage': f"{round(votes / total_votes * 100, 2)}%",
+                    })
+                if contest['choices']:
+                    data['contests'].append(contest)
+
+            print(f"[{self.county_name}] ✓ Extracted {len(data['contests'])} contests")
+        except Exception as e:
+            print(f"[{self.county_name}] ⚠ Error extracting contests: {e}")
+
+        return data
 
 
 # Factory function to create the appropriate scraper
@@ -907,6 +1506,14 @@ def create_scraper(url, county_name, reuse_driver=None):
         return SFElectionsScraper(url, county_name, reuse_driver)
     elif 'santacruzcountyca.gov' in url:
         return SantaCruzScraper(url, county_name, reuse_driver)
+    elif 'alamedacountyca.gov' in url:
+        return AlamedaScraper(url, county_name, reuse_driver)
+    elif 'mendocinocounty.gov' in url or 'co.mendocino.ca.us' in url:
+        return MendocinoScraper(url, county_name, reuse_driver)
+    elif 'countyofmonterey.gov' in url:
+        return MontereyCountyScraper(url, county_name, reuse_driver)
+    elif 'napacounty.gov' in url:
+        return NapaScraper(url, county_name, reuse_driver)
     elif 'clarityelections.com' in url:
         # Import and use the existing ClarityScraper
         from clarity_scraper import ClarityScraper
