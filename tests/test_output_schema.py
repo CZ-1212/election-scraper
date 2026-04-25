@@ -1,6 +1,7 @@
-"""Validate every sample JSON in data/samples/ against the documented
-output schema. This is the contract downstream consumers (CMS imports,
-results pages, dashboards) rely on.
+"""Validate JSON samples against the documented Clarity output schema.
+
+This is the contract downstream consumers (CMS imports, results pages,
+dashboards) rely on.
 
 Adding a new field to scraper output requires updating the schema in
 this file. Removing a documented field intentionally fails the suite.
@@ -93,9 +94,10 @@ def test_sample_matches_clarity_schema(sample_path):
     ids=lambda p: p.name,
 )
 def test_sample_has_nonempty_results(sample_path):
-    """Every published sample should have at least one contest and a
-    plausible voter turnout block — otherwise we're shipping empty
-    fixtures that mask scraper regressions."""
+    """Every published sample must contain real contests and turnout numbers.
+
+    Otherwise we're shipping empty fixtures that mask scraper regressions.
+    """
     payload = json.loads(sample_path.read_text())
     inner = payload.get("selenium_data") or payload.get("json_data")
     assert inner, f"{sample_path.name}: no selenium_data or json_data payload"

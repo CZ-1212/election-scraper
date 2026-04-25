@@ -69,11 +69,14 @@ class TestValidateAndSecureFilepath:
 
 
 def test_clarity_whitelist_is_subset_of_multi_platform():
-    """clarity_scraper handles a narrower set of domains than
+    """Clarity's domain whitelist must remain a subset of multi_platform's.
+
+    clarity_scraper handles a narrower set of domains than
     multi_platform_scraper, but every domain it permits must also be
     permitted by the broader scraper. Drift in the other direction
     means a Clarity-only domain was added without being shared, and is
-    almost always a copy-paste oversight."""
+    almost always a copy-paste oversight.
+    """
     assert set(cs.ALLOWED_DOMAINS).issubset(set(mps.ALLOWED_DOMAINS))
 
 

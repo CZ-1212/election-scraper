@@ -19,11 +19,13 @@ SAMPLES = ROOT / "data" / "samples"
 
 @pytest.fixture
 def fixtures_dir() -> Path:
+    """Return the directory containing minimal hand-written parser fixtures."""
     return FIXTURES
 
 
 @pytest.fixture
 def samples_dir() -> Path:
+    """Return the directory containing real-world JSON samples for schema tests."""
     return SAMPLES
 
 

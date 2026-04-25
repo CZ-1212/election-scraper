@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""
-Scraper for the 3 WORKING Non-Clarity Sites
-Excludes San Francisco (JavaScript compatibility issue)
+"""Scraper for the 3 working non-Clarity sites.
+
+Excludes San Francisco (JavaScript compatibility issue).
 """
 
 import json
@@ -35,7 +35,7 @@ WORKING_SITES = {
 }
 
 def scrape_county(county_name, county_info):
-    """Scrape a single county"""
+    """Scrape a single county."""
     print(f"\n{'='*70}")
     print(f"Scraping: {county_name} ({county_info['platform']})")
     print(f"{'='*70}")
@@ -100,6 +100,7 @@ def scrape_county(county_name, county_info):
         return {'county': county_name, 'success': False, 'error': str(e)}
 
 def main():
+    """Scrape the 3 non-Clarity counties in parallel and write summaries."""
     print("="*70)
     print("NON-CLARITY ELECTION SCRAPER")
     print("="*70)

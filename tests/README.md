@@ -30,6 +30,13 @@ Tests cover **(1) and (2) only**. Group (3) is integration territory
 and is exercised manually against live county sites; mocking Selenium
 in detail produces tests that pass while the real thing breaks.
 
+`test_pydocstyle.py` is a fourth, lighter check: it shells out to
+`pydocstyle` against `src/` and `tests/` and fails if any docstring
+drifts out of conformance. The convention is `pep257`; per-test
+docstring requirements (D101–D103) are relaxed for the `tests/`
+tree via `tests/.pydocstyle`, since pytest function names are
+already descriptive.
+
 The bar for a unit test here: it should fail loudly the next time a
 county changes its HTML, and it should never fail for a reason
 unrelated to the code under test.
