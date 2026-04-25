@@ -11,6 +11,8 @@ import json
 import jsonschema
 import pytest
 
+from .conftest import SAMPLES as SAMPLES_DIR
+
 
 # Inner per-county payload — matches what each ClarityScraper /
 # multi-platform scraper returns from .scrape().
@@ -77,8 +79,7 @@ def test_samples_directory_is_populated(samples_dir):
 
 @pytest.mark.parametrize(
     "sample_path",
-    _sample_files(__import__("pathlib").Path(__file__).resolve().parent.parent
-                  / "data" / "samples"),
+    _sample_files(SAMPLES_DIR),
     ids=lambda p: p.name,
 )
 def test_sample_matches_clarity_schema(sample_path):
@@ -88,8 +89,7 @@ def test_sample_matches_clarity_schema(sample_path):
 
 @pytest.mark.parametrize(
     "sample_path",
-    _sample_files(__import__("pathlib").Path(__file__).resolve().parent.parent
-                  / "data" / "samples"),
+    _sample_files(SAMPLES_DIR),
     ids=lambda p: p.name,
 )
 def test_sample_has_nonempty_results(sample_path):
