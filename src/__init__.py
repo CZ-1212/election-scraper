@@ -1,5 +1,4 @@
-"""
-California Election Data Scraper
+"""California Election Data Scraper.
 
 A robust Python-based election night scraper for California counties.
 Supports both Clarity Elections and non-Clarity platforms.

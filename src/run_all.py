@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-Run all 7 county scrapers in parallel (4 Clarity + 3 non-Clarity).
-"""
+"""Run all 7 county scrapers in parallel (4 Clarity + 3 non-Clarity)."""
 
 import csv
 import re
@@ -43,13 +41,13 @@ NON_CLARITY_SITES = {
 
 
 def parse_choice(choice):
-    """Parse a choice (string or dict) into (name, votes, pct) strings.
+    r"""Parse a choice (string or dict) into (name, votes, pct) strings.
 
     Handles the formats produced by each scraper:
       - dict with 'name'/'votes'/'percentage' keys
       - "Name | votes | pct%"          (Santa Cruz pipe-separated)
-      - "Name\\npct% votes"              (Clarity: e.g. "Yes\\n71.25% 294,137")
-      - "Name\\nvotes pct%"              (LiveVoterTurnout: e.g. "Yes\\n294,137 71.25%")
+      - "Name\npct% votes"              (Clarity: e.g. "Yes\n71.25% 294,137")
+      - "Name\nvotes pct%"              (LiveVoterTurnout: e.g. "Yes\n294,137 71.25%")
     """
     if isinstance(choice, dict):
         return choice.get('name', ''), choice.get('votes', ''), choice.get('percentage', '')
@@ -97,6 +95,7 @@ def _minify_html(html_str: str) -> str:
 
 
 def _escape_html_text(value) -> str:
+    """HTML-escape ``value`` for safe insertion into the rendered template."""
     if value is None:
         return ""
     return _html.escape(str(value), quote=False)
@@ -242,6 +241,7 @@ _CHECK_SVG = '<svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>'
 
 
 def _normalize_lookup_key(s: str) -> str:
+    """Lowercase ``s`` and strip all whitespace for fuzzy lookups."""
     return re.sub(r"\s+", "", str(s or "").strip()).lower()
 
 
@@ -591,6 +591,7 @@ def _load_measure_descriptions_lookup(path: Path) -> dict:
 
 
 def scrape_clarity(county, url):
+    """Run a single Clarity scraper job and return its tuple result."""
     start = time.time()
     try:
         scraper = ClarityScraper(url, reuse_driver=None, save_files=False)
@@ -612,6 +613,10 @@ def _result_looks_empty(result):
 
 
 def scrape_non_clarity(county, info):
+    """Run a single non-Clarity scraper job and return its tuple result.
+
+    Retries once with a fresh scraper if the first result looks empty.
+    """
     start = time.time()
     try:
         scraper = info['scraper_class'](info['url'], county)
@@ -635,6 +640,7 @@ def scrape_non_clarity(county, info):
 
 
 def main():
+    """Run all county scrapers in parallel and write the combined CSV exports."""
     print("=" * 70)
     print("CALIFORNIA ELECTION SCRAPER — ALL 13 COUNTIES")
     print("=" * 70)

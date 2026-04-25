@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""
-Clarity Elections Web Scraper
-Scrapes election results from Clarity Elections websites every 30 minutes starting at 8:01 PM
+"""Clarity Elections web scraper.
+
+Scrapes election results from Clarity Elections websites every 30 minutes
+starting at 8:01 PM.
 """
 
 import time
@@ -47,7 +48,7 @@ ALLOWED_FILE_EXTENSIONS = {'xml', 'csv', 'xls', 'json'}
 
 
 class RateLimiter:
-    """Rate limiter to prevent overwhelming election servers"""
+    """Rate limiter to prevent overwhelming election servers."""
     
     # Per-domain rate limits (seconds between requests)
     DOMAIN_LIMITS = {
@@ -64,7 +65,7 @@ class RateLimiter:
         self.last_request = 0
     
     def wait(self):
-        """Enforce minimum delay between requests"""
+        """Enforce minimum delay between requests."""
         elapsed = time.time() - self.last_request
         if elapsed < self.min_interval:
             wait_time = self.min_interval - elapsed
@@ -73,8 +74,8 @@ class RateLimiter:
 
 
 def validate_url(url):
-    """
-    Validate URL against whitelist of allowed domains.
+    """Validate URL against whitelist of allowed domains.
+
     Prevents SSRF attacks when code is shared publicly.
     """
     try:
@@ -107,8 +108,8 @@ def validate_url(url):
 
 
 def validate_and_secure_filepath(base_dir, filename, extension):
-    """
-    Validate file path to prevent path traversal attacks.
+    """Validate file path to prevent path traversal attacks.
+
     Returns a secure filepath with random suffix.
     """
     # Validate extension
@@ -133,7 +134,7 @@ def validate_and_secure_filepath(base_dir, filename, extension):
 
 
 class ClarityScraper:
-    """Scraper for Clarity Elections websites"""
+    """Scraper for Clarity Elections websites."""
     
     def __init__(self, url, reuse_driver=None, save_files=True):
         # Security: Validate URL before use
@@ -149,12 +150,12 @@ class ClarityScraper:
         self.rate_limiter = RateLimiter(parsed_url.netloc)
         
     def _extract_base_url(self, url):
-        """Extract base URL from the full URL"""
+        """Extract base URL from the full URL."""
         # Remove hash portion and trailing slashes
         return url.split('#')[0].rstrip('/')
     
     def _create_session(self):
-        """Create HTTP session with connection pooling and retry strategy"""
+        """Create HTTP session with connection pooling and retry strategy."""
         session = requests.Session()
         
         # Security: Explicitly enforce SSL certificate verification
@@ -188,7 +189,7 @@ class ClarityScraper:
         return session
     
     def setup_driver(self):
-        """Initialize Selenium WebDriver with anti-detection options"""
+        """Initialize Selenium WebDriver with anti-detection options."""
         options = webdriver.ChromeOptions()
         options.add_argument('--headless')  # Run in background
         options.add_argument('--no-sandbox')  # Required for stability
@@ -256,7 +257,7 @@ class ClarityScraper:
             print("Content wait timeout after 30s — continuing with available content")
 
     def _extract_last_updated(self):
-        """Optimized extraction of last updated timestamp"""
+        """Extract last updated timestamp via priority-ordered selectors."""
         try:
             # Priority ordered selectors for efficiency
             selectors = [
@@ -288,7 +289,7 @@ class ClarityScraper:
             return None
 
     def _extract_voter_turnout_optimized(self):
-        """Optimized voter turnout extraction with broader pattern matching"""
+        """Extract voter turnout with broader pattern matching."""
         try:
             turnout_data = {}
             
@@ -414,15 +415,15 @@ class ClarityScraper:
             return {}
 
     def close_driver(self):
-        """Close the WebDriver only if we own it"""
+        """Close the WebDriver only if we own it."""
         if self.driver and self.owns_driver:
             self.driver.quit()
             self.driver = None
     
     def check_for_json_data(self):
-        """
-        Attempt to find JSON data endpoints by analyzing network requests
-        Clarity sites often load data from JSON APIs
+        """Attempt to find JSON data endpoints by analyzing network requests.
+
+        Clarity sites often load data from JSON APIs.
         """
         try:
             # Common Clarity Elections JSON endpoints
@@ -827,7 +828,7 @@ class ClarityScraper:
             self.close_driver()
     
     def _deduplicate_contests(self, contests):
-        """Remove duplicate contests based on title"""
+        """Remove duplicate contests based on title."""
         seen_titles = set()
         unique_contests = []
         
@@ -840,9 +841,9 @@ class ClarityScraper:
         return unique_contests
     
     def check_reports_section(self):
-        """
-        Check if there are downloadable reports (XML, CSV, XLS)
-        These are often the best way to get structured data
+        """Check for downloadable reports (XML, CSV, XLS).
+
+        These are often the best way to get structured data.
         """
         try:
             if not self.driver:
@@ -876,7 +877,7 @@ class ClarityScraper:
             self.close_driver()
     
     def download_report(self, report_url, report_type):
-        """Download a structured data report file"""
+        """Download a structured data report file."""
         try:
             # Security: Rate limit requests
             self.rate_limiter.wait()
@@ -905,7 +906,7 @@ class ClarityScraper:
         return None
     
     def scrape(self):
-        """Main scraping method"""
+        """Run the full scrape: JSON endpoint probe, Selenium fallback, reports."""
         print(f"\n{'='*60}")
         print(f"Starting scrape at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"{'='*60}")
@@ -992,19 +993,19 @@ class ClarityScraper:
 
 
 def scrape_job():
-    """Job to be scheduled"""
+    """Run a single scrape against TARGET_URL (entry point for the scheduler)."""
     scraper = ClarityScraper(TARGET_URL)
     scraper.scrape()
 
 
 def wait_until_start_time():
-    """Start immediately - no waiting for specific time"""
+    """Start immediately — no waiting for a specific time."""
     print("Starting immediately...")
     return
 
 
 def main():
-    """Main function to run the scraper on schedule"""
+    """Run the scraper on the configured schedule."""
     print("="*60)
     print("CLARITY ELECTIONS SCRAPER")
     print("="*60)

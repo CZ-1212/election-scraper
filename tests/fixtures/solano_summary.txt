@@ -1,0 +1,18 @@
+Solano County Registrar of Voters
+Statewide Special Election - November 4, 2025
+Official Summary Results - SIGNED
+
+Voter Turnout
+145,294 of 277,461 = 52.37%
+
+Precincts Reporting 159 of 159 = 100.00%
+
+STATE PROPOSITION 50
+Choice                 ED Votes  ED %    VBM Votes  VBM %   Prov Votes  Prov %  Total Votes  Total %
+YES                    9,821     51.14%  80,903     65.42%  1,646       74.58%  92,370       63.67%
+NO                     9,383     48.86%  42,750     34.58%  561         25.42%  52,694       36.33%
+
+MEASURE B FAIRFIELD
+Choice                 ED Votes  ED %    VBM Votes  VBM %   Prov Votes  Prov %  Total Votes  Total %
+YES                    2,100     55.00%  18,400     62.00%  300         70.00%  20,800       61.50%
+NO                     1,720     45.00%  11,300     38.00%  130         30.00%  13,150       38.50%

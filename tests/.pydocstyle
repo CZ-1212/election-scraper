@@ -1,0 +1,6 @@
+[pydocstyle]
+inherit = true
+# Test names like test_extract_base_url_strips_fragment are already
+# descriptive — requiring per-test docstrings adds noise without
+# improving readability. Module docstrings (D100, D104) still required.
+add_ignore = D101,D102,D103

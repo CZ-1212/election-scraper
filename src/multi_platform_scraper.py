@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""
-Multi-Platform Election Data Scraper
+"""Multi-platform election data scraper.
+
 Supports multiple election data platforms:
 - Clarity Elections (existing)
 - LiveVoterTurnout.com (San Mateo, San Joaquin)
@@ -47,7 +47,7 @@ ALLOWED_FILE_EXTENSIONS = {'xml', 'csv', 'xls', 'json'}
 
 
 class RateLimiter:
-    """Rate limiter to prevent overwhelming election servers"""
+    """Rate limiter to prevent overwhelming election servers."""
     
     # Per-domain rate limits (seconds between requests)
     DOMAIN_LIMITS = {
@@ -75,7 +75,7 @@ class RateLimiter:
         self.last_request = 0
     
     def wait(self):
-        """Enforce minimum delay between requests"""
+        """Enforce minimum delay between requests."""
         elapsed = time.time() - self.last_request
         if elapsed < self.min_interval:
             wait_time = self.min_interval - elapsed
@@ -84,8 +84,8 @@ class RateLimiter:
 
 
 def validate_url(url):
-    """
-    Validate URL against whitelist of allowed domains.
+    """Validate URL against whitelist of allowed domains.
+
     Prevents SSRF attacks when code is shared publicly.
     """
     try:
@@ -118,8 +118,8 @@ def validate_url(url):
 
 
 def validate_and_secure_filepath(base_dir, filename, extension):
-    """
-    Validate file path to prevent path traversal attacks.
+    """Validate file path to prevent path traversal attacks.
+
     Returns a secure filepath with random suffix.
     """
     # Validate extension
@@ -144,7 +144,7 @@ def validate_and_secure_filepath(base_dir, filename, extension):
 
 
 class BaseScraper:
-    """Base scraper class with common functionality"""
+    """Base scraper class with common functionality."""
     
     def __init__(self, url, county_name, reuse_driver=None):
         # Security: Validate URL before use
@@ -159,7 +159,7 @@ class BaseScraper:
         self.rate_limiter = RateLimiter(parsed_url.netloc)
         
     def _create_session(self):
-        """Create HTTP session with connection pooling and retry strategy"""
+        """Create HTTP session with connection pooling and retry strategy."""
         session = requests.Session()
         
         # Security: Explicitly enforce SSL certificate verification
@@ -190,7 +190,7 @@ class BaseScraper:
         return session
     
     def setup_driver(self):
-        """Initialize Selenium WebDriver with PROVEN stealth configuration"""
+        """Initialize Selenium WebDriver with the proven stealth configuration."""
         options = webdriver.ChromeOptions()
         options.add_argument('--headless')
         options.add_argument('--no-sandbox')
@@ -229,7 +229,7 @@ class BaseScraper:
         self.driver.set_page_load_timeout(30)
         
     def close_driver(self):
-        """Close the WebDriver only if we own it"""
+        """Close the WebDriver only if we own it."""
         if self.driver and self.owns_driver:
             self.driver.quit()
             self.driver = None
@@ -265,15 +265,15 @@ class BaseScraper:
         raise last_exc
 
     def scrape(self):
-        """Main scraping method - to be implemented by subclasses"""
+        """Run the per-county scrape; subclasses override this."""
         raise NotImplementedError
 
 
 class LiveVoterTurnoutScraper(BaseScraper):
-    """Scraper for LiveVoterTurnout.com sites (San Mateo, San Joaquin)"""
+    """Scraper for LiveVoterTurnout.com sites (San Mateo, San Joaquin)."""
 
     def scrape(self):
-        """Scrape LiveVoterTurnout.com site"""
+        """Scrape a LiveVoterTurnout.com site."""
         data = None
         try:
             # Security: Rate limit requests
@@ -473,6 +473,7 @@ class LiveVoterTurnoutScraper(BaseScraper):
 
 class SFElectionsScraper(BaseScraper):
     """Scraper for SF Elections (sfelections.org).
+
     Discovers the latest certified summary.xml from the detail page and parses
     the SSRS XML report directly — no Selenium needed.
     """
@@ -481,6 +482,7 @@ class SFElectionsScraper(BaseScraper):
     BASE_URL   = 'https://www.sfelections.org'
 
     def scrape(self):
+        """Scrape the SF Elections SSRS XML report."""
         self.rate_limiter.wait()
         partial_data = None
         try:
@@ -520,6 +522,7 @@ class SFElectionsScraper(BaseScraper):
             return partial_data
 
     def _parse_ssrs_xml(self, xml_text):
+        """Parse the SSRS XML report into the standard county payload."""
         import math, warnings
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
@@ -610,7 +613,7 @@ class SFElectionsScraper(BaseScraper):
 
 
 class SantaCruzScraper(BaseScraper):
-    """Scraper for Santa Cruz County elections site"""
+    """Scraper for the Santa Cruz County elections site."""
     
     def _parse_soup(self, soup):
         """Parse BeautifulSoup object directly using HTML structure (used by requests path)."""
@@ -713,7 +716,7 @@ class SantaCruzScraper(BaseScraper):
         return data
 
     def _parse_page_text(self, page_text, page_title=None):
-        """Parse page text to extract election data (used by Selenium fallback path)"""
+        """Parse page text to extract election data (Selenium fallback path)."""
         data = {
             'timestamp': datetime.now().isoformat(),
             'url': self.url,
@@ -847,7 +850,7 @@ class SantaCruzScraper(BaseScraper):
         return data
 
     def scrape(self):
-        """Scrape Santa Cruz County site - tries requests first, falls back to Selenium"""
+        """Scrape Santa Cruz County (try requests first, fall back to Selenium)."""
         # Security: Rate limit requests
         self.rate_limiter.wait()
 
@@ -906,6 +909,7 @@ class SantaCruzScraper(BaseScraper):
 
 class MendocinoScraper(BaseScraper):
     """Scraper for Mendocino County elections.
+
     The county page embeds an iframe at co.mendocino.ca.us which serves
     a Microsoft SSRS HTML report — fully static, no WAF, fetched directly.
     """
@@ -913,6 +917,7 @@ class MendocinoScraper(BaseScraper):
     IFRAME_URL = 'http://www.co.mendocino.ca.us/acr/cgi-bin/currentFR.pl'
 
     def scrape(self):
+        """Fetch the Mendocino SSRS iframe and parse it."""
         self.rate_limiter.wait()
         partial_data = None
         try:
@@ -932,10 +937,12 @@ class MendocinoScraper(BaseScraper):
             return partial_data
 
     def _meta(self, soup, name):
+        """Return the content of a named ``<meta>`` tag, or ``None``."""
         tag = soup.find('meta', attrs={'name': name})
         return tag['content'] if tag else None
 
     def _parse(self, soup):
+        """Parse Mendocino's SSRS HTML into the standard county payload."""
         data = {
             'timestamp': datetime.now().isoformat(),
             'url': self.url,
@@ -1036,6 +1043,7 @@ class AlamedaScraper(BaseScraper):
     """Scraper for Alameda County custom election results site (requests + BeautifulSoup)."""
 
     def scrape(self):
+        """Fetch the Alameda County results page and parse it."""
         self.rate_limiter.wait()
         partial_data = None
         try:
@@ -1055,6 +1063,7 @@ class AlamedaScraper(BaseScraper):
             return partial_data
 
     def _parse(self, soup):
+        """Parse the Alameda results page into the standard county payload."""
         data = {
             'timestamp': datetime.now().isoformat(),
             'url': self.url,
@@ -1179,6 +1188,7 @@ class AlamedaScraper(BaseScraper):
 
 class NapaScraper(BaseScraper):
     """Scraper for Napa County elections.
+
     The results page links to a PDF Summary Report; we fetch and parse it with pdfplumber.
     The PDF URL is discovered by scraping the election results page for the Nov 4 2025 election.
     """
@@ -1187,6 +1197,7 @@ class NapaScraper(BaseScraper):
     SUMMARY_PDF_URL = 'https://www.napacounty.gov/DocumentCenter/View/39913/'
 
     def scrape(self):
+        """Fetch the Napa summary PDF and parse it."""
         self.rate_limiter.wait()
         partial_data = None
         try:
@@ -1207,6 +1218,7 @@ class NapaScraper(BaseScraper):
             return partial_data
 
     def _parse(self, text):
+        """Parse Napa's PDF-extracted text into the standard county payload."""
         data = {
             'timestamp': datetime.now().isoformat(),
             'url': self.url,
@@ -1288,6 +1300,7 @@ class NapaScraper(BaseScraper):
 
 class SolanoScraper(BaseScraper):
     """Scraper for Solano County elections.
+
     Results are published as a signed PDF. We fetch it directly and parse with pdfplumber.
     PDF format: multi-column with Election Day / Vote by Mail / Provisional / Total columns.
     """
@@ -1295,6 +1308,7 @@ class SolanoScraper(BaseScraper):
     PDF_URL = 'https://content.solanocounty.gov/sites/default/files/2026-01/Official_Summary_Results_-_SIGNED.pdf'
 
     def scrape(self):
+        """Fetch the Solano County summary PDF and parse it."""
         self.rate_limiter.wait()
         partial_data = None
         try:
@@ -1315,6 +1329,7 @@ class SolanoScraper(BaseScraper):
             return partial_data
 
     def _parse(self, text):
+        """Parse Solano's PDF-extracted text into the standard county payload."""
         data = {
             'timestamp': datetime.now().isoformat(),
             'url': self.url,
@@ -1383,6 +1398,7 @@ class SolanoScraper(BaseScraper):
 
 class MontereyCountyScraper(BaseScraper):
     """Scraper for Monterey County elections.
+
     The page is CloudFront-protected but renders election data via JS from an XML file
     served at a /home/showdocument?id=XXXXX URL embedded in the page's JS.
     Uses Selenium to load the page, extracts the XML URL, fetches XML via browser JS,
@@ -1390,6 +1406,7 @@ class MontereyCountyScraper(BaseScraper):
     """
 
     def scrape(self):
+        """Load the Monterey County page in Selenium and parse its election JSON."""
         self.rate_limiter.wait()
         partial_data = None
         try:
@@ -1427,6 +1444,7 @@ class MontereyCountyScraper(BaseScraper):
             self.close_driver()
 
     def _parse_election(self, election):
+        """Parse Monterey's in-page ``election`` JSON into the standard payload."""
         data = {
             'timestamp': datetime.now().isoformat(),
             'url': self.url,
@@ -1499,7 +1517,7 @@ class MontereyCountyScraper(BaseScraper):
 
 # Factory function to create the appropriate scraper
 def create_scraper(url, county_name, reuse_driver=None):
-    """Create the appropriate scraper based on URL"""
+    """Create the appropriate scraper based on the URL."""
     if 'livevoterturnout.com' in url:
         return LiveVoterTurnoutScraper(url, county_name, reuse_driver)
     elif 'sfelections.org' in url:

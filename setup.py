@@ -1,4 +1,4 @@
-"""Setup script for California Election Data Scraper"""
+"""Setup script for California Election Data Scraper."""
 
 from setuptools import setup, find_packages
 from pathlib import Path
@@ -37,8 +37,10 @@ setup(
     extras_require={
         "dev": [
             "pytest>=7.0.0",
+            "jsonschema>=4.0.0",
             "black>=23.0.0",
             "flake8>=6.0.0",
+            "pydocstyle>=6.3.0",
         ],
     },
     entry_points={
