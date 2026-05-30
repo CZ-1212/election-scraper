@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Election Results</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      padding: 20px;
+    }
+
+    /* Turnout bar */
+    .turnout-bar {
+      background-color: #1a3668;
+      color: white;
+      border-radius: 5px;
+      padding: 8px 16px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0;
+    }
+    .turnout-stat {
+      flex: 1;
+      min-width: 120px;
+      text-align: center;
+      padding: 0 16px;
+      border-right: 1px solid rgba(255,255,255,0.2);
+    }
+    .turnout-stat:last-child { border-right: none; }
+    .turnout-stat-label {
+      font-size: 15px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #accf00;
+      margin-bottom: 4px;
+    }
+    .turnout-stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: white;
+    }
+    .turnout-stat-value.green { color: white; }
+
+    /* Race box */
+    .race-box {
+      background-color: white;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .race-title {
+      background-color: #1a3668;
+      color: white;
+      padding: 10px 14px;
+      font-weight: bold;
+      font-size: 1em;
+    }
+
+    /* Ballot measure — NYT style */
+    .measure-block {
+      padding: 16px 16px 0 16px;
+    }
+    .measure-name {
+      font-size: 1.15em;
+      font-weight: 700;
+      color: #1a3668;
+      margin-bottom: 6px;
+    }
+    .measure-desc {
+      font-size: 0.88em;
+      color: #555;
+      line-height: 1.55;
+      margin-bottom: 12px;
+    }
+    .measure-status-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .measure-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: 1px solid #c8e050;
+      background: #f2f7d9;
+      color: #4a6020;
+    }
+    .measure-status-badge.failing {
+      border-color: #f5b99a;
+      background: #fff0eb;
+      color: #9e3d0a;
+    }
+    .measure-votes-counted {
+      font-size: 12px;
+      color: #999;
+    }
+
+    /* Table */
+    .measure-table {
+      width: 100%;
+      border-top: 1px solid #e0e0e0;
+      margin-top: 4px;
+    }
+    .measure-table-head {
+      display: grid;
+      grid-template-columns: 100px 1fr 90px 70px;
+      padding: 6px 0;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .measure-table-head span {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #999;
+    }
+    .measure-table-head span.right { text-align: right; }
+    .measure-result-row {
+      display: grid;
+      grid-template-columns: 100px 1fr 60px 90px;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .measure-result-row:last-child { border-bottom: none; margin-bottom: 6px; }
+    .measure-result-row.leading { background: #f8fbee; margin: 0 -16px; padding: 10px 16px; }
+    .response-cell {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .response-check {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: #accf00;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .response-check svg {
+      width: 10px; height: 10px;
+      stroke: white; fill: none;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+    }
+    .response-spacer { width: 20px; flex-shrink: 0; }
+    .response-label {
+      font-weight: 700;
+      font-size: 0.95em;
+      color: #333;
+    }
+    .bar-cell-measure { padding-right: 16px; }
+    .bar-track-measure {
+      height: 12px;
+      background: #e8e8e8;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .bar-fill-leading  { height: 100%; border-radius: 3px; background: #accf00; }
+    .bar-fill-trailing { height: 100%; border-radius: 3px; background: #c2c2c2; }
+    .total-cell {
+      font-size: 0.82em;
+      color: #888;
+      text-align: right;
+    }
+    .pct-cell-measure {
+      font-size: 0.95em;
+      font-weight: 700;
+      text-align: right;
+    }
+    .pct-leading  { color: #4a6020; }
+    .pct-trailing { color: #888; }
+
+    /* Candidate table header */
+    .candidate-table-head {
+      display: grid;
+      grid-template-columns: 180px 1fr 60px 90px;
+      padding: 6px 14px;
+      border-top: 1px solid #ddd;
+      background: #fafafa;
+    }
+    .candidate-table-head span {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #999;
+    }
+    .candidate-table-head span.right { text-align: right; }
+
+    /* Candidate row */
+    .candidate-row {
+      border-top: 1px solid #eee;
+      padding: 10px 14px;
+      display: grid;
+      grid-template-columns: 180px 1fr 60px 90px;
+      align-items: center;
+      gap: 0;
+    }
+    .candidate-row.winner { background-color: #f0f5e6; }
+    .candidate-name-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .candidate-party {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .party-d { background: #dceef4; color: #1a6e8a; }
+    .party-r { background: #faeee7; color: #b85c2a; }
+    .party-i { background: #f0edf8; color: #7b5ea7; }
+    .candidate-name-text { display: flex; flex-direction: column; }
+    .candidate-name {
+      font-weight: 700;
+      font-size: 0.92em;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .winner-check-inline { color: #738c3f; font-size: 0.85em; }
+    .candidate-leading {
+      font-size: 0.78em;
+      font-weight: 600;
+      color: #738c3f;
+      margin-top: 1px;
+    }
+    .candidate-bar-cell { padding-right: 14px; }
+    .candidate-bar-track {
+      height: 12px;
+      background: #e8e8e8;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .candidate-bar-fill { height: 100%; border-radius: 3px; }
+    .bar-d { background-color: #1a6e8a; }
+    .bar-r { background-color: #b85c2a; }
+    .bar-i { background-color: #7b5ea7; }
+    .candidate-pct {
+      font-weight: 700;
+      font-size: 0.92em;
+      text-align: right;
+      padding-right: 10px;
+    }
+    .pct-d { color: #1a6e8a; }
+    .pct-r { color: #b85c2a; }
+    .pct-i { color: #7b5ea7; }
+    .candidate-votes {
+      font-size: 0.82em;
+      color: #888;
+      text-align: right;
+    }
+    /* Search bar */
+    .search-wrap {
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .search-input {
+      width: 100%;
+      padding: 10px 16px;
+      font-size: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: white;
+      outline: none;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .search-input:focus {
+      border-color: #1a3668;
+      box-shadow: 0 0 0 2px rgba(26,54,104,0.15);
+    }
+    .no-results {
+      display: none;
+      text-align: center;
+      color: #888;
+      font-size: 14px;
+      padding: 24px 0;
+    }
+
+    /* Uncontested races dropdown */
+    .uncontested-wrap {
+      margin-bottom: 16px;
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1px solid #1a3668;
+    }
+    .uncontested-toggle {
+      background-color: #1a3668;
+      color: white;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .uncontested-toggle-label {
+      font-size: 0.92em;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .uncontested-toggle-count {
+      font-size: 0.82em;
+      color: #accf00;
+      margin-left: 8px;
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .uncontested-chevron {
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+    .uncontested-chevron.open {
+      transform: rotate(180deg);
+    }
+    .uncontested-body {
+      display: none;
+      background: white;
+    }
+    .uncontested-body.open {
+      display: block;
+    }
+    .uncontested-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid #f0f0f0;
+      gap: 12px;
+    }
+    .uncontested-row:last-child { border-bottom: none; }
+    .uncontested-race-name {
+      font-size: 0.88em;
+      font-weight: 700;
+      color: #1a3668;
+      flex: 1;
+    }
+    .uncontested-candidate {
+      font-size: 0.85em;
+      color: #444;
+      flex: 1;
+    }
+    .uncontested-profession {
+      font-size: 0.78em;
+      color: #888;
+      flex: 1;
+      font-style: italic;
+    }
+    .uncontested-badge {
+      font-size: 0.72em;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: #f2f7d9;
+      color: #4a6020;
+      border: 1px solid #c8e050;
+      padding: 2px 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+  
+    /* Ballot preview additions */
+    .preview-banner {
+      background: #1a3668;
+      color: white;
+      text-align: center;
+      padding: 14px 16px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+    .preview-banner-title {
+      font-size: 1.15em;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .preview-banner-sub {
+      font-size: 0.85em;
+      color: #accf00;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* Preview candidate rows */
+    .preview-candidate-list { padding: 4px 0; }
+    .preview-candidate {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 14px;
+      border-top: 1px solid #eee;
+    }
+    .preview-candidate:first-child { border-top: none; }
+    .preview-candidate-info { display: flex; flex-direction: column; }
+    .preview-candidate-name {
+      font-weight: 700;
+      font-size: 0.92em;
+      color: #333;
+    }
+    .preview-candidate-designation {
+      font-size: 0.82em;
+      color: #666;
+      margin-top: 2px;
+    }
+
+    /* Party classes for non-D/R */
+    .party-n { background: #e8f0e8; color: #3a6e3a; }
+    .party-g { background: #e8f0e8; color: #2e7d32; }
+    .party-l { background: #fff3e0; color: #e65100; }
+    .party-a { background: #fce4ec; color: #880e4f; }
+    .party-p { background: #f3e5f5; color: #6a1b9a; }
+
+    /* Preview measures */
+    .preview-measure-list { padding: 4px 0; }
+    .preview-measure {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 14px;
+      border-top: 1px solid #eee;
+    }
+    .preview-measure:first-child { border-top: none; }
+    .preview-measure-badge {
+      font-size: 0.78em;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: #1a3668;
+      color: #accf00;
+      padding: 3px 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      width: 130px;
+      box-sizing: border-box;
+      text-align: center;
+      margin-top: 1px;
+    }
+    .preview-measure-body { display: flex; flex-direction: column; gap: 4px; }
+    .preview-measure-jurisdiction {
+      font-size: 0.92em;
+      font-weight: 700;
+      color: #1a3668;
+    }
+    .preview-measure-description {
+      font-size: 0.82em;
+      color: #555;
+      line-height: 1.5;
+    }
+
+  </style>
+</head>
+<body><div class="preview-banner"><div class="preview-banner-title">Alameda County — June 2, 2026 Direct Primary — Ballot Preview</div><div class="preview-banner-sub">Ballot Preview — Not Election Results</div></div><div class="search-wrap"><input class="search-input" type="text" autocomplete="off" placeholder="Search races, candidates, measures…" id="electionSearch"></div><div class="uncontested-wrap" id="uncontestedWrap">
+  <div class="uncontested-toggle" id="uncontestedToggle">
+    <span>
+      <span class="uncontested-toggle-label">Uncontested Races</span>
+      <span class="uncontested-toggle-count">2 races with no opposition</span>
+    </span>
+    <svg class="uncontested-chevron" id="uncontestedChevron" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 6L8 10L12 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <div class="uncontested-body" id="uncontestedBody">
+    <div class="uncontested-row">
+      <div class="uncontested-race-name">County Superintendent Of Schools</div>
+      <div class="uncontested-candidate">Alysse Castro</div>
+      <div class="uncontested-profession">Alameda County Superintendent of Schools</div>
+      <div class="uncontested-badge">Uncontested</div>
+    </div>
+    <div class="uncontested-row">
+      <div class="uncontested-race-name">Supervisor, 3rd District</div>
+      <div class="uncontested-candidate">Lena Tam</div>
+      <div class="uncontested-profession">Alameda County Supervisor</div>
+      <div class="uncontested-badge">Uncontested</div>
+    </div>
+  </div>
+</div>
+<div class="no-results" id="noResults">No results found.</div><div class="race-box"><div class="race-title">Governor</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">AKINYEMI  AGBEDE</div><div class="preview-candidate-designation">Mathematician</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">MOHAMMAD  ARIF</div><div class="preview-candidate-designation">Immigrants Organizer</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">JAMES  ATHANS JR.</div><div class="preview-candidate-designation">Real Estate Agent</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">LARRY  AZEVEDO</div><div class="preview-candidate-designation">Businessman</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">NAOMI  BAR-LEV</div><div class="preview-candidate-designation">Musician/Proprietor/Writer</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">XAVIER  BECERRA</div><div class="preview-candidate-designation">Voting Rights Attorney</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">CHAD  BIANCO</div><div class="preview-candidate-designation">Riverside County Sheriff</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">CAROLINA  BUHLER</div><div class="preview-candidate-designation">Civil Rights Advocate</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">JOSEPH  CABRERA</div><div class="preview-candidate-designation">Business Administrator</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">ELAINE  CULOTTI</div><div class="preview-candidate-designation">Entrepreneur/Farmer/Developer</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">PATRICIA  DE LUCA BASUALDO</div><div class="preview-candidate-designation">Real Estate Broker</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">LOUIS A. DE BARRAICUA</div><div class="preview-candidate-designation">Teacher/Business Owner</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">LIVINGFORGOD ANDCOUNTRY DEMOTT</div><div class="preview-candidate-designation">Logistical Professional/Chaplain</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">RANDEEP S. DHILLON</div><div class="preview-candidate-designation">Economist/Farmer/Businessman</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">SERGE  FIANKAN</div><div class="preview-candidate-designation">Real Estate Broker</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">LUKASZ ADAM FILINSKI</div><div class="preview-candidate-designation">Father</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">MAX  FOMIN</div><div class="preview-candidate-designation">Business Owner/Father</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">SAM  SANDAK</div><div class="preview-candidate-designation">Filmmaker</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">DEREK  GRASTY</div><div class="preview-candidate-designation">District Trustee/Educator</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">DON J. GRUNDMANN</div><div class="preview-candidate-designation">Doctor of Chiropractic</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">JON  HENDERSON</div><div class="preview-candidate-designation">Business Owner</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">LEWIS  HERMS</div><div class="preview-candidate-designation">No Ballot Designation</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">RAFAEL M. HERNANDEZ</div><div class="preview-candidate-designation">Businessman/Songwriter/Author</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">STEVE  HILTON</div><div class="preview-candidate-designation">Small Business Owner</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">JOEL E. JACOB</div><div class="preview-candidate-designation">Business Owner/Entrepreneur</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">DAWIT  KELLEL</div><div class="preview-candidate-designation">Father</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">GARY HOWARD KIDGELL</div><div class="preview-candidate-designation">Building Consultant</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">ANNE  KOMAROVSK</div><div class="preview-candidate-designation">Communications Executive</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">ALICIA OLIVIA  LAPP</div><div class="preview-candidate-designation">No Ballot Designation</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">MATTHEW CHASE LEVY</div><div class="preview-candidate-designation">Entrepreneur/Physicist</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">DUANE TERRENCE LOYNES JR.</div><div class="preview-candidate-designation">No Ballot Designation</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">MATT  MAHAN</div><div class="preview-candidate-designation">Mayor, San Jose</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">AMANDA  MARTIN</div><div class="preview-candidate-designation">Mother/Builder/Entrepreneur</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">BRENT  MAUPIN</div><div class="preview-candidate-designation">Civil Engineer</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">DANIEL  MERCURI</div><div class="preview-candidate-designation">Father/Author/Businessman</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">LEO  NARANJO IV</div><div class="preview-candidate-designation">Retired Military Sergeant</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">TIM  NELSON</div><div class="preview-candidate-designation">Diplomat/Rights Advocate</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">BARACK D.  OBAMA SHAW</div><div class="preview-candidate-designation">Business Owner</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">MAURO ALBERTO OROZCO</div><div class="preview-candidate-designation">Small Business Owner</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">THUNDER  PARLEY</div><div class="preview-candidate-designation">Market Analyst</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">KATIE  PORTER</div><div class="preview-candidate-designation">Consumer Protection Advocate</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">RAJI  RAB</div><div class="preview-candidate-designation">Aviator/Educator/Entrepreneur</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">SATISH  RAO</div><div class="preview-candidate-designation">Professor</div></div></div><div class="preview-candidate"><div class="candidate-party party-p" title="Peace and Freedom Party">P</div><div class="preview-candidate-info"><div class="preview-candidate-name">RAMSEY  ROBINSON</div><div class="preview-candidate-designation">School Social Worker</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">REZA  SAFARNEJAD</div><div class="preview-candidate-designation">Small Business Owner</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">SOPHIA  EDUM-A-SAM</div><div class="preview-candidate-designation">Project Manager</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">CHRISTINE R. SARMIENTO</div><div class="preview-candidate-designation">Public Health Nurse</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">FREDERIC C.  SCHULTZ</div><div class="preview-candidate-designation">Human Rights Attorney</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">SCOTT P SHIELDS</div><div class="preview-candidate-designation">Chief Executive Officer</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">GRETHA  SOLÓRZANO</div><div class="preview-candidate-designation">Retired Nuclear Engineer</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">TOM  STEYER</div><div class="preview-candidate-designation">Climate Advocate</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">ERIC  SWALWELL</div><div class="preview-candidate-designation">U.S. Representative</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">TONY K. THURMOND</div><div class="preview-candidate-designation">California State Superintendent of Public Instruction</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">MARGARET  TROWE</div><div class="preview-candidate-designation">Hotel Worker</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">ANTONIO  VILLARAIGOSA</div><div class="preview-candidate-designation">Housing Affordability Advocate</div></div></div><div class="preview-candidate"><div class="candidate-party party-l" title="Libertarian Party">L</div><div class="preview-candidate-info"><div class="preview-candidate-name">TOM  WOODARD</div><div class="preview-candidate-designation">Retired CEO</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">BETTY T.  YEE</div><div class="preview-candidate-designation">Family Care Navigator</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">NANCY D. YOUNG</div><div class="preview-candidate-designation">CEO/Businesswoman/Pastor</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">LEO SAMUEL ZACKY</div><div class="preview-candidate-designation">Farmer/Businessman/Broadcaster</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">ERIN "ZEZ" ZEZULAK</div><div class="preview-candidate-designation">Consultant/Nurse/Businesswoman</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">DAVID  ZICKEFOOSE</div><div class="preview-candidate-designation">Real Estate Investor</div></div></div></div></div><div class="race-box"><div class="race-title">Lieutenant Governor</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">EBIE  LYNCH</div><div class="preview-candidate-designation">Business Owner/Nurse</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">RAKESH  CHRISTIAN</div><div class="preview-candidate-designation">Business Owner</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">DAVID  COLLENBERG</div><div class="preview-candidate-designation">Farmer/Business Owner</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">SEAN  COLLINSON</div><div class="preview-candidate-designation">Mediator</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">DAVID  FENNELL</div><div class="preview-candidate-designation">Businessman</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">JOSH  FRYDAY</div><div class="preview-candidate-designation">Governor's Cabinet Member</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">JANELLE  KELLMAN</div><div class="preview-candidate-designation">Climate Risk Executive</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">JEYSON  LOPEZ</div><div class="preview-candidate-designation">Customer Experience Consultant</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">FIONA  MA</div><div class="preview-candidate-designation">State Treasurer/CPA</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">OLIVER  MA</div><div class="preview-candidate-designation">Civil Rights Lawyer</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">TIM  MYERS</div><div class="preview-candidate-designation">Businessman/Musician/Producer</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">GLORIA  ROMERO</div><div class="preview-candidate-designation">Educator/Businesswoman</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">SKIP  SHELTON</div><div class="preview-candidate-designation">Defense Technology Executive</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">ABDUR RAHMAN SIKDER</div><div class="preview-candidate-designation">Professor</div></div></div><div class="preview-candidate"><div class="candidate-party party-p" title="Peace and Freedom Party">P</div><div class="preview-candidate-info"><div class="preview-candidate-name">ALICE  STEK</div><div class="preview-candidate-designation">Physician/OBGYN</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">MICHAEL  TUBBS</div><div class="preview-candidate-designation">Anti-Poverty Non-Profit Director</div></div></div></div></div><div class="race-box"><div class="race-title">Secretary Of State</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-g" title="Green Party">G</div><div class="preview-candidate-info"><div class="preview-candidate-name">GARY N. BLENNER</div><div class="preview-candidate-designation">Teacher</div></div></div><div class="preview-candidate"><div class="candidate-party party-g" title="Green Party">G</div><div class="preview-candidate-info"><div class="preview-candidate-name">MICHAEL  FEINSTEIN</div><div class="preview-candidate-designation">Electoral Reform Consultant</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">DONALD P. (DON) WAGNER</div><div class="preview-candidate-designation">Orange County Supervisor</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">SHIRLEY N. WEBER</div><div class="preview-candidate-designation">California Secretary of State</div></div></div></div></div><div class="race-box"><div class="race-title">Controller</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-p" title="Peace and Freedom Party">P</div><div class="preview-candidate-info"><div class="preview-candidate-name">MEGHANN  ADAMS</div><div class="preview-candidate-designation">School Bus Driver</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">MALIA M. COHEN</div><div class="preview-candidate-designation">State Controller/Mother</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">HERB W MORGAN</div><div class="preview-candidate-designation">Chief Investment Officer</div></div></div></div></div><div class="race-box"><div class="race-title">Treasurer</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">ANNA M. CABALLERO</div><div class="preview-candidate-designation">California State Senator</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">JENNIFER  HAWKS</div><div class="preview-candidate-designation">Retired Businesswoman</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">ELENI  KOUNALAKIS</div><div class="preview-candidate-designation">Lieutenant Governor of California</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">DAVID  SERPA</div><div class="preview-candidate-designation">Businessman/Author/Father</div></div></div><div class="preview-candidate"><div class="candidate-party party-g" title="Green Party">G</div><div class="preview-candidate-info"><div class="preview-candidate-name">GLENN  TURNER</div><div class="preview-candidate-designation">No Ballot Designation</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">TONY  VAZQUEZ</div><div class="preview-candidate-designation">Member, State Board of Equalization</div></div></div></div></div><div class="race-box"><div class="race-title">Attorney General</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">ROB  BONTA</div><div class="preview-candidate-designation">Incumbent</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">MICHAEL E. GATES</div><div class="preview-candidate-designation">Deputy United States Attorney</div></div></div><div class="preview-candidate"><div class="candidate-party party-g" title="Green Party">G</div><div class="preview-candidate-info"><div class="preview-candidate-name">MARJORIE  MIKELS</div><div class="preview-candidate-designation">Attorney/Justice Advocate</div></div></div></div></div><div class="race-box"><div class="race-title">Insurance Commissioner</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">ERIC THOR  AARNIO</div><div class="preview-candidate-designation">Contractor</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">BEN  ALLEN</div><div class="preview-candidate-designation">California State Senator</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">STEVEN CRAIG BRADFORD</div><div class="preview-candidate-designation">Education Organization Boardmember</div></div></div><div class="preview-candidate"><div class="candidate-party party-a" title="American Independent Party">A</div><div class="preview-candidate-info"><div class="preview-candidate-name">KEITH W. DAVIS</div><div class="preview-candidate-designation">Insurance Agent</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">MERRITT  FARREN</div><div class="preview-candidate-designation">Consumer Advocate/Attorney</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">ROBERT P HOWELL</div><div class="preview-candidate-designation">Cybersecurity Company CEO</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">JANE  KIM</div><div class="preview-candidate-designation">Attorney/Consumer Advocate</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">STACY A. KORSGADEN</div><div class="preview-candidate-designation">Licensed Insurance Agent</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">SEAN  LEE</div><div class="preview-candidate-designation">Financial Services Executive</div></div></div><div class="preview-candidate"><div class="candidate-party party-p" title="Peace and Freedom Party">P</div><div class="preview-candidate-info"><div class="preview-candidate-name">EDUARDO "LALO" VARGAS</div><div class="preview-candidate-designation">Science Teacher</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">PATRICK  WOLFF</div><div class="preview-candidate-designation">Financial Analyst</div></div></div></div></div><div class="race-box"><div class="race-title">Member, State Board Of Equalization, 2nd District</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">SALLY J.  LIEBER</div><div class="preview-candidate-designation">Member, State Board of Equalization</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">J BRETT  MARYMEE</div><div class="preview-candidate-designation">Small Business Owner</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">MARK  MCCOMAS</div><div class="preview-candidate-designation">Small Business Advocate</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">JOHN  PIMENTEL</div><div class="preview-candidate-designation">Member, Board of Trustees, San Mateo County Community College District</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">BILL  SHIREMAN</div><div class="preview-candidate-designation">Taxpayer Advocate</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">JOHN W. ZARUKA</div><div class="preview-candidate-designation">Retired Hospitality Executive</div></div></div></div></div><div class="race-box"><div class="race-title">10th Congressional District</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">MARK  DESAULNIER</div><div class="preview-candidate-designation">United States Congressman</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">JEFF  FRESE</div><div class="preview-candidate-designation">Small Business Owner</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">ANGELA  GRIFFITHS</div><div class="preview-candidate-designation">Functional Medicine Practitioner</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">JOSHUA  HAMILTON</div><div class="preview-candidate-designation">Entrepreneur/Community Organizer</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">MITCHELL  MAISLER</div><div class="preview-candidate-designation">Brewer</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">KATHERINE  PICCININI</div><div class="preview-candidate-designation">Retired Businesswoman</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">BOB  ROWLAND</div><div class="preview-candidate-designation">Commercial Land Broker</div></div></div></div></div><div class="race-box"><div class="race-title">12th Congressional District</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">JAMIE  JOYCE</div><div class="preview-candidate-designation">Nonprofit Executive Director</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">LATEEFAH  SIMON</div><div class="preview-candidate-designation">U.S. Representative</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">STEVE  SLAUSON</div><div class="preview-candidate-designation">Write-In Candidate</div></div></div></div></div><div class="race-box"><div class="race-title">14th Congressional District</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">VICTOR  AGUILAR, JR.</div><div class="preview-candidate-designation">San Leandro City Council Member</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">SUZANNE  CHENAULT</div><div class="preview-candidate-designation">Lawyer/Teacher/Parent</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">CARIN  ELAM</div><div class="preview-candidate-designation">Businesswoman/Nonprofit Director</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">MELISSA  HERNANDEZ</div><div class="preview-candidate-designation">Healthcare Services Director</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">WENDY  HUANG</div><div class="preview-candidate-designation">Real Estate Investor</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">DENA  MALDONADO</div><div class="preview-candidate-designation">Business Owner/Florist</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">MATT  ORTEGA</div><div class="preview-candidate-designation">Graphic Designer/Businessman</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">RAKHI ISRANI  SINGH</div><div class="preview-candidate-designation">Educator/Nonprofit Attorney</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">AISHA  WAHAB</div><div class="preview-candidate-designation">State Senator</div></div></div></div></div><div class="race-box"><div class="race-title">17th Congressional District</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">ETHAN  AGARWAL</div><div class="preview-candidate-designation">Small Business Owner</div></div></div><div class="preview-candidate"><div class="candidate-party party-l" title="Libertarian Party">L</div><div class="preview-candidate-info"><div class="preview-candidate-name">JOE  DEHN</div><div class="preview-candidate-designation">Square Dance Caller</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">MIKE  KATZ</div><div class="preview-candidate-designation">Cybersecurity Engineer/Researcher</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">RO  KHANNA</div><div class="preview-candidate-designation">United States Congressmember</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">JENNIE HA  PHAN</div><div class="preview-candidate-designation">Retired Accountant</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">RITESH  TANDON</div><div class="preview-candidate-designation">CEO/Entrepreneur/Researcher</div></div></div></div></div><div class="race-box"><div class="race-title">10th State Senate District</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">DAVID  COHEN</div><div class="preview-candidate-designation">City Councilmember</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">ANNE  KEPNER</div><div class="preview-candidate-designation">College Trustee/Mother</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">RAYMOND  LIU</div><div class="preview-candidate-designation">Fremont City Councilman</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">CARMEN  MONTANO</div><div class="preview-candidate-designation">Mayor</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">LINDA R. PRICE</div><div class="preview-candidate-designation">Businesswoman</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">SCOTT  SAKAKIHARA</div><div class="preview-candidate-designation">Councilmember/Navy Officer</div></div></div></div></div><div class="race-box"><div class="race-title">14th Assembly District</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-g" title="Green Party">G</div><div class="preview-candidate-info"><div class="preview-candidate-name">MARK  RENDON</div><div class="preview-candidate-designation">Teacher</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">BORGAR  SOLNORDAL</div><div class="preview-candidate-designation">Sunday School Teacher</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">BUFFY  WICKS</div><div class="preview-candidate-designation">Assemblymember/Mom</div></div></div></div></div><div class="race-box"><div class="race-title">16th Assembly District</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">REBECCA  BAUER-KAHAN</div><div class="preview-candidate-designation">Assemblymember/Mother</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">CHIRAG  KATHRANI</div><div class="preview-candidate-designation">Civic Technology Entrepreneur</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">JOSEPH A. RUBAY</div><div class="preview-candidate-designation">Businessman/Father</div></div></div></div></div><div class="race-box"><div class="race-title">18th Assembly District</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">MIA  BONTA</div><div class="preview-candidate-designation">California State Assemblymember, Assembly District 18</div></div></div><div class="preview-candidate"><div class="candidate-party party-g" title="Green Party">G</div><div class="preview-candidate-info"><div class="preview-candidate-name">MICHAEL  GOLDSTEIN</div><div class="preview-candidate-designation">Author/Political Commentator</div></div></div><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">NED  NUERGE</div><div class="preview-candidate-designation">Retired Driving Instructor</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">ANDRE  SANDFORD</div><div class="preview-candidate-designation">Housing Program Director</div></div></div></div></div><div class="race-box"><div class="race-title">20th Assembly District</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">PATRICIA  MUGA</div><div class="preview-candidate-designation">Real Estate Appraiser</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">LIZ  ORTEGA</div><div class="preview-candidate-designation">Assemblymember</div></div></div></div></div><div class="race-box"><div class="race-title">24th Assembly District</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-r" title="Republican Party">R</div><div class="preview-candidate-info"><div class="preview-candidate-name">MAX  HSIA</div><div class="preview-candidate-designation">Small Business Owner</div></div></div><div class="preview-candidate"><div class="candidate-party party-d" title="Democratic Party">D</div><div class="preview-candidate-info"><div class="preview-candidate-name">ALEX  LEE</div><div class="preview-candidate-designation">State Assemblymember</div></div></div><div class="preview-candidate"><div class="candidate-party party-n" title="No Party Preference">N</div><div class="preview-candidate-info"><div class="preview-candidate-name">YANG  SHAO</div><div class="preview-candidate-designation">City of Fremont Councilmember</div></div></div></div></div><div class="race-box"><div class="race-title">Superior Court Judge, Office #13</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">CABRAL  BONNER</div><div class="preview-candidate-designation">Civil Rights Attorney</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">MICHAEL P. JOHNSON</div><div class="preview-candidate-designation">Consumer Protection Attorney</div></div></div></div></div><div class="race-box"><div class="race-title">Superior Court Judge, Office #19</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">PATRICIA  MILES</div><div class="preview-candidate-designation">Administrative Law Judge</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">SELIA  WARREN</div><div class="preview-candidate-designation">Trial Attorney</div></div></div></div></div><div class="race-box"><div class="race-title">State Superintendent Of Public Instruction</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">RICHARD  BARRERA</div><div class="preview-candidate-designation">State Superintendent Advisor</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">WENDY  CASTANEDA LEAL</div><div class="preview-candidate-designation">School District Superintendent</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">NICHELLE M. HENDERSON</div><div class="preview-candidate-designation">College Trustee/Teacher</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">FRANK  LARA</div><div class="preview-candidate-designation">Teacher/Union VP</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">AINYE  LONG</div><div class="preview-candidate-designation">Public School Teacher</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">GUS  MATTAMMAL</div><div class="preview-candidate-designation">Educator/Executive/Author</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">AL  MURATSUCHI</div><div class="preview-candidate-designation">Assemblymember/Classroom Educator</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">JOSH  NEWMAN</div><div class="preview-candidate-designation">Educator/Strategic Advisor</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">ANTHONY  RENDON</div><div class="preview-candidate-designation">Democracy Advocate/Educator</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">SONJA  SHAW</div><div class="preview-candidate-designation">School District President</div></div></div></div></div><div class="race-box"><div class="race-title">County Superintendent Of Schools</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">ALYSSE  CASTRO</div><div class="preview-candidate-designation">Alameda County Superintendent of Schools</div></div></div></div></div><div class="race-box"><div class="race-title">Member, Board Of Education, 4th Trustee Area</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">JOSEPH  GRCAR</div><div class="preview-candidate-designation">Retired Laboratory Scientist</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">MARK  HARVEY</div><div class="preview-candidate-designation">Consultant/Father/Businessowner</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">AISHA  KNOWLES</div><div class="preview-candidate-designation">Alameda County Board of Education, Trustee Area 4</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">LUIS  REYNOSO</div><div class="preview-candidate-designation">University Business Professor</div></div></div></div></div><div class="race-box"><div class="race-title">Member, Board Of Education, 7th Trustee Area</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">CHERYL  COOK-KALLIO</div><div class="preview-candidate-designation">Alameda County Board of Education Trustee</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">SANGEETHA  SHANBHOGUE</div><div class="preview-candidate-designation">Parent/Homemaker</div></div></div></div></div><div class="race-box"><div class="race-title">Supervisor, 2nd District</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">LIZ  AMES</div><div class="preview-candidate-designation">Engineer/BART Director</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">ROHAN  MARFATIA</div><div class="preview-candidate-designation">Business Executive/Parent</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">ELISA  MÁRQUEZ</div><div class="preview-candidate-designation">Alameda County Supervisor</div></div></div></div></div><div class="race-box"><div class="race-title">Supervisor, 3rd District</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">LENA  TAM</div><div class="preview-candidate-designation">Alameda County Supervisor</div></div></div></div></div><div class="race-box"><div class="race-title">District Attorney</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">URSULA  JONES DICKSON</div><div class="preview-candidate-designation">Appointed Alameda County District Attorney</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">GOPAL  KRISHAN</div><div class="preview-candidate-designation">Trial Attorney</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">PAMELA  PRICE</div><div class="preview-candidate-designation">Civil Rights Attorney</div></div></div></div></div><div class="race-box"><div class="race-title">Flood Control &amp; Water Conservation District Director, Zone 7</div><div class="preview-candidate-list"><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">SEEMA  BADAR</div><div class="preview-candidate-designation">Community Volunteer</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">ALAN  BURNHAM</div><div class="preview-candidate-designation">Chemist/Business Owner</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">JIM  LEHRMAN</div><div class="preview-candidate-designation">Hydrogeologist/Geologist</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">PATRICIA  MUGA</div><div class="preview-candidate-designation">Real Estate Appraiser</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">SARAH  PALMER</div><div class="preview-candidate-designation">Incumbent</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">RISH  RAO</div><div class="preview-candidate-designation">Educator</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">SEAN  ROBERTS</div><div class="preview-candidate-designation">Computer Engineer</div></div></div><div class="preview-candidate"><div class="candidate-party party-i" title="No Party Preference">I</div><div class="preview-candidate-info"><div class="preview-candidate-name">HEIDI  TURNER-ZIKA</div><div class="preview-candidate-designation">Information Security Officer</div></div></div></div></div><div class="race-box"><div class="race-title">Measures on the Ballot</div><div class="preview-measure-list"><div class="preview-measure"><div class="preview-measure-badge">Measure A</div><div class="preview-measure-body"><div class="preview-measure-jurisdiction">Peralta Community College District</div><div class="preview-measure-description">To continue funding for community colleges in Alameda, Berkeley, and Oakland at existing tax rates, support affordable education to prepare students for jobs/ careers and university transfer; attract/ retain high quality faculty; shall Peralta Community College District's measure be adopted, reauthorizing the existing $48 per parcel annually for 9 years, providing $8,000,000 annually, with oversight, funds that cannot be taken by the state or used for administrator salaries, all benefitting local colleges?</div></div></div><div class="preview-measure"><div class="preview-measure-badge">Bond<br>Measure B</div><div class="preview-measure-body"><div class="preview-measure-jurisdiction">Castro Valley Unified School District</div><div class="preview-measure-description">Shall the measure to improve local classrooms/ school facilities: protect student safety/ security; repair/ replace aging roofs, heating, cooling, electrical/ plumbing systems; and update classrooms/ labs for science, technology, engineering, math, core academics, career/job training, by authorizing $212,000,000 in bonds at legal rates, levying $52.30 per $100,000 of assessed value, raising approximately $14,000,000 annually while bonds are outstanding, with independent oversight and all funds staying local, be adopted?</div></div></div><div class="preview-measure"><div class="preview-measure-badge">Measure G</div><div class="preview-measure-body"><div class="preview-measure-jurisdiction">Hayward Unified School District Electio</div><div class="preview-measure-description">Shall the measure to support student learning/ protect local schools from deep budget cuts by sustaining strong reading, writing, math/ science programs; attracting/ retaining qualified teachers/ staff; and supporting al students, including those with special needs, by levying a $98 parcel tax for twelve years, providing approximately $4,000,000 annually that cannot be taken by the state/ federal government, with senior exemptions, annual inflation adjustments, and independent oversight, be adopted?</div></div></div><div class="preview-measure"><div class="preview-measure-badge">Measure H</div><div class="preview-measure-body"><div class="preview-measure-jurisdiction">Piedmont Unified School District (City of Piedmont)</div><div class="preview-measure-description">To maintain the high quality of Piedmont schools, continue funding programs in math, science, technology, engineering, English, music and arts, attract and retain qualified teachers, update instructional materials and technology, and maintain manageable class sizes, shall Piedmont Unified School District's measure be adopted, renewing the expiring school parcel tax at the then-current rate ($3,174 per parcel) until ended by voters, with independent citizen oversight, annual inflation adjustments, and all funds (approximately $12 million annually) benefiting local students?</div></div></div><div class="preview-measure"><div class="preview-measure-badge">Measure C</div><div class="preview-measure-body"><div class="preview-measure-jurisdiction">City of Oakland</div><div class="preview-measure-description">Shall the measure amending Oakland's Business Tax Ordinance to provide one-year business tax exemptions for (1) certain small businesses with annual gross receipts of $1,000,000 or less, including retail sales, grocers, business and personal services, recreation and entertainment, and manufacturing, and (2) businesses that establish a new commercial location in the City; and authorizing the City Council to extend the exemptions on an annual basis for up to three additional years, be adopted?</div></div></div><div class="preview-measure"><div class="preview-measure-badge">Measure D</div><div class="preview-measure-body"><div class="preview-measure-jurisdiction">City of Oakland</div><div class="preview-measure-description">Shall the measure amending the City Charter to, among other things, expand the eligibility for service on the Board of the Police and Fire Retirement System and reduce the frequency of the Board's mandatory meetings from monthly to no less than quarterly be adopted?</div></div></div><div class="preview-measure"><div class="preview-measure-badge">Measure E</div><div class="preview-measure-body"><div class="preview-measure-jurisdiction">City of Oakland</div><div class="preview-measure-description">Shall the measure to: prevent increased 911 response times; maintain fire stations, fire protection services, police patrols and investigations, and gun-violence and crime prevention services; address homelessness; and remove illegal dumping and trash by imposing a parcel tax of $192 annually for single-family parcels, and other parcels as specified, exempting certain low-income and senior households and others, raising approximately $34,000,000 annually for nine years, with oversight, audits and public disclosure, be adopted?</div></div></div><div class="preview-measure"><div class="preview-measure-badge">Measure F</div><div class="preview-measure-body"><div class="preview-measure-jurisdiction">City of San Leandro</div><div class="preview-measure-description">Shall Section 225(a) of the San Leandro City Charter be amended to the following: The Mayor shall be elected by the registered voters of the City at large. All Council Members, except the Mayor, shall be elected by the registered voters of the City by district. In conformance with the California Voting Rights Act, one Council Member shall be nominated and elected from each Council Member district only by the registered voters of that district.</div></div></div></div></div><script>document.addEventListener('DOMContentLoaded',function(){
+  var toggle=document.getElementById("uncontestedToggle");
+  var body=document.getElementById("uncontestedBody");
+  var chevron=document.getElementById("uncontestedChevron");
+  if(toggle){toggle.addEventListener("click",function(){body.classList.toggle("open");chevron.classList.toggle("open");});}
+
+  var input=document.getElementById("electionSearch");var noResults=document.getElementById("noResults");if(!input)return;input.value='';function runFilter(){var q=input.value.trim().toLowerCase();var boxes=document.querySelectorAll(".race-box");var visible=0;boxes.forEach(function(box){var show=!q||box.textContent.toLowerCase().indexOf(q)!==-1;box.style.display=show?"":"none";if(show)visible++;});if(noResults)noResults.style.display=(q&&visible===0)?"block":"none";}input.addEventListener("input",runFilter);});</script></body></html>

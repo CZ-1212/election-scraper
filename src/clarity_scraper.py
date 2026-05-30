@@ -22,6 +22,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
+from scraper_utils import _parse_choice_str
 
 # Configuration
 TARGET_URL = "https://results.enr.clarityelections.com/CA/Marin/124182/web.345435/#/summary"
@@ -143,10 +144,14 @@ class ClarityScraper:
         self.owns_driver = reuse_driver is None  # Track if we should close driver
         self.session = self._create_session()  # HTTP session with connection pooling
         self.save_files = save_files  # Control whether to save files
-        
+
         # Security: Initialize rate limiter for this domain
         parsed_url = urlparse(self.url)
         self.rate_limiter = RateLimiter(parsed_url.netloc)
+
+        # Derive a display label for error messages from the URL path (e.g. "Marin").
+        m = re.search(r"/CA/([^/]+)/", self.url)
+        self._county_label = m.group(1) if m else "Clarity"
         
     def _extract_base_url(self, url):
         """Extract base URL from the full URL"""
@@ -712,6 +717,8 @@ class ClarityScraper:
 
                     # Choices / candidates.
                     # Try CSS selectors first; fall back to parsing the contest's full text.
+                    # Both paths parse directly into the canonical dict shape:
+                    #   {'name': str, 'votes': int, 'pct': float}
                     try:
                         rows = contest.find_elements(By.CSS_SELECTOR, "tr, .choice, [class*='choice'], [class*='candidate']")
                         seen_choices = set()
@@ -723,8 +730,13 @@ class ClarityScraper:
                                         and not choice_text.startswith('Candidate')
                                         and not choice_text.startswith('Choice')
                                         and choice_text != 'Percentage Votes'):
-                                    contest_data['choices'].append(choice_text)
                                     seen_choices.add(choice_text)
+                                    choice = _parse_choice_str(
+                                        choice_text, self._county_label,
+                                        contest_data.get('title', '')
+                                    )
+                                    if choice is not None:
+                                        contest_data['choices'].append(choice)
                             except Exception:
                                 pass
                     except NoSuchElementException:
@@ -737,7 +749,6 @@ class ClarityScraper:
                         try:
                             full_text = contest.text
                             lines = [l.strip() for l in full_text.split('\n') if l.strip()]
-                            # Skip header lines, noise
                             noise = {'Percentage', 'Votes', 'Percentage Votes', 'Map', 'Chart',
                                      'Precincts Reporting', contest_data['title']}
                             i = 0
@@ -750,15 +761,22 @@ class ClarityScraper:
                                         or re.match(r'^\(?\d+\)?$', line)):
                                     i += 1
                                     continue
-                                # Look ahead for a line containing both a % and digits
                                 next_line = lines[i + 1] if i + 1 < len(lines) else ''
                                 m1 = re.search(r'(\d+\.?\d*)%\s*([\d,]+)', next_line)
                                 m2 = re.search(r'([\d,]+)\s+(\d+\.?\d*)%', next_line)
-                                if m1:
-                                    contest_data['choices'].append(f"{line}\n{m1.group(1)}% {m1.group(2)}")
-                                    i += 2
-                                elif m2:
-                                    contest_data['choices'].append(f"{line}\n{m2.group(1)} {m2.group(2)}%")
+                                if m1 or m2:
+                                    # Build the canonical string, then parse it.
+                                    raw = (
+                                        f"{line} {m1.group(1)}% {m1.group(2)}"
+                                        if m1 else
+                                        f"{line} {m2.group(1)} {m2.group(2)}%"
+                                    )
+                                    choice = _parse_choice_str(
+                                        raw, self._county_label,
+                                        contest_data.get('title', '')
+                                    )
+                                    if choice is not None:
+                                        contest_data['choices'].append(choice)
                                     i += 2
                                 else:
                                     i += 1

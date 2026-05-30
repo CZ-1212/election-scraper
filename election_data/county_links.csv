@@ -1,0 +1,14 @@
+county,platform,test_url,live_url,source_label
+Contra_Costa,clarity,https://results.enr.clarityelections.com/CA/Contra_Costa/124407/web.345435/#/summary,,Contra Costa County Elections Division
+Marin,clarity,https://results.enr.clarityelections.com/CA/Marin/124182/web.345435/#/summary,,Marin County Elections
+Santa_Clara,clarity,https://results.enr.clarityelections.com/CA/Santa_Clara/125157/web.345435/#/summary,,Santa Clara County Registrar of Voters
+Sonoma,clarity,https://results.enr.clarityelections.com/CA/Sonoma/124354/web.345435/#/summary,,Sonoma County Registrar of Voters
+San_Mateo,livevoterturnout,https://www.livevoterturnout.com/ENR/sanmateocaenr/18/en/gWJEq_Index_18.html,,San Mateo County Elections
+San_Joaquin,livevoterturnout,https://www.livevoterturnout.com/ENR/sanjoaquincaenr/19/en/Index_19.html,,San Joaquin County Registrar of Voters
+Santa_Cruz,custom,https://www2.santacruzcountyca.gov/ElectionSites/ElectionResults/Results,,Santa Cruz County Elections Department
+Alameda,custom,https://alamedacountyca.gov/rovresults/258/,,Alameda County Registrar of Voters
+Mendocino,custom,https://www.mendocinocounty.gov/government/assessor-county-clerk-recorder-elections/current-election-results,,Mendocino County Elections
+Monterey,custom,https://www.countyofmonterey.gov/government/departments-a-h/elections/election-results,,Monterey County Elections Department
+Napa,custom,https://www.napacounty.gov/402/Election-Results,,Napa County Elections
+San_Francisco,custom,https://sfelections.org/results/20251104w/index.html,,San Francisco Department of Elections
+Solano,custom,https://content.solanocounty.gov/sites/default/files/2026-01/Official_Summary_Results_-_SIGNED.pdf,,Solano County Elections Division

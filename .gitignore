@@ -31,9 +31,11 @@ data/*
 
 # Other data formats
 *.xml
-*.csv
 *.xls
 *.xlsx
+# Exclude generated/scraped CSVs everywhere except the static election_data roster
+*.csv
+!election_data/*.csv
 
 # Logs
 *.log

@@ -24,6 +24,7 @@ from bs4 import BeautifulSoup
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from scraper_utils import _parse_choice_str
 
 
 # Security: Allowed domains for URL validation
@@ -439,13 +440,18 @@ class LiveVoterTurnoutScraper(BaseScraper):
                                     not choice_text.startswith('Candidate') and
                                     not any(s in choice_text for s in junk_strings) and
                                     choice_text not in seen_choices):
+                                    seen_choices.add(choice_text)
                                     # Remove duplicate leading line caused by party column echoing candidate name
                                     # e.g. "Yes\nYes\n101,892 54.11%" → "Yes\n101,892 54.11%"
                                     lines = choice_text.split('\n')
                                     if len(lines) >= 2 and lines[0].strip() == lines[1].strip():
                                         choice_text = '\n'.join([lines[0]] + lines[2:])
-                                    contest_data['choices'].append(choice_text)
-                                    seen_choices.add(choice_text)
+                                    choice = _parse_choice_str(
+                                        choice_text, self.county_name,
+                                        contest_data.get('title', '')
+                                    )
+                                    if choice is not None:
+                                        contest_data['choices'].append(choice)
                         except:
                             pass
                         
@@ -596,8 +602,8 @@ class SFElectionsScraper(BaseScraper):
                         pct = round(votes / contest_total * 100, 2) if contest_total else 0
                         contest['choices'].append({
                             'name': cname,
-                            'votes': str(votes),
-                            'percentage': f"{pct}%",
+                            'votes': votes,   # int
+                            'pct': pct,       # float
                         })
                 if contest['choices']:
                     data['contests'].append(contest)
@@ -680,9 +686,14 @@ class SantaCruzScraper(BaseScraper):
                         if candidate and candidate.lower() not in ['candidate', 'write in candidate', 'write in', '']:
                             votes_match = re.match(r'^(\d+(?:,\d+)*)\s*\(([^)]+%)\)$', votes_text)
                             if votes_match:
-                                contest_data['choices'].append(
-                                    f"{candidate} | {votes_match.group(1)} | {votes_match.group(2)}"
-                                )
+                                try:
+                                    contest_data['choices'].append({
+                                        'name': candidate,
+                                        'votes': int(votes_match.group(1).replace(',', '')),
+                                        'pct': float(votes_match.group(2).rstrip('%')),
+                                    })
+                                except (ValueError, TypeError) as e:
+                                    print(f"[PARSE ERROR] [{self.county_name}] {contest_data.get('title', '?')!r}: {e}")
 
                 # Total votes from footer
                 footer = results_div.select_one('.mtable-footer')
@@ -811,13 +822,16 @@ class SantaCruzScraper(BaseScraper):
                         candidate = lines[j-1].strip()
 
                         if candidate.lower() not in ['candidate', 'party', 'total', 'write in candidate', 'write in', ''] and candidate:
-                            votes = votes_match.group(1)
-                            percentage = votes_match.group(2)
-
                             if candidate not in seen_candidates:
                                 seen_candidates.add(candidate)
-                                choice_str = f"{candidate} | {votes} | {percentage}"
-                                contest_data['choices'].append(choice_str)
+                                try:
+                                    contest_data['choices'].append({
+                                        'name': candidate,
+                                        'votes': int(votes_match.group(1).replace(',', '')),
+                                        'pct': float(votes_match.group(2).rstrip('%')),
+                                    })
+                                except (ValueError, TypeError) as e:
+                                    print(f"[PARSE ERROR] [{self.county_name}] {contest_data.get('title', '?')!r}: {e}")
 
                     j += 1
 
@@ -1008,11 +1022,14 @@ class MendocinoScraper(BaseScraper):
                             and cells[0] not in SKIP_LABELS
                             and cells[0]
                             and cells[9]):  # total votes present
-                        current_choices.append({
-                            'name': cells[0],
-                            'votes': cells[9].replace(',', ''),
-                            'percentage': cells[10],
-                        })
+                        try:
+                            current_choices.append({
+                                'name': cells[0],
+                                'votes': int(cells[9].replace(',', '')),
+                                'pct': float(cells[10].rstrip('%')),
+                            })
+                        except (ValueError, TypeError) as e:
+                            print(f"[PARSE ERROR] [{self.county_name}] {current_title!r}: {e} for cells {cells!r}")
 
             flush(current_title, current_choices, data['contests'])
 
@@ -1120,13 +1137,16 @@ class AlamedaScraper(BaseScraper):
                     no_pct = cells[4].get_text(strip=True).replace(' ', '')
                     if not title:
                         continue
-                    data['contests'].append({
-                        'title': title,
-                        'choices': [
-                            {'name': 'Yes', 'votes': yes_votes, 'percentage': yes_pct},
-                            {'name': 'No', 'votes': no_votes, 'percentage': no_pct},
-                        ]
-                    })
+                    try:
+                        data['contests'].append({
+                            'title': title,
+                            'choices': [
+                                {'name': 'Yes', 'votes': int(yes_votes), 'pct': float(yes_pct.rstrip('%'))},
+                                {'name': 'No',  'votes': int(no_votes),  'pct': float(no_pct.rstrip('%'))},
+                            ]
+                        })
+                    except (ValueError, TypeError) as e:
+                        print(f"[PARSE ERROR] [{self.county_name}] {title!r}: {e}")
 
             # Individual measure/race panels: each has class "panelDtl" with an h3 sibling for the title
             for panel_btn in soup.select('button.list-group-item'):
@@ -1162,10 +1182,17 @@ class AlamedaScraper(BaseScraper):
                     if len(cells) < 3:
                         continue
                     name = cells[0].get_text(strip=True)
-                    votes = cells[1].get_text(strip=True).replace(',', '').strip()
-                    pct = cells[2].get_text(strip=True).replace(' ', '')
-                    if name and votes:
-                        contest['choices'].append({'name': name, 'votes': votes, 'percentage': pct})
+                    votes_raw = cells[1].get_text(strip=True).replace(',', '').strip()
+                    pct_raw = cells[2].get_text(strip=True).replace(' ', '')
+                    if name and votes_raw:
+                        try:
+                            contest['choices'].append({
+                                'name': name,
+                                'votes': int(votes_raw),
+                                'pct': float(pct_raw.rstrip('%')),
+                            })
+                        except (ValueError, TypeError) as e:
+                            print(f"[PARSE ERROR] [{self.county_name}] {title!r}: {e}")
 
                 if contest['choices']:
                     data['contests'].append(contest)
@@ -1270,11 +1297,14 @@ class NapaScraper(BaseScraper):
                     name = cm.group(1).strip()
                     if name in skip or re.match(r'^\d', name):
                         continue
-                    contest['choices'].append({
-                        'name': name,
-                        'votes': cm.group(2).replace(',', ''),
-                        'percentage': cm.group(3) + '%',
-                    })
+                    try:
+                        contest['choices'].append({
+                            'name': name,
+                            'votes': int(cm.group(2).replace(',', '')),
+                            'pct': float(cm.group(3)),
+                        })
+                    except (ValueError, TypeError) as e:
+                        print(f"[PARSE ERROR] [{self.county_name}] {title!r}: {e}")
 
                 if contest['choices']:
                     data['contests'].append(contest)
@@ -1366,11 +1396,14 @@ class SolanoScraper(BaseScraper):
                 contest = {'title': tm.group(1).strip(), 'choices': []}
 
                 for cm in choice_re.finditer(block):
-                    contest['choices'].append({
-                        'name': cm.group(1).strip(),
-                        'votes': cm.group(3).replace(',', ''),
-                        'percentage': cm.group(4) + '%',
-                    })
+                    try:
+                        contest['choices'].append({
+                            'name': cm.group(1).strip(),
+                            'votes': int(cm.group(3).replace(',', '')),
+                            'pct': float(cm.group(4)),
+                        })
+                    except (ValueError, TypeError) as e:
+                        print(f"[PARSE ERROR] [{self.county_name}] {contest['title']!r}: {e}")
                 if contest['choices']:
                     data['contests'].append(contest)
 
@@ -1477,15 +1510,15 @@ class MontereyCountyScraper(BaseScraper):
                     votes = cand.get('totalVotes', 0)
                     contest['choices'].append({
                         'name': cand.get('name', '').strip(),
-                        'votes': str(votes),
-                        'percentage': f"{round(votes / total_votes * 100, 2)}%",
+                        'votes': int(votes),
+                        'pct': round(votes / total_votes * 100, 2),
                     })
                 for wi in c.get('writeIns', []):
                     votes = wi.get('totalVotes', 0)
                     contest['choices'].append({
                         'name': wi.get('name', '').strip(),
-                        'votes': str(votes),
-                        'percentage': f"{round(votes / total_votes * 100, 2)}%",
+                        'votes': int(votes),
+                        'pct': round(votes / total_votes * 100, 2),
                     })
                 if contest['choices']:
                     data['contests'].append(contest)

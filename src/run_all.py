@@ -21,74 +21,68 @@ NON_CLARITY_RETRY_DELAY = 7
 from clarity_scraper import ClarityScraper, validate_and_secure_filepath
 from multi_platform_scraper import LiveVoterTurnoutScraper, SantaCruzScraper, AlamedaScraper, MendocinoScraper, MontereyCountyScraper, NapaScraper, SFElectionsScraper, SolanoScraper
 
-# All counties
-CLARITY_SITES = {
-    'Contra_Costa': 'https://results.enr.clarityelections.com/CA/Contra_Costa/124407/web.345435/#/summary',
-    'Marin':        'https://results.enr.clarityelections.com/CA/Marin/124182/web.345435/#/summary',
-    'Santa_Clara':  'https://results.enr.clarityelections.com/CA/Santa_Clara/125157/web.345435/#/summary',
-    'Sonoma':       'https://results.enr.clarityelections.com/CA/Sonoma/124354/web.345435/#/summary',
-}
+# "test"  → scrape test_url column  (zero report or past-election link)
+# "live"  → scrape live_url column   (election-night endpoint)
+MODE = "test"
 
-NON_CLARITY_SITES = {
-    'San_Mateo':   {'url': 'https://www.livevoterturnout.com/ENR/sanmateocaenr/18/en/gWJEq_Index_18.html',  'scraper_class': LiveVoterTurnoutScraper},
-    'San_Joaquin': {'url': 'https://www.livevoterturnout.com/ENR/sanjoaquincaenr/19/en/Index_19.html',       'scraper_class': LiveVoterTurnoutScraper},
-    'Santa_Cruz':  {'url': 'https://www2.santacruzcountyca.gov/ElectionSites/ElectionResults/Results',       'scraper_class': SantaCruzScraper},
-    'Alameda':     {'url': 'https://alamedacountyca.gov/rovresults/258/',                                    'scraper_class': AlamedaScraper},
-    'Mendocino':   {'url': 'https://www.mendocinocounty.gov/government/assessor-county-clerk-recorder-elections/current-election-results', 'scraper_class': MendocinoScraper},
-    'Monterey':    {'url': 'https://www.countyofmonterey.gov/government/departments-a-h/elections/election-results', 'scraper_class': MontereyCountyScraper},
-    'Napa':        {'url': 'https://www.napacounty.gov/402/Election-Results',                                        'scraper_class': NapaScraper},
-    'San_Francisco': {'url': 'https://sfelections.org/results/20251104w/index.html',                                'scraper_class': SFElectionsScraper},
-    'Solano':        {'url': 'https://content.solanocounty.gov/sites/default/files/2026-01/Official_Summary_Results_-_SIGNED.pdf', 'scraper_class': SolanoScraper},
+# Maps county name (as used in county_links.csv) to its non-Clarity scraper class.
+_COUNTY_TO_SCRAPER_CLASS: dict = {
+    "San_Mateo":     LiveVoterTurnoutScraper,
+    "San_Joaquin":   LiveVoterTurnoutScraper,
+    "Santa_Cruz":    SantaCruzScraper,
+    "Alameda":       AlamedaScraper,
+    "Mendocino":     MendocinoScraper,
+    "Monterey":      MontereyCountyScraper,
+    "Napa":          NapaScraper,
+    "San_Francisco": SFElectionsScraper,
+    "Solano":        SolanoScraper,
 }
 
 
-def parse_choice(choice):
-    """Parse a choice (string or dict) into (name, votes, pct) strings.
+def _load_county_links(csv_path: Path, mode: str) -> tuple[dict, dict, dict]:
+    """Read county_links.csv and return (clarity_sites, non_clarity_sites, source_labels).
 
-    Handles the formats produced by each scraper:
-      - dict with 'name'/'votes'/'percentage' keys
-      - "Name | votes | pct%"          (Santa Cruz pipe-separated)
-      - "Name\\npct% votes"              (Clarity: e.g. "Yes\\n71.25% 294,137")
-      - "Name\\nvotes pct%"              (LiveVoterTurnout: e.g. "Yes\\n294,137 71.25%")
+    mode selects which URL column to use: 'test' → test_url, 'live' → live_url.
+    Counties whose selected URL column is blank are skipped with a warning.
     """
-    if isinstance(choice, dict):
-        return choice.get('name', ''), choice.get('votes', ''), choice.get('percentage', '')
+    url_col = "test_url" if mode == "test" else "live_url"
+    clarity: dict = {}
+    non_clarity: dict = {}
+    source_labels: dict = {}
 
-    s = str(choice).strip()
+    if not csv_path.exists():
+        print(f"[CONFIG] county_links.csv not found at {csv_path} — no counties loaded")
+        return clarity, non_clarity, source_labels
 
-    # Format: "Name | votes | pct" (Santa Cruz)
-    if ' | ' in s:
-        parts = [p.strip() for p in s.split(' | ')]
-        name = parts[0] if len(parts) > 0 else s
-        votes = parts[1] if len(parts) > 1 else ''
-        pct = parts[2] if len(parts) > 2 else ''
-        return name, votes, pct
+    with open(csv_path, newline="", encoding="utf-8-sig") as f:
+        for row in csv.DictReader(f):
+            county = (row.get("county") or "").strip()
+            platform = (row.get("platform") or "").strip().lower()
+            url = (row.get(url_col) or "").strip()
+            label = (row.get("source_label") or "").strip()
 
-    # Multi-line: first line is name, second line has votes/pct in some order
-    lines = [l.strip() for l in s.split('\n') if l.strip()]
-    if len(lines) >= 2:
-        name = lines[0]
-        rest = lines[1]
-        # "71.25% 294,137" — pct first then votes (Clarity format)
-        m = re.match(r'^(\d+\.?\d*)%\s*([\d,]+)$', rest)
-        if m:
-            return name, m.group(2), m.group(1) + '%'
-        # "294,137 71.25%" — votes first then pct
-        m = re.match(r'^([\d,]+)\s+(\d+\.?\d*)%$', rest)
-        if m:
-            return name, m.group(1), m.group(2) + '%'
-        # "294,137 (71.25%)" — votes with pct in parens
-        m = re.match(r'^([\d,]+)\s+\((\d+\.?\d*)%\)$', rest)
-        if m:
-            return name, m.group(1), m.group(2) + '%'
-        return name, rest, ''
+            if not county:
+                continue
+            source_labels[county] = label
 
-    # Single line ending in a number (e.g. "Vote Cast 412,838") — split label from count
-    m = re.match(r'^(.+?)\s+([\d,]+)$', s)
-    if m:
-        return m.group(1), m.group(2), ''
+            if not url:
+                print(f"[CONFIG] {county}: {url_col} is blank in county_links.csv — skipping")
+                continue
 
-    return s, '', ''
+            if platform == "clarity":
+                clarity[county] = url
+            else:
+                scraper_cls = _COUNTY_TO_SCRAPER_CLASS.get(county)
+                if scraper_cls is None:
+                    print(f"[CONFIG] {county}: no scraper class mapped — skipping")
+                    continue
+                non_clarity[county] = {"url": url, "scraper_class": scraper_cls}
+
+    return clarity, non_clarity, source_labels
+
+
+_LINKS_CSV = Path(__file__).parent.parent / "election_data" / "county_links.csv"
+CLARITY_SITES, NON_CLARITY_SITES, COUNTY_SOURCE_LABELS = _load_county_links(_LINKS_CSV, MODE)
 
 
 def _minify_html(html_str: str) -> str:
@@ -210,50 +204,54 @@ def _determine_election_date(county_data: dict) -> str:
     return datetime.now().strftime("%Y-%m-%d")
 
 
-def _votes_to_int(votes_str) -> int:
-    """Convert a votes string (possibly with commas) to int, 0 on failure."""
-    try:
-        return int(str(votes_str or "").replace(",", "").strip())
-    except (ValueError, TypeError):
-        return 0
-
-
-def _fmt_pct(pct_str, votes_str=None, total_votes=0) -> str:
-    """Normalize a percentage string to have a % suffix.
-
-    If pct_str is empty and votes/total are provided, compute from those.
-    """
-    s = str(pct_str or "").strip()
-    if s:
-        return s if s.endswith("%") else s + "%"
-    if votes_str is not None and total_votes > 0:
-        v = _votes_to_int(votes_str)
-        return f"{v / total_votes * 100:.2f}%"
-    return "0%"
-
-
 def _is_ballot_measure(parsed_choices: list) -> bool:
     """Return True if all choices are yes/no responses (ballot measure)."""
-    names = {name.strip().lower() for name, _, _ in parsed_choices}
+    names = {choice["name"].strip().lower() for choice in parsed_choices}
     return bool(names) and names <= {"yes", "no"}
-
-
-_CHECK_SVG = '<svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>'
 
 
 def _normalize_lookup_key(s: str) -> str:
     return re.sub(r"\s+", "", str(s or "").strip()).lower()
 
 
-def _lookup_measure_info(title: str, measure_desc_lookup: dict) -> dict:
-    """Find measure info dict for a contest title using fuzzy prefix matching."""
+def _normalize_county(s: str) -> str:
+    """Strip 'county', underscores, spaces and lowercase so 'Alameda County' and 'Alameda' both map to 'alameda'."""
+    s = re.sub(r"\bcounty\b", "", str(s or "").lower(), flags=re.I)
+    return re.sub(r"[\s_]+", "", s).strip()
+
+
+_PARTY_ABBREV = {
+    "democratic": ("D", "party-d"),
+    "republican": ("R", "party-r"),
+    "green": ("G", "party-n"),
+    "libertarian": ("L", "party-n"),
+    "american independent": ("AI", "party-n"),
+    "peace and freedom": ("PF", "party-n"),
+}
+
+
+def _party_badge(party: str) -> tuple[str, str]:
+    """Map a party string to (badge_letter, css_class). Non-partisan and empty both return N/party-n."""
+    key = (party or "").strip().lower()
+    for k, v in _PARTY_ABBREV.items():
+        if k in key:
+            return v
+    return ("N", "party-n")
+
+
+def _lookup_measure_info(title: str, measure_desc_lookup: dict, county: str = "") -> dict:
+    """Find measure info dict for a contest title, scoped to county.
+
+    County is included in every key so measures that share a letter across
+    counties never collide (e.g. 'alameda|measurea' vs 'santaclara|measurea').
+    """
     if not measure_desc_lookup:
         return {}
 
+    county_key = _normalize_county(county)
     raw = str(title or "").strip()
     candidates = [raw]
 
-    # Split on dash/em-dash separators: "Measure A - County..." → "Measure A"
     parts = re.split(r"\s*[–—\-:]\s*", raw, maxsplit=1)
     if parts and parts[0].strip() != raw:
         candidates.append(parts[0].strip())
@@ -264,48 +262,42 @@ def _lookup_measure_info(title: str, measure_desc_lookup: dict) -> dict:
     if words:
         candidates.append(words[0])
 
-    # Also extract any "Proposition/Measure + token" substring from the title,
-    # e.g. "State Proposition 50 - ..." → "Proposition 50"
-    m = re.search(r"\b((?:Proposition|Measure|Prop)\s+\S+)", raw, re.I)
+    m = re.search(r"\b((?:Proposition|Measure|Prop|Bond\s+Measure)\s+\S+)", raw, re.I)
     if m:
         candidates.append(m.group(1).strip())
 
     seen = set()
     for c in candidates:
-        key = _normalize_lookup_key(c)
+        key = f"{county_key}|{_normalize_lookup_key(c)}"
         if key in seen:
             continue
         seen.add(key)
         if key in measure_desc_lookup:
             info = measure_desc_lookup[key]
-            print(f"[HTML] Matched measure: '{title}' -> key='{key}'")
+            print(f"[HTML] Matched measure: '{title}' (county={county}) -> key='{key}'")
             return info if isinstance(info, dict) else {"description": info, "jurisdiction": ""}
 
-    print(f"[HTML] No measure match: '{title}'")
+    print(f"[HTML] No measure match: '{title}' (county={county})")
     return {}
 
 
-def _render_measure_block(title: str, parsed_choices: list, measure_desc_lookup: dict) -> str:
-    """Render a ballot-measure race-box using the measure-block template format."""
-    info = _lookup_measure_info(title, measure_desc_lookup)
+def _render_unavailable_contest(title: str) -> str:
+    """Render a contest box whose choices failed to parse — no rows, just a notice."""
+    return (
+        '<div class="race-box">'
+        f'<div class="race-title">{_escape_html_text(title)}</div>'
+        '<div class="contest-unavailable">Results unavailable for this contest.</div>'
+        "</div>"
+    )
+
+
+def _render_measure_block(title: str, parsed_choices: list, measure_desc_lookup: dict, county: str = "") -> str:
+    """Render a ballot-measure race-box. No pass/fail interpretation."""
+    info = _lookup_measure_info(title, measure_desc_lookup, county)
     description = info.get("description", "")
     jurisdiction = info.get("jurisdiction", "")
 
-    # Rank choices by vote count descending.
-    total_votes = sum(_votes_to_int(v) for _, v, _ in parsed_choices)
-    ranked = sorted(parsed_choices, key=lambda x: _votes_to_int(x[1]), reverse=True)
-    winner_name, winner_votes, winner_pct = ranked[0]
-
-    # Status: failing when NO is the leading choice.
-    is_failing = winner_name.strip().upper() == "NO"
-    badge_class = " failing" if is_failing else ""
-    status_word = "failing" if is_failing else "passing"
-    status_svg_color = "#9e3d0a" if is_failing else "#4a6020"
-    status_svg = (
-        f'<svg width="10" height="10" viewBox="0 0 12 12" '
-        f'style="stroke:{status_svg_color};fill:none;stroke-width:2.5;stroke-linecap:round;">'
-        f'<polyline points="2,6 5,9 10,3"/></svg>'
-    )
+    total_votes = sum(choice["votes"] for choice in parsed_choices)
 
     # Short measure identifier for the measure-name div.
     m = re.match(r"^((?:Measure|Proposition|Prop)\s+\S+)", title, re.I)
@@ -319,42 +311,31 @@ def _render_measure_block(title: str, parsed_choices: list, measure_desc_lookup:
         if description
         else ""
     )
+    votes_counted_html = (
+        f'<div class="measure-votes-counted">{_escape_html_text(total_votes_str)}</div>'
+        if total_votes_str
+        else ""
+    )
 
-    # Build result rows (winner first, then trailing choices).
+    # Choices in scraped order — no sorting, no interpretation.
     rows = []
-    for i, (name, votes, pct) in enumerate(ranked):
-        pct_fmt = _fmt_pct(pct, votes, total_votes)
-        votes_fmt = _format_int_commas(votes)
-        if i == 0:
-            rows.append(
-                '<div class="measure-result-row leading">'
-                '<div class="response-cell">'
-                f'<div class="response-check">{_CHECK_SVG}</div>'
-                f'<span class="response-label">{_escape_html_text(name)}</span>'
-                "</div>"
-                '<div class="bar-cell-measure">'
-                '<div class="bar-track-measure">'
-                f'<div class="bar-fill-leading" style="width:{pct_fmt}"></div>'
-                "</div></div>"
-                f'<div class="pct-cell-measure pct-leading">{pct_fmt}</div>'
-                f'<div class="total-cell">{votes_fmt}</div>'
-                "</div>"
-            )
-        else:
-            rows.append(
-                '<div class="measure-result-row">'
-                '<div class="response-cell">'
-                '<div class="response-spacer"></div>'
-                f'<span class="response-label">{_escape_html_text(name)}</span>'
-                "</div>"
-                '<div class="bar-cell-measure">'
-                '<div class="bar-track-measure">'
-                f'<div class="bar-fill-trailing" style="width:{pct_fmt}"></div>'
-                "</div></div>"
-                f'<div class="pct-cell-measure pct-trailing">{pct_fmt}</div>'
-                f'<div class="total-cell">{votes_fmt}</div>'
-                "</div>"
-            )
+    for choice in parsed_choices:
+        name = choice["name"]
+        pct_fmt = f"{choice['pct']:.2f}%"
+        votes_fmt = f"{choice['votes']:,}"
+        rows.append(
+            '<div class="measure-result-row">'
+            '<div class="response-cell">'
+            f'<span class="response-label">{_escape_html_text(name)}</span>'
+            "</div>"
+            '<div class="bar-cell-measure">'
+            '<div class="bar-track-measure">'
+            f'<div class="bar-fill" style="width:{pct_fmt}"></div>'
+            "</div></div>"
+            f'<div class="pct-cell-measure">{pct_fmt}</div>'
+            f'<div class="total-cell">{votes_fmt}</div>'
+            "</div>"
+        )
 
     return (
         '<div class="race-box">'
@@ -362,11 +343,8 @@ def _render_measure_block(title: str, parsed_choices: list, measure_desc_lookup:
         '<div class="measure-block">'
         f'<div class="measure-name">{_escape_html_text(measure_name)}</div>'
         + description_html
-        + '<div class="measure-status-row">'
-        f'<span class="measure-status-badge{badge_class}">{status_svg} {_escape_html_text(measure_name)} is {status_word}</span>'
-        f'<span class="measure-votes-counted">{_escape_html_text(total_votes_str)}</span>'
-        "</div>"
-        '<div class="measure-table">'
+        + votes_counted_html
+        + '<div class="measure-table">'
         '<div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">'
         "<span>Response</span><span>% Votes</span>"
         '<span class="right">Pct</span><span class="right">Votes</span>'
@@ -376,44 +354,44 @@ def _render_measure_block(title: str, parsed_choices: list, measure_desc_lookup:
     )
 
 
-def _render_candidate_block(title: str, parsed_choices: list) -> str:
-    """Render a candidate race-box using the candidate-row template format."""
+def _render_candidate_block(title: str, parsed_choices: list, candidate_roster: dict | None = None, county: str = "") -> str:
+    """Render a candidate race-box. No winner/leading interpretation."""
     if not parsed_choices:
         return ""
 
-    total_votes = sum(_votes_to_int(v) for _, v, _ in parsed_choices)
-    ranked = sorted(parsed_choices, key=lambda x: _votes_to_int(x[1]), reverse=True)
-    winner_name = ranked[0][0]
+    roster = candidate_roster or {}
 
     rows = []
-    for name, votes, pct in ranked:
-        is_winner = name == winner_name
-        pct_fmt = _fmt_pct(pct, votes, total_votes)
-        votes_fmt = _format_int_commas(votes)
+    for choice in parsed_choices:
+        name = choice["name"]
+        pct_fmt = f"{choice['pct']:.2f}%"
+        votes_fmt = f"{choice['votes']:,}"
 
-        # No party data in scraped output — default to Independent styling.
-        party_letter = "I"
-        party_class = "party-i"
-        bar_class = "bar-i"
-        pct_class = "pct-i"
+        info = _lookup_candidate_info(county, title, name, roster)
+        profession = info.get("profession", "")
+        party_str = info.get("party", "")
+        letter, party_css = _party_badge(party_str)
+        party_label = party_str if party_str else "Non-Partisan"
 
-        winner_row_class = " winner" if is_winner else ""
-        winner_check = ' <span class="winner-check-inline">&#x2713;</span>' if is_winner else ""
-        leading_div = '<div class="candidate-leading">Leading</div>' if is_winner else ""
+        profession_html = (
+            f'<div class="candidate-profession">{_escape_html_text(profession)}</div>'
+            if profession else ""
+        )
 
         rows.append(
-            f'<div class="candidate-row{winner_row_class}">'
+            '<div class="candidate-row">'
             '<div class="candidate-name-cell">'
-            f'<div class="candidate-party {party_class}">{party_letter}</div>'
-            "<div class=\"candidate-name-text\">"
-            f'<div class="candidate-name">{_escape_html_text(name)}{winner_check}</div>'
-            + leading_div
+            f'<div class="candidate-party {party_css}" data-party="{_escape_html_text(party_label)}">'
+            f"{_escape_html_text(letter)}</div>"
+            '<div class="candidate-name-text">'
+            f'<div class="candidate-name">{_escape_html_text(name)}</div>'
+            + profession_html
             + "</div></div>"
             '<div class="candidate-bar-cell">'
             '<div class="candidate-bar-track">'
-            f'<div class="candidate-bar-fill {bar_class}" style="width:{pct_fmt}"></div>'
+            f'<div class="candidate-bar-fill bar-n" style="width:{pct_fmt}"></div>'
             "</div></div>"
-            f'<div class="candidate-pct {pct_class}">{pct_fmt}</div>'
+            f'<div class="candidate-pct pct-n">{pct_fmt}</div>'
             f'<div class="candidate-votes">{votes_fmt}</div>'
             "</div>"
         )
@@ -430,164 +408,258 @@ def _render_candidate_block(title: str, parsed_choices: list) -> str:
     )
 
 
-def _render_county_html(template_str: str, result: dict, measure_desc_lookup: dict | None = None) -> str:
-    """Render completed/minified HTML for a single county using the template CSS."""
+def _render_county_html(
+    template_str: str,
+    result: dict,
+    measure_desc_lookup: dict | None = None,
+    county_name: str = "",
+    candidate_roster: dict | None = None,
+    source_url: str = "",
+    source_label: str = "",
+) -> str:
+    """Render a self-contained embed: scoped <style> block + <div class='lnm-results-widget'>."""
     if not result:
         return ""
 
     if "selenium_data" in result:
-        vt = (result.get("selenium_data") or {}).get("voter_turnout", {}) or {}
-        contests = (result.get("selenium_data") or {}).get("contests", []) or []
+        sd = result.get("selenium_data") or {}
+        vt = sd.get("voter_turnout", {}) or {}
+        contests = sd.get("contests", []) or []
+        last_updated = str(sd.get("last_updated", "") or "").strip()
     else:
         vt = result.get("voter_turnout", {}) or {}
         contests = result.get("contests", []) or []
+        last_updated = str(result.get("last_updated", "") or "").strip()
 
     measure_desc_lookup = measure_desc_lookup or {}
 
-    # Reuse the <head> / CSS from the template; replace only the <body> content.
-    head_match = re.search(r"^(.*?<body>)", template_str, re.S)
-    if not head_match:
-        raise ValueError("Could not find <body> tag in election_results_template.html")
-    head_html = head_match.group(1)
+    # Extract the scoped <style> block from the template.
+    style_match = re.search(r"(<style>.*?</style>)", template_str, re.S | re.I)
+    if not style_match:
+        raise ValueError("Could not find <style> block in election_results_template.html")
+    style_block = style_match.group(1)
 
-    # Precincts: voter_turnout field (non-Clarity) or first contest's precincts_reporting (Clarity)
+    # Precincts go to provenance only (not the turnout strip).
     precincts_raw = vt.get("precincts_reported") or vt.get("precincts_reporting") or ""
     if not precincts_raw and contests:
         precincts_raw = contests[0].get("precincts_reporting") or ""
+    precincts_str = _clean_precincts(precincts_raw)
 
-    # Turnout bar
-    turnout_pct = str(vt.get("turnout_percentage", "") or "")
-    if turnout_pct and not turnout_pct.endswith("%"):
-        turnout_pct += "%"
-    turnout_html = (
-        '<div class="turnout-bar">'
-        '<div class="turnout-stat">'
-        '<div class="turnout-stat-label">Voter Turnout</div>'
-        f'<div class="turnout-stat-value green">{_escape_html_text(turnout_pct)}</div>'
-        "</div>"
-        '<div class="turnout-stat">'
-        '<div class="turnout-stat-label">Ballots Cast</div>'
-        f'<div class="turnout-stat-value">{_escape_html_text(_format_int_commas(vt.get("ballots_cast", "")))}</div>'
-        "</div>"
-        '<div class="turnout-stat">'
-        '<div class="turnout-stat-label">Registered Voters</div>'
-        f'<div class="turnout-stat-value">{_escape_html_text(_format_int_commas(vt.get("registered_voters", "")))}</div>'
-        "</div>"
-        '<div class="turnout-stat">'
-        '<div class="turnout-stat-label">Precincts Reporting</div>'
-        f'<div class="turnout-stat-value">{_escape_html_text(_clean_precincts(precincts_raw))}</div>'
-        "</div>"
-        "</div>"
+    # Turnout bar \u2014 only render stats that have a value; omit bar if none do.
+    turnout_stats = []
+    turnout_pct = str(vt.get("turnout_percentage", "") or "").strip()
+    if turnout_pct:
+        if not turnout_pct.endswith("%"):
+            turnout_pct += "%"
+        turnout_stats.append(("Voter Turnout", turnout_pct))
+    ballots = _format_int_commas(vt.get("ballots_cast", ""))
+    if ballots:
+        turnout_stats.append(("Ballots Cast", ballots))
+    registered = _format_int_commas(vt.get("registered_voters", ""))
+    if registered:
+        turnout_stats.append(("Registered Voters", registered))
+
+    if turnout_stats:
+        stat_divs = "".join(
+            '<div class="turnout-stat">'
+            f'<div class="turnout-stat-label">{_escape_html_text(label)}</div>'
+            f'<div class="turnout-stat-value">{_escape_html_text(value)}</div>'
+            "</div>"
+            for label, value in turnout_stats
+        )
+        turnout_html = f'<div class="turnout-bar">{stat_divs}</div>'
+    else:
+        turnout_html = ""
+
+    # Provenance block \u2014 source link, timestamp, precincts when available.
+    provenance_parts = []
+    if source_url:
+        link_label = source_label if source_label else county_name.replace("_", " ") + " Registrar of Voters"
+        provenance_parts.append(
+            f'Source: <a href="{_escape_html_text(source_url)}" target="_blank" rel="noopener">'
+            f"{_escape_html_text(link_label)}</a>"
+        )
+    if last_updated:
+        provenance_parts.append(f"Updated: {_escape_html_text(last_updated)}")
+    if precincts_str:
+        provenance_parts.append(_escape_html_text(precincts_str))
+
+    provenance_html = (
+        '<div class="lnm-provenance">' + " &middot; ".join(provenance_parts) + "</div>"
+        if provenance_parts else ""
     )
 
-    # Contest blocks
+    # Contest blocks — choices are now canonical dicts {name, votes: int, pct: float}.
+    # A single bad choice fails the entire contest: render an unavailability notice
+    # instead of partial rows, which would be misleading (e.g. a measure showing only Yes).
     contest_blocks = []
     for contest in contests:
         choices_raw = contest.get("choices", []) or []
+        title = contest.get("title", "") or ""
         parsed = []
+        parse_failed = False
+
         for choice in choices_raw:
-            name, votes, pct = parse_choice(choice)
-            # Skip "Vote Cast" summary rows some scrapers append.
-            if re.match(r"^vote\s*cast", name.strip(), re.I):
+            if not isinstance(choice, dict) or "name" not in choice:
+                print(
+                    f"[PARSE ERROR] [{county_name}] {title!r}: "
+                    f"choice is not a canonical dict: {choice!r}"
+                )
+                parse_failed = True
+                continue  # keep logging remaining failures before deciding
+            if not isinstance(choice.get("votes"), int) or not isinstance(choice.get("pct"), (int, float)):
+                print(
+                    f"[PARSE ERROR] [{county_name}] {title!r}: "
+                    f"choice missing int votes or float pct: {choice!r}"
+                )
+                parse_failed = True
                 continue
-            parsed.append((name, votes, pct))
+            if re.match(r"^vote\s*cast", str(choice["name"]).strip(), re.I):
+                continue
+            parsed.append(choice)
+
+        if parse_failed:
+            # One or more choices could not be parsed — render nothing rather than partial rows.
+            contest_blocks.append(_render_unavailable_contest(title))
+            continue
 
         if not parsed:
             continue
 
-        title = contest.get("title", "")
         if _is_ballot_measure(parsed):
-            block = _render_measure_block(title, parsed, measure_desc_lookup)
+            block = _render_measure_block(title, parsed, measure_desc_lookup, county_name)
         else:
-            block = _render_candidate_block(title, parsed)
+            block = _render_candidate_block(title, parsed, candidate_roster, county_name)
         contest_blocks.append(block)
 
     search_bar = (
         '<div class="search-wrap">'
         '<input class="search-input" type="text" placeholder="Search for measures, candidates, contests\u2026" id="electionSearch">'
-        '</div>'
+        "</div>"
         '<div class="no-results" id="noResults">No results found.</div>'
     )
     search_script = (
-        '<script>(function(){'
+        "<script>(function(){"
         'var input=document.getElementById("electionSearch");'
         'var noResults=document.getElementById("noResults");'
-        'if(!input)return;'
+        "if(!input)return;"
         'input.addEventListener("input",function(){'
-        'var q=this.value.trim().toLowerCase();'
-        'var boxes=document.querySelectorAll(".race-box");'
-        'var visible=0;'
-        'boxes.forEach(function(box){'
-        'var show=!q||box.textContent.toLowerCase().indexOf(q)!==-1;'
+        "var q=this.value.trim().toLowerCase();"
+        'var container=input.closest(".lnm-results-widget")||document;'
+        'var boxes=container.querySelectorAll(".race-box");'
+        "var visible=0;"
+        "boxes.forEach(function(box){"
+        "var show=!q||box.textContent.toLowerCase().indexOf(q)!==-1;"
         'box.style.display=show?"":"none";'
-        'if(show)visible++;'
-        '});'
+        "if(show)visible++;"
+        "});"
         'noResults.style.display=(q&&visible===0)?"block":"none";'
-        '});'
-        '})();</script>'
+        "});"
+        "})();</script>"
     )
-    html_out = head_html + search_bar + turnout_html + "".join(contest_blocks) + search_script + "</body></html>"
+
+    widget_body = search_bar + turnout_html + provenance_html + "".join(contest_blocks) + search_script
+    html_out = style_block + '\n<div class="lnm-results-widget">\n' + widget_body + "\n</div>"
     return _minify_html(html_out)
 
 
-def _load_measure_descriptions_lookup(path: Path) -> dict:
-    """Load measure descriptions keyed by normalized measure_title.
+_MEASURE_ROW_PAT = re.compile(r"\b(measure|proposition|prop|bond|recall)\b", re.I)
 
-    Returns a dict of {normalized_key: {'description': str, 'jurisdiction': str}}.
+
+def _load_measure_descriptions_lookup(path: Path) -> dict:
+    """Load measure descriptions from local_races - Sheet1.csv.
+
+    Only rows whose 'Race/Measure name' contains a ballot-measure keyword are
+    loaded; candidate rows are skipped automatically.
+
+    Key format: "{normalized_county}|{normalized_title_variant}" so that
+    measures sharing a letter across counties never collide.  Multiple key
+    variants per row let the scraper's short or long title form both match.
     """
     if not path.exists():
-        print(f"[HTML] measure_descriptions.csv not found at '{path}'. Leaving description/jurisdiction blank.")
+        print(f"[HTML] {path.name} not found. Leaving measure descriptions blank.")
         return {}
 
-    def _normalize_colname(s: str) -> str:
-        return re.sub(r"[\s_]+", "", str(s or "").strip().lower())
-
+    lookup: dict = {}
     with open(path, "r", encoding="utf-8-sig", newline="") as f:
-        reader = csv.DictReader(f)
-        if not reader.fieldnames:
-            return {}
-
-        field_map = {_normalize_colname(fn): fn for fn in reader.fieldnames if fn}
-
-        title_col = None
-        desc_col = None
-        juris_col = None
-
-        for candidate in ["measure_title", "measuretitle", "title"]:
-            if _normalize_colname(candidate) in field_map:
-                title_col = field_map[_normalize_colname(candidate)]
-                break
-        for candidate in ["description", "measure_description", "measuredescription", "contest_description"]:
-            if _normalize_colname(candidate) in field_map:
-                desc_col = field_map[_normalize_colname(candidate)]
-                break
-        for candidate in ["jurisdiction"]:
-            if _normalize_colname(candidate) in field_map:
-                juris_col = field_map[_normalize_colname(candidate)]
-                break
-
-        if not title_col or not desc_col:
-            print(
-                f"[HTML] measure_descriptions.csv missing expected columns. "
-                f"Detected title_col='{title_col}', desc_col='{desc_col}'. Leaving blank."
-            )
-            return {}
-
-        lookup = {}
-        for row in reader:
-            raw_title = (row.get(title_col) or "").strip()
-            if not raw_title:
+        for row in csv.DictReader(f):
+            race = (row.get("Race/Measure name") or "").strip()
+            if not _MEASURE_ROW_PAT.search(race):
                 continue
-            key = _normalize_lookup_key(raw_title)
-            lookup[key] = {
-                "description": (row.get(desc_col) or "").strip(),
-                "jurisdiction": (row.get(juris_col) or "").strip() if juris_col else "",
-            }
-        print(
-            f"[HTML] Loaded measure descriptions: {len(lookup)} entries "
-            f"(title_col='{title_col}', desc_col='{desc_col}', juris_col='{juris_col}')."
-        )
-        return lookup
+
+            juris = (row.get("Candidate Name/Measure Juristiction") or "").strip()
+            desc = (row.get("Profession/Description") or "").strip()
+            county_raw = (row.get("County") or "").strip()
+            county_key = _normalize_county(county_raw)
+            info = {"description": desc, "jurisdiction": juris}
+
+            # Collect every title variant the scraper might produce for this row.
+            variants: list[str] = [race]
+
+            parts = re.split(r"\s*[–—\-:]\s*", race, maxsplit=1)
+            if parts and parts[0].strip() != race:
+                variants.append(parts[0].strip())
+
+            words = race.split()
+            if len(words) >= 2:
+                variants.append(" ".join(words[:2]))
+
+            m = re.search(r"\b((?:Proposition|Measure|Prop|Bond\s+Measure)\s+\S+)", race, re.I)
+            if m:
+                variants.append(m.group(1).strip())
+
+            for variant in variants:
+                full_key = f"{county_key}|{_normalize_lookup_key(variant)}"
+                if full_key not in lookup:
+                    lookup[full_key] = info
+
+    print(f"[HTML] Loaded measure descriptions: {len(lookup)} entries from {path.name}")
+    return lookup
+
+
+def _load_candidate_roster_lookup(path: Path) -> dict:
+    """Load candidate professions and parties from local_races - Sheet1.csv.
+
+    Skips measure rows (race name matches _MEASURE_ROW_PAT).
+    Key: "{normalized_county}|{normalized_race}|{normalized_candidate_name}"
+    Value: {'profession': str, 'party': str}
+    """
+    if not path.exists():
+        print(f"[HTML] {path.name} not found. Leaving candidate professions blank.")
+        return {}
+
+    lookup: dict = {}
+    with open(path, "r", encoding="utf-8-sig", newline="") as f:
+        for row in csv.DictReader(f):
+            race = (row.get("Race/Measure name") or "").strip()
+            if _MEASURE_ROW_PAT.search(race):
+                continue
+
+            candidate = (row.get("Candidate Name/Measure Juristiction") or "").strip()
+            if not candidate:
+                continue
+
+            profession = (row.get("Profession/Description") or "").strip()
+            party = (row.get("Party") or "").strip()
+            county_raw = (row.get("County") or "").strip()
+
+            key = f"{_normalize_county(county_raw)}|{_normalize_lookup_key(race)}|{_normalize_lookup_key(candidate)}"
+            lookup[key] = {"profession": profession, "party": party}
+
+    print(f"[HTML] Loaded candidate roster: {len(lookup)} entries from {path.name}")
+    return lookup
+
+
+def _lookup_candidate_info(county: str, race_title: str, candidate_name: str, roster: dict) -> dict:
+    """Look up a candidate in the roster by county + race + name.
+
+    Returns {'profession': str, 'party': str} or {} if no match.
+    Scoped to county so there is no cross-county fallthrough.
+    """
+    if not roster:
+        return {}
+    key = f"{_normalize_county(county)}|{_normalize_lookup_key(race_title)}|{_normalize_lookup_key(candidate_name)}"
+    return roster.get(key, {})
 
 
 def scrape_clarity(county, url):
@@ -760,16 +832,28 @@ def main():
             writer.writerow(['contest_title', 'choice_name', 'votes', 'vote_percentage'])
             for contest in contests:
                 for choice in contest.get('choices', []):
-                    name, votes, pct = parse_choice(choice)
-                    writer.writerow([contest.get('title', ''), name, votes, pct])
+                    writer.writerow([
+                        contest.get('title', ''),
+                        choice.get('name', '') if isinstance(choice, dict) else '',
+                        choice.get('votes', '') if isinstance(choice, dict) else '',
+                        choice.get('pct', '')  if isinstance(choice, dict) else '',
+                    ])
     print(f"\n💾 All county data saved to: {combined_file.name}")
     print("=" * 70)
 
     # Second export: one row per county HTML (minified), plus election_date.
-    measure_lookup = _load_measure_descriptions_lookup(Path("election_data") / "measure_descriptions.csv")
-    print(f"[HTML] measure_descriptions loaded at startup: {len(measure_lookup)}")
+    roster_path = Path("election_data") / "local_races - Sheet1.csv"
+    measure_lookup = _load_measure_descriptions_lookup(roster_path)
+    candidate_roster = _load_candidate_roster_lookup(roster_path)
     template_str = (Path("template") / "election_results_template.html").read_text(encoding="utf-8")
     election_date = _determine_election_date(county_data)
+
+    # Build URL map for provenance links.
+    county_urls: dict = {}
+    for c, url in CLARITY_SITES.items():
+        county_urls[c] = url
+    for c, info in NON_CLARITY_SITES.items():
+        county_urls[c] = info["url"]
 
     html_export_file = Path("data") / f"election_results_html_{election_date}.csv"
     with open(html_export_file, "w", newline="", encoding="utf-8") as f:
@@ -782,7 +866,9 @@ def main():
                 continue
 
             county_display_name = county.replace("_", " ")
-            html_output = _render_county_html(template_str, data, measure_lookup)
+            source_url = county_urls.get(county, "")
+            source_label = COUNTY_SOURCE_LABELS.get(county, "")
+            html_output = _render_county_html(template_str, data, measure_lookup, county, candidate_roster, source_url, source_label)
             writer.writerow([county_display_name, election_date, html_output])
 
     print(f"\n💾 HTML outputs saved to: {html_export_file.name}")
