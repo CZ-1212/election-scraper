@@ -4,13 +4,19 @@ A robust Python-based election night scraper designed to extract results from mu
 
 ## Quick Start
 
-### Scrape Non-Clarity Counties (Fast - ~1-2 minutes)
+### Full pipeline (scrape → normalize → Google Sheet)
+```bash
+source venv/bin/activate
+python run_all.py
+```
+
+### Scrape Non-Clarity Counties only (Fast - ~1-2 minutes)
 ```bash
 python3 src/scrape_3_working.py
 ```
 Scrapes: San Mateo, San Joaquin, Santa Cruz
 
-### Scrape Clarity Counties (Comprehensive - ~5-6 minutes)
+### Scrape Clarity Counties only (Comprehensive - ~5-6 minutes)
 ```bash
 python3 src/test_clarity_only.py
 ```
@@ -19,22 +25,170 @@ Scrapes: Contra Costa, Marin, Santa Clara, Sonoma
 ## Project Structure
 
 ```
-Election-Scraper/
-├── src/                          # Source code
-│   ├── clarity_scraper.py        # Clarity Elections scraper module
-│   ├── multi_platform_scraper.py # Multi-platform scraper base
-│   ├── scrape_3_working.py       # Non-Clarity production scraper
-│   └── test_clarity_only.py      # Clarity production scraper
-├── docs/                         # Documentation
-│   ├── NON_CLARITY_STATUS.md     # Technical details for non-Clarity sites
-│   └── PROJECT_STRUCTURE.md      # Detailed project structure
-├── data/                         # Data directory
-│   ├── samples/                  # Sample output files (committed)
-│   └── .gitkeep                  # Keep directory in git
-├── requirements.txt              # Python dependencies
-├── LICENSE                       # MIT License
-└── README.md                     # This file
+election-scraper/
+├── run_all.py                        # ← Pipeline orchestrator (start here for the full pipeline)
+├── src/
+│   ├── normalize.py                  # Merges raw county JSON into one master JSON
+│   ├── clarity_scraper.py            # Clarity Elections scraper module
+│   ├── multi_platform_scraper.py     # Non-Clarity scraper base classes
+│   ├── scrape_3_working.py           # Non-Clarity production scraper (7 counties)
+│   ├── test_clarity_only.py          # Clarity production scraper (4 counties)
+│   └── run_all.py                    # All-13-county scraper + HTML renderer
+├── export/
+│   ├── to_sheets.py                  # Google Sheets live dashboard publisher
+│   └── to_wordpress.py               # WordPress REST API publisher (manual only)
+├── tests/
+│   ├── test_mock.py                  # Full test suite (no network, no credentials)
+│   └── fixtures/                     # Sample county JSON files for testing
+├── data/
+│   ├── samples/                      # Sample output files (committed)
+│   └── processed/
+│       └── election_results_master.json  # Normalized output (auto-committed by CI)
+├── election_data/                    # Static CSVs: race names, candidates, URLs
+├── template/                         # HTML results embed template
+├── logs/                             # Pipeline log files (gitignored, folder kept)
+├── .github/workflows/
+│   ├── scrape.yml                    # Runs every 15 min: scrape + normalize + sheets
+│   └── publish.yml                   # Manual only: push to WordPress
+├── docs/
+│   ├── NON_CLARITY_STATUS.md
+│   └── PROJECT_STRUCTURE.md
+├── requirements.txt
+├── .env.example                      # Copy to .env and fill in credentials
+├── LICENSE
+└── README.md
 ```
+
+---
+
+## Pipeline setup (new — Bay City News internal workflow)
+
+### 1. Create the virtual environment
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 2. Configure credentials
+
+```bash
+cp .env.example .env
+# Open .env and fill in every variable (see comments inside)
+```
+
+You need:
+- A **Google service account key file** — download from Google Cloud Console → IAM → Service Accounts → Keys
+- The **Google Sheet ID** from the sheet URL
+- **WordPress** site URL, username, application password, and page ID
+
+> **Never commit `.env`** — it's in `.gitignore`. Only `.env.example` (with placeholder values) is committed.
+
+### 3. Share the Google Sheet with the service account
+
+Open the Google Sheet and share it as **Editor** with the service account email listed as `"client_email"` in your key file. For this project that is: `data-review@june2026-elections.iam.gserviceaccount.com`
+
+---
+
+## Pipeline orchestrator — run_all.py
+
+`run_all.py` chains the four steps of the pipeline. All commands require the venv to be active.
+
+```bash
+# Full pipeline: scrape + normalize + update Google Sheet
+python run_all.py
+
+# Scrape only one group
+python run_all.py --scraper clarity        # Clarity counties only
+python run_all.py --scraper non-clarity    # Non-Clarity counties only
+
+# Skip the Google Sheet update
+python run_all.py --no-sheets
+
+# Use fixture files instead of live websites (no network needed, good for testing)
+python run_all.py --mock
+
+# Skip re-scraping — normalize and push whatever data is already on disk
+python run_all.py --dry-run
+
+# Publish to WordPress (requires typed YES confirmation before anything posts)
+python run_all.py --push-wp
+
+# Publish only specific counties to WordPress
+python run_all.py --push-wp --counties "Marin,Santa_Clara,San_Mateo"
+
+# Push existing normalized data to WordPress without re-scraping
+python run_all.py --dry-run --push-wp --no-sheets
+```
+
+---
+
+## Google Sheet dashboard
+
+The pipeline maintains four tabs in the Google Sheet:
+
+| Tab | Purpose |
+|---|---|
+| **STATUS DASHBOARD** | One row per county: status, timestamp, ballots, turnout %, anomaly flags |
+| **[County Name]** | One tab per county: full contest and choice breakdowns |
+| **SCRAPE LOG** | Appended every run — full history of all scrapes |
+| **PUBLISH CHECKLIST** | Static editor instructions — never overwritten by the pipeline |
+
+**Before publishing, editors should:**
+1. Open **STATUS DASHBOARD** — all counties should show `OK` or an acceptable `WARN`.
+2. Spot-check 2–3 counties against each county's registrar website.
+3. Confirm **SCRAPE LOG** shows a recent timestamp (within the last 20 minutes).
+4. If everything looks correct, trigger the publish workflow (see below).
+
+---
+
+## Publishing to WordPress via GitHub Actions
+
+### How to trigger a publish
+
+1. Go to the repo on GitHub → **Actions** tab → **"Publish to WordPress"** in the left sidebar.
+2. Click **"Run workflow"**.
+3. Type the confirmation message exactly: `I have reviewed the Google Sheet and data is ready to publish`
+4. Optionally enter a comma-separated county list (e.g. `Marin,San_Mateo`) to publish only those counties. Leave blank to publish all.
+5. Click the green **"Run workflow"** button.
+
+The workflow uses the existing normalized data on disk — it **does not re-scrape**. Use the "Scrape Election Results" workflow to refresh data first.
+
+### Excluding a county with bad data
+
+Enter only the counties you want published. For example, to publish everything except San Francisco:
+```
+Contra_Costa,Marin,Santa_Clara,Sonoma,San_Mateo,San_Joaquin,Santa_Cruz,Alameda,Mendocino,Monterey,Napa,Solano
+```
+
+---
+
+## GitHub Secrets required
+
+Set these in **Settings → Secrets and variables → Actions → New repository secret**:
+
+| Secret | Contents |
+|---|---|
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Full JSON contents of the service account key file |
+| `GOOGLE_SHEET_ID` | The Google Sheet ID (from the sheet URL) |
+| `WP_SITE_URL` | Full URL of the WordPress site |
+| `WP_USERNAME` | WordPress username |
+| `WP_APP_PASSWORD` | WordPress application password (WP Admin → Users → Profile) |
+| `WP_PAGE_ID` | WordPress page ID of the election results page |
+
+---
+
+## Running the test suite
+
+```bash
+source venv/bin/activate
+python -m pytest tests/ -v
+```
+
+All tests are self-contained — no network calls, no credentials. They use fixture JSON files from `tests/fixtures/` to simulate real scraper output.
+
+---
 
 ## About Clarity Elections Sites
 

@@ -1,0 +1,156 @@
+name: Publish to WordPress
+
+# This workflow is MANUAL ONLY — it has no schedule.
+# An editor triggers it from the GitHub Actions UI after reviewing the Google Sheet.
+#
+# How to run it:
+#   1. Go to the repo on GitHub.
+#   2. Click the "Actions" tab.
+#   3. Click "Publish to WordPress" in the left sidebar.
+#   4. Click "Run workflow" (top right).
+#   5. Fill in the inputs (confirmation message + optional county list).
+#   6. Click the green "Run workflow" button.
+#
+# The workflow pushes EXISTING normalized data to WordPress — it does NOT re-scrape.
+# Use the "Scrape Election Results" workflow to refresh the data first.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: >
+          Type exactly: "I have reviewed the Google Sheet and data is ready to publish"
+        required: true
+        type: string
+
+      counties:
+        description: >
+          Counties to publish (comma-separated, e.g. "Marin,Santa_Clara,San_Mateo").
+          Leave blank to publish ALL counties with OK or WARN status.
+          Use this to exclude a county that is showing bad data.
+        required: false
+        default: ""
+        type: string
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Validate the confirmation message before doing anything at all.
+      #    If the editor didn't type it exactly, the job fails immediately and
+      #    nothing is touched on the live site.
+      - name: Validate confirmation
+        run: |
+          EXPECTED="I have reviewed the Google Sheet and data is ready to publish"
+          ACTUAL="${{ github.event.inputs.confirmation }}"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::Confirmation message did not match."
+            echo "  Expected: $EXPECTED"
+            echo "  Got:      $ACTUAL"
+            echo ""
+            echo "The publish was ABORTED. Nothing was posted to WordPress."
+            exit 1
+          fi
+          echo "Confirmation accepted. Proceeding with publish."
+
+      # 2. Log which counties will be published so there's a clear audit trail.
+      - name: Log county selection
+        run: |
+          COUNTIES="${{ github.event.inputs.counties }}"
+          if [ -z "$COUNTIES" ]; then
+            echo "County selection: ALL counties with OK/WARN status"
+          else
+            echo "County selection: $COUNTIES"
+          fi
+          echo "Triggered by: ${{ github.actor }}"
+
+      # 3. Check out the repo (includes the latest normalized master JSON committed
+      #    by the scrape workflow).
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # 4. Set up Python.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 5. Install dependencies.
+      - name: Create venv and install dependencies
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # 6. Write the .env file from GitHub Secrets.
+      #    Secrets are set in Settings → Secrets and variables → Actions.
+      #    GitHub automatically masks secret values in log output.
+      - name: Write .env from secrets
+        run: |
+          cat > .env << 'EOF'
+          GOOGLE_SERVICE_ACCOUNT_JSON=/home/runner/work/election-scraper/election-scraper/service-account-key.json
+          GOOGLE_SHEET_ID=${{ secrets.GOOGLE_SHEET_ID }}
+          WP_SITE_URL=${{ secrets.WP_SITE_URL }}
+          WP_USERNAME=${{ secrets.WP_USERNAME }}
+          WP_APP_PASSWORD=${{ secrets.WP_APP_PASSWORD }}
+          WP_PAGE_ID=${{ secrets.WP_PAGE_ID }}
+          EOF
+
+      # 7. Write the Google service account key file from the secret.
+      - name: Write Google service account key
+        run: |
+          echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}' > service-account-key.json
+
+      # 8. Build the counties flag if specific counties were requested.
+      #    If the input was blank, we don't pass --counties so all counties publish.
+      - name: Build counties flag
+        id: counties_flag
+        run: |
+          COUNTIES="${{ github.event.inputs.counties }}"
+          if [ -z "$COUNTIES" ]; then
+            echo "flag=" >> $GITHUB_OUTPUT
+          else
+            echo "flag=--counties \"$COUNTIES\"" >> $GITHUB_OUTPUT
+          fi
+
+      # 9. Push existing normalized data to WordPress.
+      #    --dry-run      = skip re-scraping (use the data already on disk)
+      #    --push-wp      = enable the WordPress publish step
+      #    --no-sheets    = don't re-write the Google Sheet during a publish run
+      #    WP_CI_CONFIRMED=YES = skip the interactive prompt (human already confirmed above)
+      - name: Publish to WordPress
+        id: publish
+        run: |
+          source venv/bin/activate
+          COUNTIES="${{ github.event.inputs.counties }}"
+          if [ -z "$COUNTIES" ]; then
+            python run_all.py --dry-run --push-wp --no-sheets
+          else
+            python run_all.py --dry-run --push-wp --no-sheets --counties "$COUNTIES"
+          fi
+        env:
+          WP_CI_CONFIRMED: "YES"
+
+      # 10. Always print a final summary — even if publish failed — so editors
+      #     see exactly what happened without having to dig through log lines.
+      - name: Publish summary
+        if: always()
+        run: |
+          echo "============================================================"
+          echo "WORDPRESS PUBLISH SUMMARY"
+          echo "  Time:      $(date -u '+%Y-%m-%d %H:%M UTC')"
+          echo "  Triggered: ${{ github.actor }}"
+          COUNTIES="${{ github.event.inputs.counties }}"
+          echo "  Counties:  ${COUNTIES:-ALL}"
+          echo "  Result:    ${{ steps.publish.outcome }}"
+          echo "============================================================"
+          if [ "${{ steps.publish.outcome }}" = "failure" ]; then
+            echo "::error::WordPress publish FAILED. See the 'Publish to WordPress' step above for the full error."
+            echo "Common causes:"
+            echo "  - WP_APP_PASSWORD secret is wrong or expired"
+            echo "  - WP_PAGE_ID doesn't exist on the target site"
+            echo "  - data/processed/election_results_master.json is missing (run the scrape workflow first)"
+            exit 1
+          fi

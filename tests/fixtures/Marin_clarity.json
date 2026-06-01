@@ -1,0 +1,34 @@
+{
+  "scrape_timestamp": "2026-06-02T20:01:15.000000",
+  "json_data": null,
+  "selenium_data": {
+    "timestamp": "2026-06-02T20:01:20.000000",
+    "url": "https://results.enr.clarityelections.com/CA/Marin/124182/web.345435/#/summary",
+    "page_title": "Election Night Reporting",
+    "voter_turnout": {
+      "ballots_cast": 41200,
+      "registered_voters": 173865,
+      "turnout_percentage": 23.70
+    },
+    "contests": [
+      {
+        "title": "Measure A — Marin County Open Space",
+        "precincts_reporting": "159 of 159 Precincts Reported",
+        "choices": [
+          {"name": "Yes", "votes": 28840, "pct": 70.00},
+          {"name": "No", "votes": 12360, "pct": 30.00}
+        ]
+      },
+      {
+        "title": "Marin Municipal Water District — Director Division 3",
+        "precincts_reporting": "159 of 159 Precincts Reported",
+        "choices": [
+          {"name": "Sandra Lee", "votes": 22100, "pct": 53.64},
+          {"name": "Tom Nguyen", "votes": 19100, "pct": 46.36}
+        ]
+      }
+    ],
+    "last_updated": "Monday, June 2, 2026, 8:00:00 PM"
+  },
+  "reports": []
+}
