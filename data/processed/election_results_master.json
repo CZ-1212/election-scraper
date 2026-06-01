@@ -1,47 +1,31 @@
 {
-  "pipeline_timestamp": "2026-06-01T11:20:01.168188",
+  "pipeline_timestamp": "2026-06-01T21:53:06.359599",
   "county_count": 7,
   "counties": {
     "Contra_Costa": {
       "county": "Contra_Costa",
       "platform": "clarity",
-      "scrape_timestamp": "2026-06-02T20:01:15.000000",
-      "last_updated": "Monday, June 2, 2026, 8:00:00 PM",
+      "scrape_timestamp": "2026-06-01T21:52:41.892269",
+      "last_updated": "Tuesday, December 2, 2025, 7:33:01 PM",
       "voter_turnout": {
-        "ballots_cast": 145230,
+        "ballots_cast": 413212,
         "registered_voters": 730646,
-        "turnout_percentage": 19.88
+        "turnout_percentage": 56.6
       },
       "contests": [
         {
-          "title": "Measure X — Contra Costa County Sales Tax",
-          "precincts_reporting": "250 of 250 Precincts Reported",
+          "title": "PROPOSITION 50",
+          "precincts_reporting": "Precincts Reporting",
           "choices": [
             {
               "name": "Yes",
-              "votes": 89412,
-              "pct": 61.57
+              "votes": 294137,
+              "pct": 71.25
             },
             {
               "name": "No",
-              "votes": 55818,
-              "pct": 38.43
-            }
-          ]
-        },
-        {
-          "title": "Contra Costa Community College District — Trustee Area 1",
-          "precincts_reporting": "250 of 250 Precincts Reported",
-          "choices": [
-            {
-              "name": "Maria Gonzalez",
-              "votes": 72100,
-              "pct": 49.65
-            },
-            {
-              "name": "James Park",
-              "votes": 73130,
-              "pct": 50.35
+              "votes": 118701,
+              "pct": 28.75
             }
           ]
         }
@@ -52,43 +36,107 @@
     "Marin": {
       "county": "Marin",
       "platform": "clarity",
-      "scrape_timestamp": "2026-06-02T20:01:15.000000",
-      "last_updated": "Monday, June 2, 2026, 8:00:00 PM",
+      "scrape_timestamp": "2026-06-01T21:52:41.892718",
+      "last_updated": "Tuesday, December 2, 2025, 6:37:54 PM",
       "voter_turnout": {
-        "ballots_cast": 41200,
+        "ballots_cast": 118495,
         "registered_voters": 173865,
-        "turnout_percentage": 23.7
+        "turnout_percentage": 68.2
       },
       "contests": [
         {
-          "title": "Measure A — Marin County Open Space",
-          "precincts_reporting": "159 of 159 Precincts Reported",
+          "title": "Town of Fairfax Recall of LISEL BLASH",
+          "precincts_reporting": "Precincts Reporting 100%",
           "choices": [
             {
               "name": "Yes",
-              "votes": 28840,
-              "pct": 70.0
+              "votes": 1936,
+              "pct": 44.29
             },
             {
               "name": "No",
-              "votes": 12360,
-              "pct": 30.0
+              "votes": 2435,
+              "pct": 55.71
             }
           ]
         },
         {
-          "title": "Marin Municipal Water District — Director Division 3",
-          "precincts_reporting": "159 of 159 Precincts Reported",
+          "title": "Town of Fairfax Recall of STEPHANIE HELLMAN",
+          "precincts_reporting": "Precincts Reporting 100%",
           "choices": [
             {
-              "name": "Sandra Lee",
-              "votes": 22100,
-              "pct": 53.64
+              "name": "Yes",
+              "votes": 1958,
+              "pct": 44.92
             },
             {
-              "name": "Tom Nguyen",
-              "votes": 19100,
-              "pct": 46.36
+              "name": "No",
+              "votes": 2401,
+              "pct": 55.08
+            }
+          ]
+        },
+        {
+          "title": "Proposition 50",
+          "precincts_reporting": "Precincts Reporting 100%",
+          "choices": [
+            {
+              "name": "Yes",
+              "votes": 95495,
+              "pct": 80.68
+            },
+            {
+              "name": "No",
+              "votes": 22869,
+              "pct": 19.32
+            }
+          ]
+        },
+        {
+          "title": "Measure I Petaluma Joint Union High School District",
+          "precincts_reporting": "Precincts Reporting 100%",
+          "choices": [
+            {
+              "name": "Yes",
+              "votes": 94,
+              "pct": 54.34
+            },
+            {
+              "name": "No",
+              "votes": 79,
+              "pct": 45.66
+            }
+          ]
+        },
+        {
+          "title": "Measure J City of Sausalito",
+          "precincts_reporting": "Precincts Reporting 100%",
+          "choices": [
+            {
+              "name": "Yes",
+              "votes": 2845,
+              "pct": 75.44
+            },
+            {
+              "name": "No",
+              "votes": 926,
+              "pct": 24.56
+            }
+          ]
+        },
+        {
+          "title": "Measure K City of Sausalito",
+          "precincts_reporting": "Precincts Reporting 100%",
+          "choices": [
+            {
+              "name": "Yes",
+              "votes": 2086,
+              "pct": 54.59
+            },
+            {
+              "name": "No",
+              "votes": 1735,
+              "pct": 45.41
             }
           ]
         }
@@ -99,43 +147,27 @@
     "San_Joaquin": {
       "county": "San_Joaquin",
       "platform": "livevoterturnout",
-      "scrape_timestamp": "2026-06-02T20:01:30.000000",
-      "last_updated": "June 2, 2026 8:00 PM",
+      "scrape_timestamp": "",
+      "last_updated": "",
       "voter_turnout": {
-        "ballots_cast": 75300,
-        "registered_voters": 332180,
-        "turnout_percentage": 22.67
+        "ballots_cast": 188443,
+        "registered_voters": 403835,
+        "turnout_percentage": 46.7
       },
       "contests": [
         {
-          "title": "Measure D — Stockton Unified School District Parcel Tax",
-          "precincts_reporting": "412 of 412 Precincts Reported",
+          "title": "Proposition 50",
+          "precincts_reporting": "",
           "choices": [
             {
               "name": "Yes",
-              "votes": 42168,
-              "pct": 56.0
+              "votes": 101892,
+              "pct": 54.11
             },
             {
               "name": "No",
-              "votes": 33132,
-              "pct": 44.0
-            }
-          ]
-        },
-        {
-          "title": "San Joaquin County Supervisor — District 2",
-          "precincts_reporting": "412 of 412 Precincts Reported",
-          "choices": [
-            {
-              "name": "Carlos Reyes",
-              "votes": 38403,
-              "pct": 51.0
-            },
-            {
-              "name": "Angela Wu",
-              "votes": 36897,
-              "pct": 49.0
+              "votes": 86419,
+              "pct": 45.89
             }
           ]
         }
@@ -146,43 +178,27 @@
     "San_Mateo": {
       "county": "San_Mateo",
       "platform": "livevoterturnout",
-      "scrape_timestamp": "2026-06-02T20:01:30.000000",
-      "last_updated": "June 2, 2026 8:00 PM",
+      "scrape_timestamp": "",
+      "last_updated": "",
       "voter_turnout": {
-        "ballots_cast": 98500,
-        "registered_voters": 415220,
-        "turnout_percentage": 23.72
+        "ballots_cast": 246003,
+        "registered_voters": 446692,
+        "turnout_percentage": 55.1
       },
       "contests": [
         {
-          "title": "Measure A — San Mateo County Parks Bond",
-          "precincts_reporting": "539 of 539 Precincts Reported",
+          "title": "Proposition 50 (Majority Approval Required)",
+          "precincts_reporting": "",
           "choices": [
             {
-              "name": "Yes",
-              "votes": 64125,
-              "pct": 65.1
+              "name": "YES",
+              "votes": 186934,
+              "pct": 76.05
             },
             {
-              "name": "No",
-              "votes": 34375,
-              "pct": 34.9
-            }
-          ]
-        },
-        {
-          "title": "San Mateo County Board of Supervisors — District 3",
-          "precincts_reporting": "539 of 539 Precincts Reported",
-          "choices": [
-            {
-              "name": "Diana Lopez",
-              "votes": 51220,
-              "pct": 52.0
-            },
-            {
-              "name": "Robert Kim",
-              "votes": 47280,
-              "pct": 48.0
+              "name": "NO",
+              "votes": 58885,
+              "pct": 23.95
             }
           ]
         }
@@ -193,43 +209,74 @@
     "Santa_Clara": {
       "county": "Santa_Clara",
       "platform": "clarity",
-      "scrape_timestamp": "2026-06-02T20:01:15.000000",
-      "last_updated": "Monday, June 2, 2026, 8:00:00 PM",
+      "scrape_timestamp": "2026-06-01T21:52:52.879531",
+      "last_updated": "Tuesday, December 2, 2025, 5:28:43 PM",
       "voter_turnout": {
-        "ballots_cast": 187400,
+        "ballots_cast": 553637,
         "registered_voters": 1068535,
-        "turnout_percentage": 17.54
+        "turnout_percentage": 51.8
       },
       "contests": [
         {
-          "title": "Measure B — Valley Transportation Authority Sales Tax",
+          "title": "Assessor",
           "precincts_reporting": "Precincts Reporting 100%",
           "choices": [
             {
-              "name": "Yes",
-              "votes": 115000,
-              "pct": 61.36
+              "name": "Neysa Fligor",
+              "votes": 176260,
+              "pct": 37.67
             },
             {
-              "name": "No",
-              "votes": 72400,
-              "pct": 38.64
+              "name": "Rishi Kumar",
+              "votes": 112364,
+              "pct": 24.01
+            },
+            {
+              "name": "Yan Zhao",
+              "votes": 99646,
+              "pct": 21.29
+            },
+            {
+              "name": "Bryan Do",
+              "votes": 79694,
+              "pct": 17.03
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
             }
           ]
         },
         {
-          "title": "Santa Clara County Supervisor — District 1",
+          "title": "State Proposition 50 - Assembly Constitutional Amendment 8",
           "precincts_reporting": "Precincts Reporting 100%",
           "choices": [
             {
-              "name": "Alicia Moreno",
-              "votes": 55300,
-              "pct": 55.3
+              "name": "Yes",
+              "votes": 393625,
+              "pct": 71.53
             },
             {
-              "name": "David Chen",
-              "votes": 44700,
-              "pct": 44.7
+              "name": "No",
+              "votes": 156690,
+              "pct": 28.47
+            }
+          ]
+        },
+        {
+          "title": "Measure A - County of Santa Clara, General Retail Transactions (Sales) and Use Tax",
+          "precincts_reporting": "Precincts Reporting 100%",
+          "choices": [
+            {
+              "name": "Yes",
+              "votes": 308055,
+              "pct": 57.25
+            },
+            {
+              "name": "No",
+              "votes": 230038,
+              "pct": 42.75
             }
           ]
         }
@@ -240,43 +287,59 @@
     "Santa_Cruz": {
       "county": "Santa_Cruz",
       "platform": "santacruz",
-      "scrape_timestamp": "2026-06-02T20:01:30.000000",
-      "last_updated": "June 2, 2026 8:00 PM",
+      "scrape_timestamp": "",
+      "last_updated": "12/2/2025 12:00:00 PM",
       "voter_turnout": {
-        "ballots_cast": 44800,
-        "registered_voters": 185040,
-        "turnout_percentage": 24.21
+        "ballots_cast": 106244,
+        "registered_voters": 173331,
+        "turnout_percentage": 61.3
       },
       "contests": [
         {
-          "title": "Measure G — Santa Cruz County Library Parcel Tax",
-          "precincts_reporting": "182 of 182 Precincts Reported",
+          "title": "50 - Congressional Redistricting (Vote for  1)",
+          "precincts_reporting": "",
           "choices": [
             {
               "name": "Yes",
-              "votes": 31360,
-              "pct": 70.0
+              "votes": 82508,
+              "pct": 77.79
             },
             {
               "name": "No",
-              "votes": 13440,
-              "pct": 30.0
+              "votes": 23558,
+              "pct": 22.21
             }
           ]
         },
         {
-          "title": "Santa Cruz City Council — District 3",
-          "precincts_reporting": "182 of 182 Precincts Reported",
+          "title": "B - Workforce Housing And Climate Protection Act - Majority To Pass (Vote for  1)",
+          "precincts_reporting": "",
           "choices": [
             {
-              "name": "Yolanda Rivera",
-              "votes": 23616,
-              "pct": 52.71
+              "name": "Yes",
+              "votes": 3109,
+              "pct": 12.98
             },
             {
-              "name": "Brian Hoffman",
-              "votes": 21184,
-              "pct": 47.29
+              "name": "No",
+              "votes": 20842,
+              "pct": 87.02
+            }
+          ]
+        },
+        {
+          "title": "C - Workforce Housing Affordability Act - Majority To Pass (Vote for  1)",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "Yes",
+              "votes": 13575,
+              "pct": 56.14
+            },
+            {
+              "name": "No",
+              "votes": 10604,
+              "pct": 43.86
             }
           ]
         }
@@ -287,43 +350,74 @@
     "Sonoma": {
       "county": "Sonoma",
       "platform": "clarity",
-      "scrape_timestamp": "2026-06-02T20:01:15.000000",
-      "last_updated": "Monday, June 2, 2026, 8:00:00 PM",
+      "scrape_timestamp": "2026-06-01T21:52:54.576931",
+      "last_updated": "Tuesday, December 2, 2025, 11:20:16 PM",
       "voter_turnout": {
-        "ballots_cast": 62100,
-        "registered_voters": 298210,
-        "turnout_percentage": 20.82
+        "ballots_cast": 209450,
+        "registered_voters": 321131,
+        "turnout_percentage": 65.2
       },
       "contests": [
         {
-          "title": "Measure C — Sonoma County Housing Bond",
-          "precincts_reporting": "205 of 205 Precincts Reported",
+          "title": "Timber Cove County Water District",
+          "precincts_reporting": "Precincts Reporting 100%",
           "choices": [
             {
-              "name": "Yes",
-              "votes": 40365,
-              "pct": 65.0
+              "name": "JOHN D. REA",
+              "votes": 32,
+              "pct": 21.92
             },
             {
-              "name": "No",
-              "votes": 21735,
-              "pct": 35.0
+              "name": "JOHN F. GRAY",
+              "votes": 31,
+              "pct": 21.23
+            },
+            {
+              "name": "JESS WEBER",
+              "votes": 53,
+              "pct": 36.3
+            },
+            {
+              "name": "ROBERT LEICHTNER",
+              "votes": 30,
+              "pct": 20.55
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
             }
           ]
         },
         {
-          "title": "Sonoma Valley Unified School District — Board Member",
-          "precincts_reporting": "205 of 205 Precincts Reported",
+          "title": "Proposition 50 - Special State Measure Redistricting",
+          "precincts_reporting": "Precincts Reporting 100%",
           "choices": [
             {
-              "name": "Patricia Walsh",
-              "votes": 31050,
-              "pct": 50.0
+              "name": "YES",
+              "votes": 153840,
+              "pct": 73.53
             },
             {
-              "name": "Kevin Tran",
-              "votes": 31050,
-              "pct": 50.0
+              "name": "NO",
+              "votes": 55393,
+              "pct": 26.47
+            }
+          ]
+        },
+        {
+          "title": "Measure I - Petaluma Joint Union High School District Parcel Tax - 2/3 Vote To Pass",
+          "precincts_reporting": "Precincts Reporting 100%",
+          "choices": [
+            {
+              "name": "YES",
+              "votes": 21181,
+              "pct": 62.47
+            },
+            {
+              "name": "NO",
+              "votes": 12724,
+              "pct": 37.53
             }
           ]
         }
