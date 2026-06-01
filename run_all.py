@@ -396,6 +396,25 @@ def main():
         mod.preview_html(master_json_path=master_json, include_counties=county_list)
         sys.exit(0)
 
+    # ── STEP 0: SYNC COUNTY LINKS ────────────────────────────────────────────
+    # Pull the latest county URLs from the Google Sheet before scraping.
+    # If this fails (no internet, bad credentials), the existing CSV is used.
+    if not args.mock and not args.dry_run:
+        log.info("Step 0 — Syncing county URLs from the Google Sheet...")
+        export_dir = PROJECT_ROOT / "export"
+        if str(export_dir) not in sys.path:
+            sys.path.insert(0, str(export_dir))
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("to_sheets", export_dir / "to_sheets.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        csv_path = PROJECT_ROOT / "election_data" / "county_links.csv"
+        ok = mod.sync_county_links(output_csv_path=csv_path)
+        if ok:
+            log.info("  ✓ county_links.csv updated from Google Sheet.")
+        else:
+            log.warning("  Could not sync county links — using existing county_links.csv.")
+
     # ── STEP 1: SCRAPE ───────────────────────────────────────────────────────
     if args.dry_run:
         log.info("Step 1 — Skipping website visits (dry-run mode: using data already on disk).")

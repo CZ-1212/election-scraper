@@ -307,6 +307,109 @@ def update_sheets(master_json_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# COUNTY LINKS SYNC
+# Reads the "links" tab from the Google Sheet and writes county_links.csv.
+# The team maintains URLs in the spreadsheet — the pipeline syncs them down
+# before every scrape so nobody has to edit CSV files by hand.
+# ---------------------------------------------------------------------------
+
+# Which Clarity / LiveVoterTurnout counties use which platform.
+# Everything not listed here is treated as "custom".
+_PLATFORM_MAP = {
+    "Contra_Costa": "clarity",
+    "Marin":        "clarity",
+    "Santa_Clara":  "clarity",
+    "Sonoma":       "clarity",
+    "San_Mateo":    "livevoterturnout",
+    "San_Joaquin":  "livevoterturnout",
+}
+
+# Static source labels — these never change so we keep them here rather than
+# adding another column to the spreadsheet.
+_SOURCE_LABELS = {
+    "Alameda":       "Alameda County Registrar of Voters",
+    "Contra_Costa":  "Contra Costa County Elections Division",
+    "Marin":         "Marin County Elections",
+    "Mendocino":     "Mendocino County Elections",
+    "Monterey":      "Monterey County Elections Department",
+    "Napa":          "Napa County Elections",
+    "San_Francisco": "San Francisco Department of Elections",
+    "San_Joaquin":   "San Joaquin County Registrar of Voters",
+    "San_Mateo":     "San Mateo County Elections",
+    "Santa_Clara":   "Santa Clara County Registrar of Voters",
+    "Santa_Cruz":    "Santa Cruz County Elections Department",
+    "Solano":        "Solano County Elections Division",
+    "Sonoma":        "Sonoma County Registrar of Voters",
+}
+
+
+def sync_county_links(output_csv_path: Path) -> bool:
+    """
+    Pull county URLs from the 'links' tab of the Google Sheet and write
+    them to county_links.csv so the scrapers always use up-to-date URLs.
+
+    Column mapping (Google Sheet → CSV):
+      test_url  = Zero Report  (if set) else Past Election
+      live_url  = Zero Report  (if set) else Placeholder
+
+    Returns True on success, False if the sync fails (caller can fall back
+    to whatever is already in the CSV).
+    """
+    service_account_path = _get_env("GOOGLE_SERVICE_ACCOUNT_JSON")
+    sheet_id = _get_env("GOOGLE_SHEET_ID")
+
+    print("[links:sync] Pulling county URLs from Google Sheet 'links' tab...")
+
+    try:
+        spreadsheet = _connect(service_account_path, sheet_id)
+        ws = spreadsheet.worksheet("links")
+        rows = ws.get_all_records()
+    except Exception as e:
+        print(f"[links:sync] WARNING: Could not read 'links' tab — {e}")
+        print("[links:sync] Falling back to existing county_links.csv.")
+        return False
+
+    output_csv_path = Path(output_csv_path)
+    output_csv_path.parent.mkdir(parents=True, exist_ok=True)
+
+    written = 0
+    with open(output_csv_path, "w", newline="", encoding="utf-8") as f:
+        import csv as _csv
+        writer = _csv.DictWriter(f, fieldnames=["county", "platform", "test_url", "live_url", "source_label"])
+        writer.writeheader()
+
+        for row in rows:
+            # Normalize county name: "Contra Costa" → "Contra_Costa"
+            county_raw = str(row.get("County") or "").strip()
+            if not county_raw:
+                continue
+            county = county_raw.replace(" ", "_")
+
+            zero_report   = str(row.get("Zero Report")  or "").strip()
+            placeholder   = str(row.get("Placeholder")  or "").strip()
+            past_election = str(row.get("Past Election") or "").strip()
+
+            # test_url: zero report if available, otherwise past election
+            test_url = zero_report or past_election
+
+            # live_url: zero report if available, otherwise placeholder
+            live_url = zero_report or placeholder
+
+            writer.writerow({
+                "county":       county,
+                "platform":     _PLATFORM_MAP.get(county, "custom"),
+                "test_url":     test_url,
+                "live_url":     live_url,
+                "source_label": _SOURCE_LABELS.get(county, ""),
+            })
+            written += 1
+            print(f"[links:sync]   {county}: test={test_url[:60]}...")
+
+    print(f"[links:sync] ✓ Wrote {written} counties to {output_csv_path.name}")
+    return True
+
+
+# ---------------------------------------------------------------------------
 # CONNECTION TEST — verify credentials and sheet access without writing anything
 # ---------------------------------------------------------------------------
 
