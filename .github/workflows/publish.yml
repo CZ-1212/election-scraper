@@ -32,6 +32,10 @@ on:
         default: ""
         type: string
 
+# Read permission is enough for publish — it only reads existing data and posts to WordPress.
+permissions:
+  contents: read
+
 jobs:
   publish:
     runs-on: ubuntu-latest

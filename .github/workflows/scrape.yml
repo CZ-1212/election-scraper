@@ -12,6 +12,10 @@ on:
   # Also allow manual triggering from the GitHub Actions UI (useful for testing).
   workflow_dispatch:
 
+# Allow the workflow to write back to the repo (needed to commit updated data files).
+permissions:
+  contents: write
+
 jobs:
   scrape-and-update:
     runs-on: ubuntu-latest
