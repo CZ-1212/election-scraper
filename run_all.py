@@ -142,54 +142,71 @@ def parse_args():
 # ---------------------------------------------------------------------------
 def run_scrape(args):
     """
-    Visit each county election website and download the latest results.
-    Saves one JSON file per county into the data/ folder.
+    Visit every county election website and download the latest results.
+
+    Uses src/run_all.py which reads URLs directly from county_links.csv —
+    the same file we sync from the Google Sheet — so it always uses the
+    correct up-to-date URLs for all 13 counties.
+
+    The --scraper flag still lets you limit to just clarity or non-clarity
+    counties when testing a single group.
     """
     log.info("=" * 60)
     log.info("STEP 1 of 4 — SCRAPING COUNTY WEBSITES")
     log.info("  Going to each county registrar's website and downloading their results.")
+    log.info("  URLs come from county_links.csv (synced from the Google Sheet).")
     log.info("=" * 60)
 
     src_dir = PROJECT_ROOT / "src"
     env = os.environ.copy()
     existing_pythonpath = env.get("PYTHONPATH", "")
     env["PYTHONPATH"] = f"{src_dir}:{existing_pythonpath}" if existing_pythonpath else str(src_dir)
-
     python_exe = sys.executable
     scraper_choice = args.scraper
     success = True
 
-    # Non-Clarity counties use a simpler web scraper (no browser needed).
-    if scraper_choice in ("both", "non-clarity"):
-        log.info("  Visiting: San Mateo, San Joaquin, Santa Cruz...")
-        log.info("  (These counties use a simpler page — takes about 1-2 minutes.)")
+    if scraper_choice == "both":
+        # src/run_all.py handles all 13 counties using county_links.csv URLs.
+        log.info("  Scraping all 13 counties (this takes about 5-10 minutes)...")
+        result = subprocess.run(
+            [python_exe, str(src_dir / "run_all.py")],
+            cwd=str(PROJECT_ROOT),
+            env=env,
+        )
+        if result.returncode != 0:
+            log.error("  ✗ Full scrape had errors — check the output above for details.")
+            log.error("    Continuing with whatever data was saved.")
+            success = False
+        else:
+            log.info("  ✓ All 13 counties — downloaded successfully.")
+
+    elif scraper_choice == "non-clarity":
+        # Individual script for non-Clarity counties only (faster for testing).
+        log.info("  Visiting non-Clarity counties: San Mateo, San Joaquin, Santa Cruz...")
         result = subprocess.run(
             [python_exe, str(src_dir / "scrape_3_working.py")],
             cwd=str(PROJECT_ROOT),
             env=env,
         )
         if result.returncode != 0:
-            log.error("  ✗ San Mateo / San Joaquin / Santa Cruz scrape had an error.")
-            log.error("    The pipeline will continue with whatever data was saved.")
+            log.error("  ✗ Non-Clarity scrape had an error.")
             success = False
         else:
-            log.info("  ✓ San Mateo, San Joaquin, Santa Cruz — downloaded successfully.")
+            log.info("  ✓ Non-Clarity counties downloaded.")
 
-    # Clarity counties run a full Chrome browser to load their JavaScript pages.
-    if scraper_choice in ("both", "clarity"):
-        log.info("  Visiting: Contra Costa, Marin, Santa Clara, Sonoma...")
-        log.info("  (These counties require a browser — takes about 5-6 minutes.)")
+    elif scraper_choice == "clarity":
+        # Individual script for Clarity counties only (uses Chrome browser).
+        log.info("  Visiting Clarity counties: Contra Costa, Marin, Santa Clara, Sonoma...")
         result = subprocess.run(
             [python_exe, str(src_dir / "test_clarity_only.py")],
             cwd=str(PROJECT_ROOT),
             env=env,
         )
         if result.returncode != 0:
-            log.error("  ✗ Clarity scrape had an error (Contra Costa / Marin / Santa Clara / Sonoma).")
-            log.error("    The pipeline will continue with whatever data was saved.")
+            log.error("  ✗ Clarity scrape had an error.")
             success = False
         else:
-            log.info("  ✓ Contra Costa, Marin, Santa Clara, Sonoma — downloaded successfully.")
+            log.info("  ✓ Clarity counties downloaded.")
 
     return success
 

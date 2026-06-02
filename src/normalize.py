@@ -295,30 +295,131 @@ def _scrape_status(county_data: dict, anomalies: list[str]) -> str:
 # MAIN NORMALIZE FUNCTION
 # ---------------------------------------------------------------------------
 
+def _parse_all_counties_csv(csv_path: Path) -> dict[str, dict]:
+    """
+    Parse the all_counties.csv produced by src/run_all.py into per-county dicts.
+
+    The file uses a grouped format — each county gets a header block, a turnout
+    row, a contest sub-header, then one row per choice:
+
+        County,ballots_cast,registered_voters,turnout_percentage,Last-update
+        Contra_Costa,413212,730646,56.6,2026-06-01 ...
+        contest_title,choice_name,votes,vote_percentage
+        PROPOSITION 50,Yes,250000,60.5
+        PROPOSITION 50,No,163212,39.5
+        County,ballots_cast,...    ← next county block starts here
+    """
+    import csv as _csv
+
+    counties: dict[str, dict] = {}
+    current_county: str | None = None
+    expect_turnout = False
+    expect_contest_rows = False
+    current_contests: dict[str, dict] = {}
+
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        for row in _csv.reader(f):
+            if not row or not any(row):
+                continue
+
+            first = row[0].strip()
+
+            # County header row — signals start of a new county block.
+            if first == "County" and len(row) >= 4 and row[1].strip() == "ballots_cast":
+                if current_county:
+                    counties[current_county]["contests"] = list(current_contests.values())
+                current_county = None
+                current_contests = {}
+                expect_turnout = True
+                expect_contest_rows = False
+                continue
+
+            # Contest sub-header row.
+            if first == "contest_title":
+                expect_contest_rows = True
+                expect_turnout = False
+                continue
+
+            # Turnout data row — the row immediately after the County header.
+            if expect_turnout and current_county is None and first:
+                county_name = first.replace(" ", "_")
+                try:
+                    ballots = int(str(row[1]).replace(",", "")) if len(row) > 1 and row[1] else 0
+                    registered = int(str(row[2]).replace(",", "")) if len(row) > 2 and row[2] else 0
+                    turnout_pct = float(row[3]) if len(row) > 3 and row[3] else 0.0
+                    last_updated = row[4].strip() if len(row) > 4 else ""
+                except (ValueError, IndexError):
+                    ballots, registered, turnout_pct, last_updated = 0, 0, 0.0, ""
+
+                current_county = county_name
+                counties[current_county] = {
+                    "county": county_name,
+                    "platform": "custom",
+                    "scrape_timestamp": "",
+                    "last_updated": last_updated,
+                    "voter_turnout": {
+                        "ballots_cast": ballots,
+                        "registered_voters": registered,
+                        "turnout_percentage": turnout_pct,
+                    },
+                    "contests": [],
+                }
+                expect_turnout = False
+                continue
+
+            # Contest choice row.
+            if expect_contest_rows and current_county and first:
+                contest_title = first
+                choice_name = row[1].strip() if len(row) > 1 else ""
+                try:
+                    votes = int(str(row[2]).replace(",", "")) if len(row) > 2 and row[2] else 0
+                    pct = float(row[3]) if len(row) > 3 and row[3] else 0.0
+                except (ValueError, IndexError):
+                    votes, pct = 0, 0.0
+
+                if contest_title not in current_contests:
+                    current_contests[contest_title] = {
+                        "title": contest_title,
+                        "precincts_reporting": "",
+                        "choices": [],
+                    }
+                if choice_name:
+                    current_contests[contest_title]["choices"].append({
+                        "name": choice_name,
+                        "votes": votes,
+                        "pct": pct,
+                    })
+
+    # Save the last county block.
+    if current_county:
+        counties[current_county]["contests"] = list(current_contests.values())
+
+    return counties
+
+
 def normalize(input_dir: Path, output_path: Path) -> dict:
     """
-    Read all county JSON files from input_dir, normalize them, and write
-    the merged master JSON to output_path.
+    Read county data from input_dir and write the merged master JSON to output_path.
+
+    Reads individual county JSON files (saved by scrape_3_working.py and
+    test_clarity_only.py) if present. If none are found, falls back to parsing
+    all_counties.csv (saved by src/run_all.py when scraping all 13 counties).
 
     Returns the master dict so callers can inspect it without re-reading the file.
     """
     input_dir = Path(input_dir)
     output_path = Path(output_path)
 
-    # Make sure the output directory exists before we try to write to it.
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    print(f"[normalize] Scanning {input_dir} for county JSON files...")
+    print(f"[normalize] Scanning {input_dir} for county data...")
 
-    # Collect all JSON files that look like county data.
-    # We look for files containing known county name patterns.
-    county_files: dict[str, Path] = {}  # county_name -> path to most-recent file
+    # Collect individual county JSON files first (fastest, most precise).
+    county_files: dict[str, Path] = {}
 
     for filepath in sorted(input_dir.glob("*.json")):
-        # Skip the master output file itself if it lives in the same directory.
         if filepath.name == "election_results_master.json":
             continue
-        # Skip summary/meta files.
         if any(x in filepath.name for x in ["working_summary", "all_counties"]):
             continue
 
@@ -327,8 +428,6 @@ def normalize(input_dir: Path, output_path: Path) -> dict:
             print(f"[normalize] Skipping unrecognized file: {filepath.name}")
             continue
 
-        # If we see multiple files for the same county (timestamps differ),
-        # keep the most recently modified one.
         if county not in county_files:
             county_files[county] = filepath
         else:
@@ -336,8 +435,51 @@ def normalize(input_dir: Path, output_path: Path) -> dict:
             if filepath.stat().st_mtime > existing.stat().st_mtime:
                 county_files[county] = filepath
 
+    # If all_counties.csv exists and covers more counties than the individual JSON files,
+    # use it — it comes from src/run_all.py which scrapes all 13 counties at once
+    # with the correct URLs from county_links.csv.
+    csv_candidates = sorted(
+        input_dir.glob("all_counties*.csv"),
+        key=lambda p: p.stat().st_mtime, reverse=True
+    )
+    if csv_candidates:
+        csv_counties = _parse_all_counties_csv(csv_candidates[0])
+        if len(csv_counties) > len(county_files):
+            print(f"[normalize] all_counties.csv has {len(csv_counties)} counties vs "
+                  f"{len(county_files)} JSON files — using {csv_candidates[0].name}")
+            county_files = {}  # discard JSON files, use CSV instead
+
     if not county_files:
-        raise ValueError(f"No recognizable county JSON files found in {input_dir}")
+        csv_candidates = sorted(input_dir.glob("all_counties*.csv"),
+                                key=lambda p: p.stat().st_mtime, reverse=True)
+        if csv_candidates:
+            all_csv = csv_candidates[0]
+            print(f"[normalize] No county JSON files found — reading from {all_csv.name}")
+            parsed = _parse_all_counties_csv(all_csv)
+            if not parsed:
+                raise ValueError(f"all_counties.csv at {all_csv} contained no county data.")
+            # Attach anomalies and status then write master JSON.
+            master_counties = {}
+            for county, data in parsed.items():
+                anomalies = _detect_anomalies(data)
+                data["anomalies"] = anomalies
+                data["scrape_status"] = _scrape_status(data, anomalies)
+                master_counties[county] = data
+            master = {
+                "pipeline_timestamp": datetime.now().isoformat(),
+                "county_count": len(master_counties),
+                "counties": master_counties,
+            }
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump(master, f, indent=2, ensure_ascii=False)
+            ok_count = sum(1 for d in master_counties.values() if d.get("scrape_status") == "OK")
+            warn_count = sum(1 for d in master_counties.values() if d.get("scrape_status") == "WARN")
+            fail_count = sum(1 for d in master_counties.values() if d.get("scrape_status") == "FAIL")
+            print(f"[normalize] Master JSON written to: {output_path}")
+            print(f"[normalize] Summary: {ok_count} OK / {warn_count} WARN / {fail_count} FAIL")
+            return master
+        else:
+            raise ValueError(f"No county JSON files or all_counties.csv found in {input_dir}")
 
     print(f"[normalize] Found files for {len(county_files)} counties: {', '.join(sorted(county_files.keys()))}")
 
