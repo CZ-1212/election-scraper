@@ -489,10 +489,17 @@ class SFElectionsScraper(BaseScraper):
     """Scraper for SF Elections (sfelections.org).
     Discovers the latest certified summary.xml from the detail page and parses
     the SSRS XML report directly — no Selenium needed.
+
+    The election ID (e.g. '20260602w') is derived from self.url so this
+    scraper automatically uses whichever election the county_links.csv points to.
     """
 
-    DETAIL_URL = 'https://sfelections.org/results/20251104w/detail.html'
-    BASE_URL   = 'https://www.sfelections.org'
+    BASE_URL = 'https://www.sfelections.org'
+
+    def _election_id_from_url(self):
+        """Extract the election ID (e.g. '20260602w') from the passed-in URL."""
+        m = re.search(r'/results/(\w+)/', self.url)
+        return m.group(1) if m else '20260602w'
 
     def scrape(self):
         self.rate_limiter.wait()
@@ -500,17 +507,24 @@ class SFElectionsScraper(BaseScraper):
         try:
             headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
 
-            # Find the most recent dated folder from the detail page
-            print(f"[{self.county_name}] Finding latest certified XML...")
-            r = self._fetch_with_retry(self.DETAIL_URL, headers=headers, timeout=20, verify=True)
+            # Derive the election ID from the URL passed in via county_links.csv.
+            # This makes the scraper work for any election without code changes —
+            # just update the URL in the Google Sheet links tab.
+            election_id = self._election_id_from_url()
+            election_date = election_id.rstrip('w')  # '20260602w' → '20260602'
+            detail_url = f'https://sfelections.org/results/{election_id}/detail.html'
+
+            print(f"[{self.county_name}] Election ID: {election_id}")
+            print(f"[{self.county_name}] Finding latest certified XML from {detail_url}...")
+            r = self._fetch_with_retry(detail_url, headers=headers, timeout=20, verify=True)
             soup = BeautifulSoup(r.text, 'html.parser')
 
             xml_url = None
-            # Links are like /results/20251104/data/20251203/summary.xml — pick the latest date folder
+            # Links are like /results/20260602/data/20260603/summary.xml — pick the latest date folder
             candidates = []
             for a in soup.find_all('a', href=True):
                 href = a['href']
-                m = re.search(r'/results/20251104/data/(\d+)/summary\.xml', href)
+                m = re.search(rf'/results/{election_date}/data/(\d+)/summary\.xml', href)
                 if m:
                     candidates.append((m.group(1), href))
             if candidates:
@@ -519,7 +533,8 @@ class SFElectionsScraper(BaseScraper):
                 xml_url = latest_href if latest_href.startswith('http') else self.BASE_URL + latest_href
 
             if not xml_url:
-                print(f"[{self.county_name}] ✗ Could not find summary.xml URL")
+                print(f"[{self.county_name}] ✗ Could not find summary.xml URL on {detail_url}")
+                print(f"[{self.county_name}]   Results may not be posted yet for election {election_id}.")
                 return None
 
             print(f"[{self.county_name}] Fetching XML: {xml_url}")

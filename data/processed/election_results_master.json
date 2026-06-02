@@ -1,12 +1,12 @@
 {
-  "pipeline_timestamp": "2026-06-02T05:52:18.406547",
+  "pipeline_timestamp": "2026-06-01T23:00:59.711297",
   "county_count": 13,
   "counties": {
     "Alameda": {
       "county": "Alameda",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 05:52:18",
+      "last_updated": "2026-06-01 23:00:59",
       "voter_turnout": {
         "ballots_cast": 508730,
         "registered_voters": 965876,
@@ -53,7 +53,7 @@
       "county": "Contra_Costa",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 05:52:18",
+      "last_updated": "2026-06-01 23:00:59",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 731497,
@@ -1016,7 +1016,7 @@
       "county": "Marin",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 05:52:18",
+      "last_updated": "2026-06-01 23:00:59",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 173082,
@@ -2004,7 +2004,7 @@
       "county": "Mendocino",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 05:52:18",
+      "last_updated": "2026-06-01 23:00:59",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 0,
@@ -2022,7 +2022,7 @@
       "county": "Monterey",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 05:52:18",
+      "last_updated": "2026-06-01 23:00:59",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 0,
@@ -3005,7 +3005,7 @@
       "county": "Napa",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 05:52:18",
+      "last_updated": "2026-06-01 23:00:59",
       "voter_turnout": {
         "ballots_cast": 52409,
         "registered_voters": 86390,
@@ -3036,38 +3036,1129 @@
       "county": "San_Francisco",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 05:52:18",
+      "last_updated": "2026-06-01 23:00:59",
       "voter_turnout": {
-        "ballots_cast": 295232,
-        "registered_voters": 531310,
-        "turnout_percentage": 55.57
+        "ballots_cast": 0,
+        "registered_voters": 531781,
+        "turnout_percentage": 0.0
       },
       "contests": [
         {
-          "title": "Proposition 50",
+          "title": "GOVERNOR",
           "precincts_reporting": "",
           "choices": [
             {
-              "name": "Yes",
-              "votes": 251058,
-              "pct": 85.29
+              "name": "MARGARET TROWE",
+              "votes": 0,
+              "pct": 0.0
             },
             {
-              "name": "No",
-              "votes": 43288,
-              "pct": 14.71
+              "name": "TONY K. THURMOND",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "THUNDER PARLEY",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "KATIE PORTER",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "TOM WOODARD",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "LEO SAMUEL ZACKY",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "ERIN \"ZEZ\" ZEZULAK",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "DAVID ZICKEFOOSE",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "AMANDA MARTIN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "MATT MAHAN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "BRENT MAUPIN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "DANIEL MERCURI",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "BETTY T. YEE",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "NANCY D. YOUNG",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "ALICIA OLIVIA LAPP",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "MATTHEW CHASE LEVY",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "DUANE TERRENCE LOYNES JR.",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "RANDEEP S. DHILLON",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "LIVINGFORGOD ANDCOUNTRY DEMOTT",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "PATRICIA DE LUCA BASUALDO",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "LOUIS A. DE BARRAICUA",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "RAJI RAB",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "SATISH RAO",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "RAMSEY ROBINSON",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "LEWIS HERMS",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "RAFAEL M. HERNANDEZ",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "JON HENDERSON",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "STEVE HILTON",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "NAOMI BAR-LEV",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "XAVIER BECERRA",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "CAROLINA BUHLER",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "CHAD BIANCO",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "JOSEPH CABRERA",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "ELAINE CULOTTI",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "JOEL E. JACOB",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "MAX FOMIN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "LUKASZ ADAM FILINSKI",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "SERGE FIANKAN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "LEO NARANJO IV",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "TIM NELSON",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "TOM STEYER",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "ERIC SWALWELL",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "SCOTT P SHIELDS",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "FREDERIC C. SCHULTZ",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "CHRISTINE R. SARMIENTO",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "REZA SAFARNEJAD",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "SAM SANDAK",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "GRETHA SOLORZANO",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "JAMES ATHANS JR.",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "LARRY AZEVEDO",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "MOHAMMAD ARIF",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "AKINYEMI AGBEDE",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "DEREK GRASTY",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "DON J. GRUNDMANN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "DAWIT KELLEL",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "ANNE KOMAROVSK",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "GARY HOWARD KIDGELL",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "SOPHIA EDUM-A-SAM",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "MAURO ALBERTO OROZCO",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "BARACK D. OBAMA SHAW",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "ANTONIO VILLARAIGOSA",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "LIEUTENANT GOVERNOR",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "MICHAEL TUBBS",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "TIM MYERS",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "FIONA MA",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "OLIVER MA",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "EBIE LYNCH",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "JEYSON LOPEZ",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "GLORIA ROMERO",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "RAKESH CHRISTIAN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "DAVID COLLENBERG",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "SEAN COLLINSON",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "JOSH FRYDAY",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "DAVID FENNELL",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "ALICE STEK",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "SKIP SHELTON",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "ABDUR RAHMAN SIKDER",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "JANELLE KELLMAN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "SECRETARY OF STATE",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "DONALD P. (DON) WAGNER",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "SHIRLEY N. WEBER",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "GARY N. BLENNER",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "MICHAEL FEINSTEIN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "CONTROLLER",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "HERB W MORGAN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "MALIA M. COHEN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "MEGHANN ADAMS",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "TREASURER",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "GLENN TURNER",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "JENNIFER HAWKS",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "ANNA M. CABALLERO",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "DAVID SERPA",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "ELENI KOUNALAKIS",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "TONY VAZQUEZ",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "ATTORNEY GENERAL",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "MARJORIE MIKELS",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "ROB BONTA",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "MICHAEL E. GATES",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "INSURANCE COMMISSIONER",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "PATRICK WOLFF",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "SEAN LEE",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "KEITH W. DAVIS",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "ROBERT P HOWELL",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "STEVEN CRAIG BRADFORD",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "MERRITT FARREN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "BEN ALLEN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "ERIC THOR AARNIO",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "STACY A. KORSGADEN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "JANE KIM",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "EDUARDO \"LALO\" VARGAS",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "BOARD OF EQUALIZATION MEMBER, DISTRICT 2",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "JOHN PIMENTEL",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "JOHN W. ZARUKA",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "MARK MCCOMAS",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "J BRETT MARYMEE",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "SALLY J. LIEBER",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "BILL SHIREMAN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "UNITED STATES REPRESENTATIVE, DISTRICT 11",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "SCOTT WIENER",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "NATHAN DEER",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "OMED HAMID",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "GREGORY M HAYNES",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "MARIE HURABIELL",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "JOHN \"GUS\" BUFFLER",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "CONNIE CHAN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "SAIKAT CHAKRABARTI",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "JINGCHAO XIONG",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "KEITH FREEDMAN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "DAVID GANEZER",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "UNITED STATES REPRESENTATIVE, DISTRICT 15",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "KEVIN MULLIN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "ANTHONY VAN DANG",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "CHARLES HOELTER",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "JIM GARRITY",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "MANTOSH KUMAR",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "STATE SENATOR, DISTRICT 2",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "TIEF GIBBS",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "AARON SMITH",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "DAMON CONNOLLY",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "STATE ASSEMBLY MEMBER, DISTRICT 12",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "JACKIE ELWARD",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "ERIC LUCAN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "HOLLI THIER",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "ELI BECKMAN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "STEVE SCHWARTZ",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "ERYN CERVANTES",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "STATE ASSEMBLY MEMBER, DISTRICT 17",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "MATT HANEY",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "STATE ASSEMBLY MEMBER, DISTRICT 18",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "NED NUERGE",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "MIA BONTA",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "MICHAEL GOLDSTEIN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "ANDRE SANDFORD",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "STATE ASSEMBLY MEMBER, DISTRICT 19",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "PHILIP LOUIS WING",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "CATHERINE STEFANI",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "JUDGE OF THE SUPERIOR COURT, SEAT 16",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "ALEXANDRA PRAY",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "PHOEBE H. MAFFEI",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "SUPERINTENDENT OF PUBLIC INSTRUCTION",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "GUS MATTAMMAL",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "AL MURATSUCHI",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "FRANK LARA",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "AINYE LONG",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "ANTHONY RENDON",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "NICHELLE M. HENDERSON",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "RICHARD BARRERA",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "WENDY CASTANEDA LEAL",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "JOSH NEWMAN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "SONJA SHAW",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "MEMBER, BOARD OF EDUCATION",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "BRANDEE MARCKMANN",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "VIRGINIA CHEUNG",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "PHIL KIM",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "Measure A",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "BONDS - YES",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "BONDS - NO",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "Measure B",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "YES",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "NO",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "Measure C",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "YES",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "NO",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "Measure D",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "YES",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "NO",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "MEMBER, BOARD OF SUPERVISORS, DISTRICT 2",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "LORI BROOKE",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "STEPHEN SHERRILL",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
+            }
+          ]
+        },
+        {
+          "title": "MEMBER, BOARD OF SUPERVISORS, DISTRICT 4",
+          "precincts_reporting": "",
+          "choices": [
+            {
+              "name": "ALAN WONG",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "DAVID E. LEE",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "ALBERT CHOW",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "JEREMY JULIAN GRECO",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "NATALIE GEE",
+              "votes": 0,
+              "pct": 0.0
+            },
+            {
+              "name": "Write-in",
+              "votes": 0,
+              "pct": 0.0
             }
           ]
         }
       ],
-      "anomalies": [],
-      "scrape_status": "OK"
+      "anomalies": [
+        "ZERO_BALLOTS: ballots_cast is 0 — results may not be posted yet",
+        "ZERO_VOTES: all choices in 'GOVERNOR' have 0 votes"
+      ],
+      "scrape_status": "WARN"
     },
     "San_Joaquin": {
       "county": "San_Joaquin",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 05:52:18",
+      "last_updated": "2026-06-01 23:00:59",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 410058,
@@ -3976,7 +5067,7 @@
       "county": "San_Mateo",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 05:52:18",
+      "last_updated": "2026-06-01 23:00:59",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 447306,
@@ -7218,7 +8309,7 @@
       "county": "Santa_Clara",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 05:52:18",
+      "last_updated": "2026-06-01 23:00:59",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 1075142,
@@ -8266,7 +9357,7 @@
       "county": "Santa_Cruz",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 05:52:18",
+      "last_updated": "2026-06-01 23:00:59",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 0,
@@ -9339,7 +10430,7 @@
       "county": "Solano",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 05:52:18",
+      "last_updated": "2026-06-01 23:00:59",
       "voter_turnout": {
         "ballots_cast": 145294,
         "registered_voters": 277461,
@@ -9370,7 +10461,7 @@
       "county": "Sonoma",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 05:52:18",
+      "last_updated": "2026-06-01 23:00:59",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 319260,

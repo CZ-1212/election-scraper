@@ -91,11 +91,14 @@ def load_uncontested() -> set:
 REPORT_COLUMNS = [
     "County",
     "Race / Measure",
+    "Race Type",            # Candidate or Measure
+    "Measure Jurisdiction", # e.g. "City of Oakland"
+    "Measure Description",  # full ballot text from local_races CSV
     "Uncontested",
     "Precincts Reporting",
     "Choice / Candidate",
     "Party",
-    "Description",
+    "Profession",
     "Votes",
     "Percent",
     "Total Ballots Cast",
@@ -127,9 +130,13 @@ def build_report(master: dict, local_races: dict, uncontested: set,
         anomalies       = " | ".join(county_data.get("anomalies") or [])
 
         for contest in county_data.get("contests") or []:
-            race_title  = contest.get("title", "")
-            precincts   = contest.get("precincts_reporting", "")
-            choices     = contest.get("choices") or []
+            race_title    = contest.get("title", "")
+            precincts     = contest.get("precincts_reporting", "")
+            choices       = contest.get("choices") or []
+            is_measure    = contest.get("is_measure", False)
+            measure_desc  = contest.get("measure_description", "")
+            measure_juris = contest.get("measure_jurisdiction", "")
+            race_type     = "Measure" if is_measure else "Candidate"
 
             # Check if this race is uncontested.
             is_uncontested = _normalize_key(county_display, race_title) in uncontested
@@ -137,56 +144,56 @@ def build_report(master: dict, local_races: dict, uncontested: set,
                 continue
 
             if not choices:
-                # Race scraped but no choices — still show it so editors can spot gaps.
                 rows.append({
-                    "County":             county_display,
-                    "Race / Measure":     race_title,
-                    "Uncontested":        "Yes" if is_uncontested else "",
-                    "Precincts Reporting": precincts,
-                    "Choice / Candidate": "(no choices scraped)",
-                    "Party":              "",
-                    "Description":        "",
-                    "Votes":              "",
-                    "Percent":            "",
-                    "Total Ballots Cast": ballots_cast,
-                    "Registered Voters":  registered,
-                    "Turnout %":          turnout_pct,
-                    "Last Updated":       last_updated,
-                    "Scrape Status":      scrape_status,
-                    "Anomalies":          anomalies,
+                    "County":               county_display,
+                    "Race / Measure":       race_title,
+                    "Race Type":            race_type,
+                    "Measure Jurisdiction": measure_juris,
+                    "Measure Description":  measure_desc,
+                    "Uncontested":          "Yes" if is_uncontested else "",
+                    "Precincts Reporting":  precincts,
+                    "Choice / Candidate":   "(no choices scraped)",
+                    "Party":                "",
+                    "Profession":           "",
+                    "Votes":                "",
+                    "Percent":              "",
+                    "Total Ballots Cast":   ballots_cast,
+                    "Registered Voters":    registered,
+                    "Turnout %":            turnout_pct,
+                    "Last Updated":         last_updated,
+                    "Scrape Status":        scrape_status,
+                    "Anomalies":            anomalies,
                 })
                 continue
 
             for choice in choices:
-                name = choice.get("name", "")
-
-                # Look up description and party from the static roster CSV.
-                lookup_key = _normalize_key(county_display, race_title, name)
-                info = local_races.get(lookup_key) or {}
-                description = info.get("description", "")
-                party       = info.get("party", "")
-
-                votes   = choice.get("votes", "")
-                pct     = choice.get("pct", "")
-                votes_fmt = f"{int(votes):,}" if votes != "" else ""
-                pct_fmt   = f"{float(pct):.2f}%" if pct != "" else ""
+                name       = choice.get("name", "")
+                party      = choice.get("party", "")
+                profession = choice.get("profession", "")
+                votes      = choice.get("votes", "")
+                pct        = choice.get("pct", "")
+                votes_fmt  = f"{int(votes):,}" if votes != "" else ""
+                pct_fmt    = f"{float(pct):.2f}%" if pct != "" else ""
 
                 rows.append({
-                    "County":             county_display,
-                    "Race / Measure":     race_title,
-                    "Uncontested":        "Yes" if is_uncontested else "",
-                    "Precincts Reporting": precincts,
-                    "Choice / Candidate": name,
-                    "Party":              party,
-                    "Description":        description,
-                    "Votes":              votes_fmt,
-                    "Percent":            pct_fmt,
-                    "Total Ballots Cast": f"{int(ballots_cast):,}" if ballots_cast else "",
-                    "Registered Voters":  f"{int(registered):,}" if registered else "",
-                    "Turnout %":          f"{float(turnout_pct):.1f}%" if turnout_pct else "",
-                    "Last Updated":       last_updated,
-                    "Scrape Status":      scrape_status,
-                    "Anomalies":          anomalies,
+                    "County":               county_display,
+                    "Race / Measure":       race_title,
+                    "Race Type":            race_type,
+                    "Measure Jurisdiction": measure_juris,
+                    "Measure Description":  measure_desc,
+                    "Uncontested":          "Yes" if is_uncontested else "",
+                    "Precincts Reporting":  precincts,
+                    "Choice / Candidate":   name,
+                    "Party":                party,
+                    "Profession":           profession,
+                    "Votes":                votes_fmt,
+                    "Percent":              pct_fmt,
+                    "Total Ballots Cast":   f"{int(ballots_cast):,}" if ballots_cast else "",
+                    "Registered Voters":    f"{int(registered):,}" if registered else "",
+                    "Turnout %":            f"{float(turnout_pct):.1f}%" if turnout_pct else "",
+                    "Last Updated":         last_updated,
+                    "Scrape Status":        scrape_status,
+                    "Anomalies":            anomalies,
                 })
 
     return rows

@@ -13,10 +13,113 @@ Both are normalized to the same master structure so downstream code (Sheets,
 WordPress) never has to care which platform a county used.
 """
 
+import csv
 import json
 import re
 from datetime import datetime
 from pathlib import Path
+
+# Path to the static local_races roster CSV — candidate parties, professions,
+# and measure descriptions that don't change between scrape runs.
+_LOCAL_RACES_CSV = Path(__file__).resolve().parent.parent / "election_data" / "local_races - Sheet1.csv"
+
+# Regex to detect ballot measure rows (vs. candidate rows) in the roster.
+_MEASURE_PAT = re.compile(r"\b(measure|proposition|prop|bond|recall|initiative)\b", re.I)
+
+
+def _load_local_races(csv_path: Path) -> tuple[dict, dict]:
+    """
+    Load the static local_races CSV into two lookup dicts:
+
+      candidate_lookup  — keyed by (county, race_title, candidate_name) → {party, profession}
+      measure_lookup    — keyed by (county, race_title)                  → {description, jurisdiction}
+
+    Keys are lowercased and whitespace-collapsed for fuzzy matching.
+    """
+    def _key(*parts):
+        return re.sub(r"\s+", " ", " ".join(str(p or "").strip().lower() for p in parts)).strip()
+
+    candidates: dict = {}
+    measures: dict   = {}
+
+    if not csv_path.exists():
+        print(f"[normalize] NOTE: {csv_path.name} not found — party/description data will be blank.")
+        return candidates, measures
+
+    with open(csv_path, newline="", encoding="utf-8-sig") as f:
+        for row in csv.DictReader(f):
+            race    = (row.get("Race/Measure name") or "").strip()
+            name    = (row.get("Candidate Name/Measure Juristiction") or "").strip()
+            desc    = (row.get("Profession/Description") or "").strip()
+            party   = (row.get("Party") or "").strip()
+            county  = (row.get("County") or "").strip().replace(" County", "").strip()
+
+            if _MEASURE_PAT.search(race):
+                # Ballot measure — store description and jurisdiction.
+                measures[_key(county, race)] = {
+                    "description":  desc,
+                    "jurisdiction": name,
+                }
+                # Also index by first two words and short prefix for flexible matching.
+                short = " ".join(race.split()[:2])
+                measures.setdefault(_key(county, short), {"description": desc, "jurisdiction": name})
+            else:
+                # Candidate — store party and profession.
+                if name:
+                    candidates[_key(county, race, name)] = {
+                        "party":      party,
+                        "profession": desc,
+                    }
+
+    print(f"[normalize] Loaded roster: {len(candidates)} candidates, {len(measures)} measures.")
+    return candidates, measures
+
+
+# Load once at module level so every normalize() call shares the same data.
+_CANDIDATE_LOOKUP, _MEASURE_LOOKUP = _load_local_races(_LOCAL_RACES_CSV)
+
+
+def _enrich_choices(choices: list, county: str, race_title: str) -> list:
+    """
+    Add party and profession to each candidate choice by looking up the
+    static roster. Returns the same list with extra fields filled in where
+    a match is found.
+    """
+    def _key(*parts):
+        return re.sub(r"\s+", " ", " ".join(str(p or "").strip().lower() for p in parts)).strip()
+
+    enriched = []
+    for choice in choices:
+        name = choice.get("name", "")
+        info = _CANDIDATE_LOOKUP.get(_key(county.replace("_", " "), race_title, name)) or {}
+        enriched.append({
+            **choice,
+            "party":      info.get("party", ""),
+            "profession": info.get("profession", ""),
+        })
+    return enriched
+
+
+def _measure_info(county: str, race_title: str) -> dict:
+    """
+    Look up description and jurisdiction for a ballot measure from the
+    static roster. Returns empty dict if no match.
+    """
+    def _key(*parts):
+        return re.sub(r"\s+", " ", " ".join(str(p or "").strip().lower() for p in parts)).strip()
+
+    county_clean = county.replace("_", " ")
+    info = (
+        _MEASURE_LOOKUP.get(_key(county_clean, race_title))
+        or _MEASURE_LOOKUP.get(_key(county_clean, " ".join(race_title.split()[:2])))
+        or {}
+    )
+    return info
+
+
+def _is_measure(race_title: str) -> bool:
+    """Return True if the race title looks like a ballot measure."""
+    return bool(_MEASURE_PAT.search(race_title))
 
 
 # ---------------------------------------------------------------------------
@@ -174,12 +277,21 @@ def _normalize_clarity(raw: dict, county: str) -> dict:
         title = str(c.get("title") or "").strip()
         precincts = str(c.get("precincts_reporting") or "").strip()
         choices = _normalize_choices(c.get("choices") or [])
-        if title:
-            contests.append({
-                "title": title,
-                "precincts_reporting": precincts,
-                "choices": choices,
-            })
+        if not title:
+            continue
+
+        is_measure = _is_measure(title)
+        enriched_choices = choices if is_measure else _enrich_choices(choices, county, title)
+        measure = _measure_info(county, title) if is_measure else {}
+
+        contests.append({
+            "title": title,
+            "is_measure": is_measure,
+            "measure_description":  measure.get("description", ""),
+            "measure_jurisdiction": measure.get("jurisdiction", ""),
+            "precincts_reporting": precincts,
+            "choices": enriched_choices,
+        })
 
     return {
         "county": county,
@@ -211,12 +323,21 @@ def _normalize_non_clarity(raw: dict, county: str) -> dict:
         title = str(c.get("title") or "").strip()
         precincts = str(c.get("precincts_reporting") or "").strip()
         choices = _normalize_choices(c.get("choices") or [])
-        if title:
-            contests.append({
-                "title": title,
-                "precincts_reporting": precincts,
-                "choices": choices,
-            })
+        if not title:
+            continue
+
+        is_measure = _is_measure(title)
+        enriched_choices = choices if is_measure else _enrich_choices(choices, county, title)
+        measure = _measure_info(county, title) if is_measure else {}
+
+        contests.append({
+            "title": title,
+            "is_measure": is_measure,
+            "measure_description":  measure.get("description", ""),
+            "measure_jurisdiction": measure.get("jurisdiction", ""),
+            "precincts_reporting": precincts,
+            "choices": enriched_choices,
+        })
 
     return {
         "county": county,
