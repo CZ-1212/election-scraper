@@ -32,9 +32,9 @@ on:
         default: ""
         type: string
 
-# Read permission is enough for publish — it only reads existing data and posts to WordPress.
+# Write permission needed to commit wp_inject_state.json back to the repo.
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   publish:
@@ -100,6 +100,7 @@ jobs:
           WP_USERNAME=${{ secrets.WP_USERNAME }}
           WP_APP_PASSWORD=${{ secrets.WP_APP_PASSWORD }}
           WP_PAGE_ID=${{ secrets.WP_PAGE_ID }}
+          WP_PAGE_IDS=${{ secrets.WP_PAGE_IDS }}
           EOF
 
       # 7. Write the Google service account key file from the secret.
@@ -119,25 +120,54 @@ jobs:
             echo "flag=--counties \"$COUNTIES\"" >> $GITHUB_OUTPUT
           fi
 
-      # 9. Push existing normalized data to WordPress.
-      #    --dry-run      = skip re-scraping (use the data already on disk)
-      #    --push-wp      = enable the WordPress publish step
-      #    --no-sheets    = don't re-write the Google Sheet during a publish run
-      #    WP_CI_CONFIRMED=YES = skip the interactive prompt (human already confirmed above)
+      # 9. Push the summary results table to the combined WordPress results page.
+      #    Calls to_wordpress.py directly — bypasses normalize so the committed
+      #    master JSON is used as-is without needing raw county data files.
+      #    WP_CI_CONFIRMED=YES skips the interactive prompt (editor confirmed above).
       - name: Publish to WordPress
         id: publish
         run: |
           source venv/bin/activate
           COUNTIES="${{ github.event.inputs.counties }}"
           if [ -z "$COUNTIES" ]; then
-            python run_all.py --dry-run --push-wp --no-sheets
+            python export/to_wordpress.py \
+              --master-json data/processed/election_results_master.json
           else
-            python run_all.py --dry-run --push-wp --no-sheets --counties "$COUNTIES"
+            python export/to_wordpress.py \
+              --master-json data/processed/election_results_master.json \
+              --counties "$COUNTIES"
           fi
         env:
           WP_CI_CONFIRMED: "YES"
 
-      # 10. Always print a final summary — even if publish failed — so editors
+      # 10. Inject live tallies into each county's ballot-preview page.
+      #     Calls to_wordpress.py --inject-wp directly — no normalize, no scrape.
+      #     Only pushes a page when vote tallies have changed (hash check).
+      #     continue-on-error so one bad county never blocks the state commit.
+      - name: Inject results into ballot-preview pages
+        id: inject
+        continue-on-error: true
+        run: |
+          source venv/bin/activate
+          python export/to_wordpress.py \
+            --inject-wp \
+            --master-json data/processed/election_results_master.json
+
+      # 11. Commit the inject state file so the next run knows which counties
+      #     were already up-to-date and can skip them.
+      - name: Commit inject state
+        id: commit_state
+        continue-on-error: true
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/processed/wp_inject_state.json
+          git diff --staged --quiet || git commit -m "chore: update wp inject state [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 12. Always print a final summary — even if publish failed — so editors
       #     see exactly what happened without having to dig through log lines.
       - name: Publish summary
         if: always()
@@ -148,7 +178,9 @@ jobs:
           echo "  Triggered: ${{ github.actor }}"
           COUNTIES="${{ github.event.inputs.counties }}"
           echo "  Counties:  ${COUNTIES:-ALL}"
-          echo "  Result:    ${{ steps.publish.outcome }}"
+          echo "  Publish:   ${{ steps.publish.outcome }}"
+          echo "  Inject:    ${{ steps.inject.outcome }}"
+          echo "  State commit: ${{ steps.commit_state.outcome }}"
           echo "============================================================"
           if [ "${{ steps.publish.outcome }}" = "failure" ]; then
             echo "::error::WordPress publish FAILED. See the 'Publish to WordPress' step above for the full error."

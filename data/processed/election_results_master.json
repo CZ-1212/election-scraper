@@ -1,12 +1,12 @@
 {
-  "pipeline_timestamp": "2026-06-02T23:27:34.116268",
+  "pipeline_timestamp": "2026-06-02T16:32:42.246968",
   "county_count": 13,
   "counties": {
     "Alameda": {
       "county": "Alameda",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 23:27:33",
+      "last_updated": "2026-06-02 16:32:42",
       "voter_turnout": {
         "ballots_cast": 508730,
         "registered_voters": 965876,
@@ -59,7 +59,7 @@
       "county": "Contra_Costa",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 23:27:33",
+      "last_updated": "2026-06-02 16:32:42",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 731497,
@@ -1412,7 +1412,7 @@
       "county": "Marin",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 23:27:33",
+      "last_updated": "2026-06-02 16:32:42",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 173082,
@@ -2784,7 +2784,7 @@
       "county": "Mendocino",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 23:27:33",
+      "last_updated": "2026-06-02 16:32:42",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 0,
@@ -2802,7 +2802,7 @@
       "county": "Monterey",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 23:27:33",
+      "last_updated": "2026-06-02 16:32:42",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 0,
@@ -4169,7 +4169,7 @@
       "county": "Napa",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 23:27:33",
+      "last_updated": "2026-06-02 16:32:42",
       "voter_turnout": {
         "ballots_cast": 52409,
         "registered_voters": 86390,
@@ -4203,7 +4203,7 @@
       "county": "San_Francisco",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 23:27:33",
+      "last_updated": "2026-06-02 16:32:42",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 531781,
@@ -5765,7 +5765,7 @@
       "county": "San_Joaquin",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 23:27:33",
+      "last_updated": "2026-06-02 16:32:42",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 410058,
@@ -7265,7 +7265,7 @@
       "county": "San_Mateo",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 23:27:33",
+      "last_updated": "2026-06-02 16:32:42",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 447306,
@@ -8644,7 +8644,7 @@
       "county": "Santa_Clara",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 23:27:33",
+      "last_updated": "2026-06-02 16:32:42",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 1075142,
@@ -9997,7 +9997,7 @@
       "county": "Santa_Cruz",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 23:27:33",
+      "last_updated": "2026-06-02 16:32:42",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 0,
@@ -11506,7 +11506,7 @@
       "county": "Solano",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 23:27:33",
+      "last_updated": "2026-06-02 16:32:42",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 275572,
@@ -11929,7 +11929,16 @@
               "pct": 0.0,
               "party": "",
               "profession": ""
-            },
+            }
+          ],
+          "is_measure": false,
+          "measure_description": "",
+          "measure_jurisdiction": ""
+        },
+        {
+          "title": "Lieutenant Governor",
+          "precincts_reporting": "",
+          "choices": [
             {
               "name": "JOSH FRYDAY",
               "votes": 0,
@@ -12041,7 +12050,16 @@
               "pct": 0.0,
               "party": "",
               "profession": ""
-            },
+            }
+          ],
+          "is_measure": false,
+          "measure_description": "",
+          "measure_jurisdiction": ""
+        },
+        {
+          "title": "Secretary of State",
+          "precincts_reporting": "",
+          "choices": [
             {
               "name": "GARY N. BLENNER",
               "votes": 0,
@@ -12069,7 +12087,16 @@
               "pct": 0.0,
               "party": "",
               "profession": ""
-            },
+            }
+          ],
+          "is_measure": false,
+          "measure_description": "",
+          "measure_jurisdiction": ""
+        },
+        {
+          "title": "Controller",
+          "precincts_reporting": "",
+          "choices": [
             {
               "name": "MALIA M. COHEN",
               "votes": 0,
@@ -12090,7 +12117,16 @@
               "pct": 0.0,
               "party": "",
               "profession": ""
-            },
+            }
+          ],
+          "is_measure": false,
+          "measure_description": "",
+          "measure_jurisdiction": ""
+        },
+        {
+          "title": "Treasurer",
+          "precincts_reporting": "",
+          "choices": [
             {
               "name": "ELENI KOUNALAKIS",
               "votes": 0,
@@ -12132,7 +12168,16 @@
               "pct": 0.0,
               "party": "",
               "profession": ""
-            },
+            }
+          ],
+          "is_measure": false,
+          "measure_description": "",
+          "measure_jurisdiction": ""
+        },
+        {
+          "title": "Attorney General",
+          "precincts_reporting": "",
+          "choices": [
             {
               "name": "ROB BONTA",
               "votes": 0,
@@ -12153,7 +12198,16 @@
               "pct": 0.0,
               "party": "",
               "profession": ""
-            },
+            }
+          ],
+          "is_measure": false,
+          "measure_description": "",
+          "measure_jurisdiction": ""
+        },
+        {
+          "title": "Insurance Commissioner",
+          "precincts_reporting": "",
+          "choices": [
             {
               "name": "PATRICK WOLFF",
               "votes": 0,
@@ -12223,7 +12277,16 @@
               "pct": 0.0,
               "party": "",
               "profession": ""
-            },
+            }
+          ],
+          "is_measure": false,
+          "measure_description": "",
+          "measure_jurisdiction": ""
+        },
+        {
+          "title": "Member, State Board of Equalization - 1st District",
+          "precincts_reporting": "",
+          "choices": [
             {
               "name": "NELSON ESPARZA",
               "votes": 0,
@@ -12258,7 +12321,16 @@
               "pct": 0.0,
               "party": "",
               "profession": ""
-            },
+            }
+          ],
+          "is_measure": false,
+          "measure_description": "",
+          "measure_jurisdiction": ""
+        },
+        {
+          "title": "8th Congressional District",
+          "precincts_reporting": "",
+          "choices": [
             {
               "name": "NICOLAS CARJUZAA",
               "votes": 0,
@@ -12286,7 +12358,16 @@
               "pct": 0.0,
               "party": "",
               "profession": ""
-            },
+            }
+          ],
+          "is_measure": false,
+          "measure_description": "",
+          "measure_jurisdiction": ""
+        },
+        {
+          "title": "11th Assembly District",
+          "precincts_reporting": "",
+          "choices": [
             {
               "name": "LORI D WILSON",
               "votes": 0,
@@ -12307,7 +12388,16 @@
               "pct": 0.0,
               "party": "",
               "profession": ""
-            },
+            }
+          ],
+          "is_measure": false,
+          "measure_description": "",
+          "measure_jurisdiction": ""
+        },
+        {
+          "title": "Superintendent of Public Instruction",
+          "precincts_reporting": "",
+          "choices": [
             {
               "name": "GUS MATTAMMAL",
               "votes": 0,
@@ -12377,14 +12467,32 @@
               "pct": 0.0,
               "party": "",
               "profession": ""
-            },
+            }
+          ],
+          "is_measure": false,
+          "measure_description": "",
+          "measure_jurisdiction": ""
+        },
+        {
+          "title": "Solano County Superintendent of Schools",
+          "precincts_reporting": "",
+          "choices": [
             {
               "name": "NIKKI PARR",
               "votes": 0,
               "pct": 0.0,
               "party": "",
               "profession": ""
-            },
+            }
+          ],
+          "is_measure": false,
+          "measure_description": "",
+          "measure_jurisdiction": ""
+        },
+        {
+          "title": "3rd Supervisorial District",
+          "precincts_reporting": "",
+          "choices": [
             {
               "name": "ELDON BROOKE PARKER",
               "votes": 0,
@@ -12398,7 +12506,16 @@
               "pct": 0.0,
               "party": "",
               "profession": ""
-            },
+            }
+          ],
+          "is_measure": false,
+          "measure_description": "",
+          "measure_jurisdiction": ""
+        },
+        {
+          "title": "4th Supervisorial District",
+          "precincts_reporting": "",
+          "choices": [
             {
               "name": "JUAN P. DESMARAIS",
               "votes": 0,
@@ -12412,21 +12529,48 @@
               "pct": 0.0,
               "party": "",
               "profession": ""
-            },
+            }
+          ],
+          "is_measure": false,
+          "measure_description": "",
+          "measure_jurisdiction": ""
+        },
+        {
+          "title": "Assessor/Recorder",
+          "precincts_reporting": "",
+          "choices": [
             {
               "name": "GLENN ZOOK",
               "votes": 0,
               "pct": 0.0,
               "party": "",
               "profession": ""
-            },
+            }
+          ],
+          "is_measure": false,
+          "measure_description": "",
+          "measure_jurisdiction": ""
+        },
+        {
+          "title": "Auditor-Controller",
+          "precincts_reporting": "",
+          "choices": [
             {
               "name": "JANINE HARRIS",
               "votes": 0,
               "pct": 0.0,
               "party": "",
               "profession": ""
-            },
+            }
+          ],
+          "is_measure": false,
+          "measure_description": "",
+          "measure_jurisdiction": ""
+        },
+        {
+          "title": "Treasurer/Tax Collector/County Clerk",
+          "precincts_reporting": "",
+          "choices": [
             {
               "name": "DENISE DIX",
               "votes": 0,
@@ -12450,7 +12594,7 @@
       "county": "Sonoma",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 23:27:33",
+      "last_updated": "2026-06-02 16:32:42",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 319260,

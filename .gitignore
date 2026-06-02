@@ -32,6 +32,8 @@ data/*
 data/processed/*
 !data/processed/.gitkeep
 !data/processed/election_results_master.json
+!data/processed/wp_inject_state.json
+!data/processed/vote_count_state.json
 
 # Other data formats
 *.xml

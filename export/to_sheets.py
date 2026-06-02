@@ -55,6 +55,26 @@ TAB_STATUS   = "STATUS DASHBOARD"
 TAB_LOG      = "SCRAPE LOG"
 TAB_CHECKLIST = "PUBLISH CHECKLIST"
 
+# Stores ballot counts from the previous run so we can show deltas to reporters.
+_VOTE_STATE_FILE = Path(__file__).resolve().parent.parent / "data" / "processed" / "vote_count_state.json"
+
+# A single interval that adds more than this share of registered voters is flagged
+# as a spike — likely a large batch drop from the registrar.
+_SPIKE_THRESHOLD_PCT = 5.0  # 5 % of registered voters in one 15-min cycle
+
+
+def _load_vote_state() -> dict:
+    if _VOTE_STATE_FILE.exists():
+        with open(_VOTE_STATE_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+
+def _save_vote_state(state: dict) -> None:
+    _VOTE_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(_VOTE_STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump(state, f, indent=2)
+
 
 # ---------------------------------------------------------------------------
 # GOOGLE SHEETS CONNECTION
@@ -89,34 +109,76 @@ def _get_or_create_tab(spreadsheet: gspread.Spreadsheet, title: str) -> gspread.
 
 STATUS_HEADERS = [
     "County",
-    "Status",          # OK / WARN / FAIL
+    "Status",
     "Scrape Time",
     "Site Last Updated",
     "Ballots Cast",
+    "Δ Since Last Update",   # new votes counted since the previous pipeline run
+    "Δ % of Registered",     # delta as a share of registered voters — helps spot big drops
+    "⚠ Spike?",              # flagged when a single interval adds ≥5% of registered voters
     "Registered Voters",
     "Turnout %",
     "Contests",
     "Anomaly Flags",
 ]
 
-def _update_status_dashboard(ws: gspread.Worksheet, counties: dict) -> None:
+
+def _update_status_dashboard(
+    ws: gspread.Worksheet,
+    counties: dict,
+    prev_state: dict,
+) -> dict:
     """
     Rewrite the STATUS DASHBOARD tab with one data row per county.
-    Clears the existing content first so stale county rows don't linger.
+    Returns the new vote-count state (ballots_cast per county) to be saved
+    after the sheet is updated.
+
+    prev_state — {county_key: {"ballots_cast": int, "timestamp": str}}
     """
     rows = [STATUS_HEADERS]
+    new_state: dict = {}
 
     for county_name, data in sorted(counties.items()):
         vt = data.get("voter_turnout") or {}
         anomalies = data.get("anomalies") or []
+
+        current_ballots = vt.get("ballots_cast") or 0
+        registered = vt.get("registered_voters") or 0
+
+        # Compute delta vs. the previous run.
+        prev = prev_state.get(county_name, {})
+        prev_ballots = prev.get("ballots_cast", None)
+
+        if prev_ballots is None:
+            delta_str = "—"
+            delta_pct_str = "—"
+            spike = ""
+        else:
+            delta = current_ballots - prev_ballots
+            delta_str = f"+{delta:,}" if delta >= 0 else f"{delta:,}"
+            if registered > 0:
+                delta_pct = delta / registered * 100
+                delta_pct_str = f"{delta_pct:.2f}%"
+                spike = "⚠ SPIKE" if delta_pct >= _SPIKE_THRESHOLD_PCT else ""
+            else:
+                delta_pct_str = "—"
+                spike = ""
+
+        new_state[county_name] = {
+            "ballots_cast": current_ballots,
+            "timestamp": data.get("scrape_timestamp", ""),
+        }
 
         rows.append([
             county_name.replace("_", " "),
             data.get("scrape_status", "FAIL"),
             data.get("scrape_timestamp", ""),
             data.get("last_updated", ""),
-            vt.get("ballots_cast", ""),
-            vt.get("registered_voters", ""),
+            current_ballots if current_ballots else "",
+            delta_str,
+            delta_pct_str,
+            spike,
+            registered if registered else "",
             vt.get("turnout_percentage", ""),
             len(data.get("contests", [])),
             " | ".join(anomalies) if anomalies else "",
@@ -125,6 +187,7 @@ def _update_status_dashboard(ws: gspread.Worksheet, counties: dict) -> None:
     ws.clear()
     ws.update(rows, value_input_option="USER_ENTERED")
     print(f"[sheets] STATUS DASHBOARD updated: {len(rows) - 1} counties.")
+    return new_state
 
 
 # ---------------------------------------------------------------------------
@@ -177,37 +240,68 @@ LOG_HEADERS = [
     "Run Timestamp",
     "County",
     "Status",
-    "Contests",
     "Ballots Cast",
+    "Δ Since Last",
+    "⚠ Spike?",
+    "Contests",
     "Notes",
 ]
 
-def _append_to_scrape_log(ws: gspread.Worksheet, counties: dict, run_timestamp: str) -> None:
+
+def _append_to_scrape_log(
+    ws: gspread.Worksheet,
+    counties: dict,
+    run_timestamp: str,
+    prev_state: dict,
+) -> None:
     """
     Append one row per county to the SCRAPE LOG tab.
     Rows are added below whatever is already there — we never overwrite the log.
     """
-    # Check if the sheet is empty (no headers yet) and add them if needed.
     existing = ws.get_all_values()
     if not existing or existing[0] != LOG_HEADERS:
-        ws.append_row(LOG_HEADERS, value_input_option="USER_ENTERED")
+        ws.update([LOG_HEADERS], value_input_option="USER_ENTERED")
+        existing = [LOG_HEADERS]
 
+    rows = []
+    spikes = []
     for county_name, data in sorted(counties.items()):
         vt = data.get("voter_turnout") or {}
         anomalies = data.get("anomalies") or []
+        current_ballots = vt.get("ballots_cast") or 0
+        registered = vt.get("registered_voters") or 0
 
-        ws.append_row([
+        prev = prev_state.get(county_name, {})
+        prev_ballots = prev.get("ballots_cast", None)
+        if prev_ballots is None:
+            delta_str = "—"
+            spike = ""
+        else:
+            delta = current_ballots - prev_ballots
+            delta_str = f"+{delta:,}" if delta >= 0 else f"{delta:,}"
+            if registered > 0 and (delta / registered * 100) >= _SPIKE_THRESHOLD_PCT:
+                spike = "⚠ SPIKE"
+                spikes.append(f"{county_name.replace('_',' ')} (+{delta:,})")
+            else:
+                spike = ""
+
+        rows.append([
             run_timestamp,
             county_name.replace("_", " "),
             data.get("scrape_status", "FAIL"),
+            current_ballots if current_ballots else "",
+            delta_str,
+            spike,
             len(data.get("contests", [])),
-            vt.get("ballots_cast", ""),
             " | ".join(anomalies) if anomalies else "OK",
-        ], value_input_option="USER_ENTERED")
+        ])
 
-    # Blank row to visually separate runs in the log.
-    ws.append_row(["---", "", "", "", "", ""])
-    print(f"[sheets] SCRAPE LOG appended: {len(counties)} counties logged.")
+    # Summary row for this run — makes it easy to scan the log for big moments.
+    spike_summary = "SPIKES: " + ", ".join(spikes) if spikes else "no spikes"
+    rows.append(["--- END RUN", "", "", "", "", spike_summary, "", ""])
+
+    ws.append_rows(rows, value_input_option="USER_ENTERED")
+    print(f"[sheets] SCRAPE LOG appended: {len(counties)} counties. {spike_summary}")
 
 
 # ---------------------------------------------------------------------------
@@ -397,9 +491,15 @@ def update_sheets(master_json_path: Path) -> None:
     spreadsheet = _connect(service_account_path, sheet_id)
     print(f"[sheets] Connected: '{spreadsheet.title}'")
 
+    # Load previous ballot counts for delta calculation.
+    prev_state = _load_vote_state()
+
     # --- STATUS DASHBOARD tab ---
     ws_status = _get_or_create_tab(spreadsheet, TAB_STATUS)
-    _update_status_dashboard(ws_status, counties)
+    new_state = _update_status_dashboard(ws_status, counties, prev_state)
+
+    # Save updated ballot counts so the next run can compute deltas.
+    _save_vote_state(new_state)
 
     # --- One tab per county ---
     for county_name, county_data in sorted(counties.items()):
@@ -414,7 +514,7 @@ def update_sheets(master_json_path: Path) -> None:
 
     # --- SCRAPE LOG tab (append only) ---
     ws_log = _get_or_create_tab(spreadsheet, TAB_LOG)
-    _append_to_scrape_log(ws_log, counties, run_timestamp)
+    _append_to_scrape_log(ws_log, counties, run_timestamp, prev_state)
 
     # --- PUBLISH CHECKLIST tab (write once, never overwrite) ---
     ws_checklist = _get_or_create_tab(spreadsheet, TAB_CHECKLIST)

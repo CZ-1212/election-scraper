@@ -72,10 +72,8 @@ jobs:
         run: |
           echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}' > service-account-key.json
 
-      # 7. Run ONLY the scrape step first.
-      #    continue-on-error means a county scrape failure won't block normalize.
-      #    The non-Clarity scraper and Clarity scraper run independently inside run_all.py,
-      #    so if one county website is down, the others still complete.
+      # 7. Scrape all county websites and save raw JSON files to data/.
+      #    continue-on-error so one county being down never blocks the rest.
       - name: Scrape county websites
         id: scrape
         continue-on-error: true
@@ -85,8 +83,9 @@ jobs:
         env:
           DISPLAY: ""
 
-      # 8. Normalize whatever data landed in data/ — even partial data is worth publishing.
-      #    This runs regardless of whether the scrape step succeeded or failed.
+      # 8. Normalize whatever landed in data/ into election_results_master.json.
+      #    Runs separately so it executes even if scrape had errors — partial
+      #    data is still better than nothing.
       - name: Normalize scraped data
         id: normalize
         continue-on-error: true
@@ -95,7 +94,7 @@ jobs:
           python src/normalize.py
 
       # 9. Push normalized data to the Google Sheet dashboard.
-      #    This runs regardless of prior step outcomes.
+      #    Runs regardless of prior step outcomes.
       - name: Update Google Sheet
         id: sheets
         continue-on-error: true
@@ -111,7 +110,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/processed/election_results_master.json
+          git add data/processed/election_results_master.json data/processed/vote_count_state.json
           # Only commit if there's actually something new — avoids empty commits.
           git diff --staged --quiet || git commit -m "chore: auto-update election results [$(date -u '+%Y-%m-%d %H:%M UTC')]"
           git push

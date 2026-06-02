@@ -1454,21 +1454,29 @@ class SolanoScraper(BaseScraper):
                         'choices': list(current_choices),
                     })
 
+            # Use recursive=False on td/th so colspan="14" header cells count as
+            # one cell rather than being flattened by deeply nested tables.
+            seen_contests: set = set()
             for row in soup.find_all("tr"):
-                cells = [td.get_text(strip=True) for td in row.find_all(["td", "th"])]
+                cells = [td.get_text(strip=True)
+                         for td in row.find_all(["td", "th"], recursive=False)]
                 if not cells:
                     continue
 
                 first = cells[0]
 
                 # Contest header: "Governor - Vote for ONE (1) on this page"
-                if len(cells) == 1 and ' - Vote for ' in first and 'on this page' in first:
-                    _save()
-                    current_contest = re.sub(r'\s*-\s*Vote for.*', '', first).strip()
-                    current_choices = []
+                # or  "Lieutenant Governor - Vote for ONE (1)"  (no trailing phrase)
+                if len(cells) == 1 and '- Vote for' in first:
+                    title = re.sub(r'\s*-\s*Vote for.*', '', first).strip()
+                    if title and title not in seen_contests:
+                        _save()
+                        current_contest = title
+                        current_choices = []
+                        seen_contests.add(title)
                     continue
 
-                # Candidate row: 14 cells, first cell is the candidate name
+                # Candidate row: 14 direct cells, first cell is ALL-CAPS name
                 if (current_contest and len(cells) == 14
                         and re.match(r'^[A-Z][A-Z\s\.\-\'\(\)\/]+$', first)
                         and first not in ('CHOICE', 'CANDIDATE NAME')):

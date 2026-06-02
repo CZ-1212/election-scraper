@@ -1,0 +1,52 @@
+{
+  "contra_costa": {
+    "last_hash": "5ebfe4d16b9b3074",
+    "last_inject": "2026-06-02T23:03:31+00:00",
+    "wp_page_id": "183779"
+  },
+  "marin": {
+    "last_hash": "787deef4f8ff38cf",
+    "last_inject": "2026-06-02T22:26:12+00:00",
+    "wp_page_id": "181668"
+  },
+  "monterey": {
+    "last_hash": "af978a85e2a86881",
+    "last_inject": "2026-06-02T22:26:16+00:00",
+    "wp_page_id": "181676"
+  },
+  "san_mateo": {
+    "last_hash": "aafa56770255d9e1",
+    "last_inject": "2026-06-02T22:26:20+00:00",
+    "wp_page_id": "181742"
+  },
+  "santa_clara": {
+    "last_hash": "fa26c46ba2a94b89",
+    "last_inject": "2026-06-02T22:26:23+00:00",
+    "wp_page_id": "181745"
+  },
+  "santa_cruz": {
+    "last_hash": "53af878db4826cfe",
+    "last_inject": "2026-06-02T22:26:26+00:00",
+    "wp_page_id": "181747"
+  },
+  "sonoma": {
+    "last_hash": "93882dc811ecc00c",
+    "last_inject": "2026-06-02T22:26:31+00:00",
+    "wp_page_id": "181751"
+  },
+  "san_joaquin": {
+    "last_hash": "91bdba33791bbbf8",
+    "last_inject": "2026-06-02T22:26:33+00:00",
+    "wp_page_id": "181684"
+  },
+  "san_francisco": {
+    "last_hash": "8edce239d3f21a98",
+    "last_inject": "2026-06-02T22:28:26+00:00",
+    "wp_page_id": "181682"
+  },
+  "solano": {
+    "last_hash": "0836d0882ec8173e",
+    "last_inject": "2026-06-02T22:52:15+00:00",
+    "wp_page_id": "181749"
+  }
+}

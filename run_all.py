@@ -96,6 +96,21 @@ def parse_args():
     )
 
     parser.add_argument(
+        "--inject-wp",
+        action="store_true",
+        help="Inject live tallies into each county's ballot-preview page on WordPress. "
+             "Only updates a page when vote tallies have changed since the last push. "
+             "NEVER runs automatically — you must pass this flag explicitly.",
+    )
+
+    parser.add_argument(
+        "--force-inject",
+        action="store_true",
+        help="Force --inject-wp to push even when tallies haven't changed. "
+             "Useful after CSS updates or initial page setup.",
+    )
+
+    parser.add_argument(
         "--counties",
         default=None,
         help="Comma-separated list of county names to publish to WordPress "
@@ -382,6 +397,47 @@ def run_wordpress(args):
 
 
 # ---------------------------------------------------------------------------
+# STEP 4b — INJECT INTO BALLOT PREVIEW PAGES
+# Only runs when --inject-wp is explicitly passed. Reads WP_PAGE_IDS from .env
+# and calls inject_all_counties. Skips counties whose tallies haven't changed.
+# ---------------------------------------------------------------------------
+def run_inject_wp(args):
+    """
+    Inject live vote tallies into each county's WordPress ballot-preview page.
+    Skips counties where the tallies haven't changed since the last push.
+    """
+    log.info("=" * 60)
+    log.info("STEP 4b — INJECTING RESULTS INTO BALLOT PREVIEW PAGES")
+    log.info("  Updating only counties where vote tallies have changed.")
+    log.info("=" * 60)
+
+    export_dir = PROJECT_ROOT / "export"
+    if str(export_dir) not in sys.path:
+        sys.path.insert(0, str(export_dir))
+
+    import importlib.util
+    wp_path = export_dir / "to_wordpress.py"
+    spec = importlib.util.spec_from_file_location("to_wordpress", wp_path)
+    wp_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(wp_module)
+
+    master_json = PROJECT_ROOT / "data" / "processed" / "election_results_master.json"
+    if not master_json.exists():
+        log.error("Master JSON not found at %s — run the scrape step first.", master_json)
+        return False
+
+    force = getattr(args, "force_inject", False)
+    try:
+        wp_module.inject_all_counties(master_json_path=master_json, force=force)
+        return True
+    except SystemExit as e:
+        return e.code == 0
+    except Exception as e:
+        log.error("Inject step failed: %s", e)
+        return False
+
+
+# ---------------------------------------------------------------------------
 # MAIN — chain the pipeline steps together
 # ---------------------------------------------------------------------------
 def main():
@@ -514,6 +570,14 @@ def main():
     else:
         log.info("Step 4 — WordPress publish skipped.")
         log.info("         (To publish to the website, re-run with --push-wp.)")
+
+    # ── STEP 4b: INJECT INTO BALLOT PREVIEW PAGES ───────────────────────────
+    # Only when --inject-wp is explicitly passed. Skips counties with no tally changes.
+    if getattr(args, "inject_wp", False):
+        run_inject_wp(args)
+    else:
+        log.info("Step 4b — Ballot-preview inject skipped.")
+        log.info("          (To inject results, re-run with --inject-wp.)")
 
     log.info("=" * 60)
     log.info("Pipeline finished at %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
