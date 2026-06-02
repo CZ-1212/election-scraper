@@ -1310,16 +1310,15 @@ class SolanoScraper(BaseScraper):
             r = self._fetch_with_retry(fetch_url, headers=headers, timeout=20, verify=True)
 
             if fetch_url.lower().endswith('.pdf'):
-                # PDF path — extract text with pdfplumber
+                # PDF path — extract text with pdfplumber then use text-based parser
                 import pdfplumber, io as _io
                 with pdfplumber.open(_io.BytesIO(r.content)) as pdf:
                     text = '\n'.join(page.extract_text() or '' for page in pdf.pages)
                 partial_data = self._parse(text)
             else:
-                # HTML path — strip tags and parse the plain text
-                from bs4 import BeautifulSoup as _BS
-                text = _BS(r.text, 'html.parser').get_text(separator='\n')
-                partial_data = self._parse(text)
+                # HTML path — Solano publishes a structured HTML report.
+                # Parse directly with BeautifulSoup for accurate contest data.
+                partial_data = self._parse_html(r.text)
 
             return partial_data
         except Exception as e:
@@ -1394,6 +1393,96 @@ class SolanoScraper(BaseScraper):
             print(f"[{self.county_name}] ✓ Extracted {len(data['contests'])} contests")
         except Exception as e:
             print(f"[{self.county_name}] ⚠ Error extracting contests: {e}")
+
+        return data
+
+    def _parse_html(self, html_text):
+        """
+        Parse Solano's HTML cumulative report format.
+
+        Solano publishes results as an HTML file where each contest is a table row
+        with the title "ContestName - Vote for ONE (1) on this page" and candidate
+        rows with 14 cells: [Name, Party, '', ED_votes, ED_pct, '', VBM_votes,
+        VBM_pct, '', Prov_votes, Prov_pct, '', Total_votes, Total_pct].
+
+        We take the Total column (last two cells) for each candidate.
+        """
+        from bs4 import BeautifulSoup as _BS
+
+        data = {
+            'timestamp': datetime.now().isoformat(),
+            'url': self.url,
+            'county_name': self.county_name,
+            'page_title': 'Solano County Election Results',
+            'last_updated': None,
+            'voter_turnout': {},
+            'contests': [],
+        }
+
+        soup = _BS(html_text, 'html.parser')
+
+        # Extract voter turnout from the "X of Y = Z%" pattern
+        print(f"[{self.county_name}] Extracting voter turnout data...")
+        try:
+            text = soup.get_text(separator=' ')
+            m = re.search(r'Registered Voters\s*([\d,]+)\s*of\s*([\d,]+)\s*=\s*([\d.]+)%', text)
+            if not m:
+                # Try alternate "ballots of registered = pct" pattern
+                m = re.search(r'([\d,]+)\s+of\s+([\d,]+)\s+=\s+([\d.]+)%', text)
+            if m:
+                data['voter_turnout']['ballots_cast']      = int(m.group(1).replace(',', ''))
+                data['voter_turnout']['registered_voters'] = int(m.group(2).replace(',', ''))
+                data['voter_turnout']['turnout_percentage'] = float(m.group(3))
+            m2 = re.search(r'Precincts\D+([\d]+)\s+of\s+([\d]+)\s*=\s*([\d.]+)%', text)
+            if m2:
+                data['voter_turnout']['precincts_reported'] = f"{m2.group(1)} / {m2.group(2)} ({m2.group(3)}%)"
+            print(f"[{self.county_name}] ✓ Voter turnout: {data['voter_turnout']}")
+        except Exception as e:
+            print(f"[{self.county_name}] ⚠ Turnout error: {e}")
+
+        # Extract contests from table rows
+        print(f"[{self.county_name}] Extracting contests...")
+        try:
+            current_contest = None
+            current_choices = []
+
+            def _save():
+                if current_contest and current_choices:
+                    data['contests'].append({
+                        'title': current_contest,
+                        'precincts_reporting': '',
+                        'choices': list(current_choices),
+                    })
+
+            for row in soup.find_all("tr"):
+                cells = [td.get_text(strip=True) for td in row.find_all(["td", "th"])]
+                if not cells:
+                    continue
+
+                first = cells[0]
+
+                # Contest header: "Governor - Vote for ONE (1) on this page"
+                if len(cells) == 1 and ' - Vote for ' in first and 'on this page' in first:
+                    _save()
+                    current_contest = re.sub(r'\s*-\s*Vote for.*', '', first).strip()
+                    current_choices = []
+                    continue
+
+                # Candidate row: 14 cells, first cell is the candidate name
+                if (current_contest and len(cells) == 14
+                        and re.match(r'^[A-Z][A-Z\s\.\-\'\(\)\/]+$', first)
+                        and first not in ('CHOICE', 'CANDIDATE NAME')):
+                    try:
+                        votes = int(cells[12].replace(',', '')) if cells[12] else 0
+                        pct   = float(cells[13].rstrip('%')) if cells[13] else 0.0
+                        current_choices.append({'name': first, 'votes': votes, 'pct': pct})
+                    except (ValueError, IndexError):
+                        pass
+
+            _save()  # save the last contest
+            print(f"[{self.county_name}] ✓ Extracted {len(data['contests'])} contests")
+        except Exception as e:
+            print(f"[{self.county_name}] ⚠ Contest error: {e}")
 
         return data
 
