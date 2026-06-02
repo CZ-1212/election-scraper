@@ -1,12 +1,12 @@
 {
-  "pipeline_timestamp": "2026-06-02T07:01:06.985623",
+  "pipeline_timestamp": "2026-06-02T11:26:27.439133",
   "county_count": 13,
   "counties": {
     "Alameda": {
       "county": "Alameda",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 07:01:06",
+      "last_updated": "2026-06-02 11:26:27",
       "voter_turnout": {
         "ballots_cast": 508730,
         "registered_voters": 965876,
@@ -59,7 +59,7 @@
       "county": "Contra_Costa",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 07:01:06",
+      "last_updated": "2026-06-02 11:26:27",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 731497,
@@ -1412,7 +1412,7 @@
       "county": "Marin",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 07:01:06",
+      "last_updated": "2026-06-02 11:26:27",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 173082,
@@ -2784,7 +2784,7 @@
       "county": "Mendocino",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 07:01:06",
+      "last_updated": "2026-06-02 11:26:27",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 0,
@@ -2802,7 +2802,7 @@
       "county": "Monterey",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 07:01:06",
+      "last_updated": "2026-06-02 11:26:27",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 0,
@@ -4169,7 +4169,7 @@
       "county": "Napa",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 07:01:06",
+      "last_updated": "2026-06-02 11:26:27",
       "voter_turnout": {
         "ballots_cast": 52409,
         "registered_voters": 86390,
@@ -4203,7 +4203,7 @@
       "county": "San_Francisco",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 07:01:06",
+      "last_updated": "2026-06-02 11:26:27",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 531781,
@@ -5765,7 +5765,7 @@
       "county": "San_Joaquin",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 07:01:06",
+      "last_updated": "2026-06-02 11:26:27",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 410058,
@@ -7031,7 +7031,7 @@
       "county": "San_Mateo",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 07:01:06",
+      "last_updated": "2026-06-02 11:26:27",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 447306,
@@ -11565,7 +11565,7 @@
       "county": "Santa_Clara",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 07:01:06",
+      "last_updated": "2026-06-02 11:26:27",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 1075142,
@@ -13037,7 +13037,7 @@
       "county": "Santa_Cruz",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 07:01:06",
+      "last_updated": "2026-06-02 11:26:27",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 0,
@@ -14546,7 +14546,7 @@
       "county": "Solano",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 07:01:06",
+      "last_updated": "2026-06-02 11:26:27",
       "voter_turnout": {
         "ballots_cast": 145294,
         "registered_voters": 277461,
@@ -14580,7 +14580,7 @@
       "county": "Sonoma",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-02 07:01:06",
+      "last_updated": "2026-06-02 11:26:27",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 319260,
