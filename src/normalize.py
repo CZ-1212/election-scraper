@@ -79,22 +79,63 @@ def _load_local_races(csv_path: Path) -> tuple[dict, dict]:
 _CANDIDATE_LOOKUP, _MEASURE_LOOKUP = _load_local_races(_LOCAL_RACES_CSV)
 
 
+
+# Party abbreviations that Clarity embeds at the start of candidate names,
+# e.g. "DEM BETTY T. YEE" or "NPP MARGARET TROWE".
+_PARTY_PREFIXES = {
+    "DEM": "Democrat",
+    "REP": "Republican",
+    "NPP": "No Party Preference",
+    "LIB": "Libertarian",
+    "GRN": "Green",
+    "PFR": "Peace and Freedom",
+    "AI":  "American Independent",
+    "IND": "Independent",
+}
+
+
+def _split_party_prefix(name: str) -> tuple[str, str]:
+    """
+    If the candidate name starts with a known party abbreviation (e.g. 'DEM'),
+    return (party_full_name, clean_name_without_prefix).
+    Otherwise return ('', original_name).
+    """
+    parts = name.strip().split(None, 1)  # split on first whitespace only
+    if len(parts) == 2 and parts[0].upper() in _PARTY_PREFIXES:
+        return _PARTY_PREFIXES[parts[0].upper()], parts[1].strip()
+    return "", name.strip()
+
+
 def _enrich_choices(choices: list, county: str, race_title: str) -> list:
     """
-    Add party and profession to each candidate choice by looking up the
-    static roster. Returns the same list with extra fields filled in where
-    a match is found.
+    Add party and profession to each candidate choice.
+
+    Two sources in priority order:
+    1. Party abbreviation embedded in the choice name by Clarity scrapers
+       (e.g. 'DEM BETTY T. YEE' → party='Democrat', name='BETTY T. YEE').
+    2. Local races CSV lookup by (county, race, candidate name).
     """
     def _key(*parts):
         return re.sub(r"\s+", " ", " ".join(str(p or "").strip().lower() for p in parts)).strip()
 
+    county_clean = county.replace("_", " ")
     enriched = []
     for choice in choices:
-        name = choice.get("name", "")
-        info = _CANDIDATE_LOOKUP.get(_key(county.replace("_", " "), race_title, name)) or {}
+        raw_name = choice.get("name", "")
+
+        # Try to extract party from embedded prefix first.
+        inline_party, clean_name = _split_party_prefix(raw_name)
+
+        # Look up in the roster using the clean name (without party prefix).
+        info = (
+            _CANDIDATE_LOOKUP.get(_key(county_clean, race_title, clean_name))
+            or _CANDIDATE_LOOKUP.get(_key(county_clean, race_title, raw_name))
+            or {}
+        )
+
         enriched.append({
             **choice,
-            "party":      info.get("party", ""),
+            "party":      inline_party or info.get("party", ""),
             "profession": info.get("profession", ""),
         })
     return enriched
@@ -102,24 +143,64 @@ def _enrich_choices(choices: list, county: str, race_title: str) -> list:
 
 def _measure_info(county: str, race_title: str) -> dict:
     """
-    Look up description and jurisdiction for a ballot measure from the
-    static roster. Returns empty dict if no match.
+    Look up description and jurisdiction for a ballot measure.
+    Tries progressively shorter versions of the title to handle cases where
+    the scraper returns a longer/different form than the local_races CSV.
     """
     def _key(*parts):
         return re.sub(r"\s+", " ", " ".join(str(p or "").strip().lower() for p in parts)).strip()
 
     county_clean = county.replace("_", " ")
-    info = (
-        _MEASURE_LOOKUP.get(_key(county_clean, race_title))
-        or _MEASURE_LOOKUP.get(_key(county_clean, " ".join(race_title.split()[:2])))
-        or {}
-    )
-    return info
+    words = race_title.split()
+
+    # Try: full title, first 4 words, first 3 words, first 2 words, first word only.
+    candidates = [
+        race_title,
+        " ".join(words[:4]),
+        " ".join(words[:3]),
+        " ".join(words[:2]),
+        words[0] if words else "",
+    ]
+    for candidate in candidates:
+        if not candidate:
+            continue
+        info = _MEASURE_LOOKUP.get(_key(county_clean, candidate))
+        if info:
+            return info
+    return {}
 
 
 def _is_measure(race_title: str) -> bool:
     """Return True if the race title looks like a ballot measure."""
     return bool(_MEASURE_PAT.search(race_title))
+
+
+def _enrich_contests(contests: list, county: str) -> list:
+    """
+    Add party, profession, is_measure, and measure description/jurisdiction
+    to every contest and choice. Called after parsing regardless of whether
+    data came from a JSON file or all_counties.csv.
+    """
+    enriched = []
+    for contest in contests:
+        title      = contest.get("title", "")
+        choices    = contest.get("choices") or []
+        is_measure = _is_measure(title)
+        measure    = _measure_info(county, title) if is_measure else {}
+
+        enriched_choices = (
+            choices if is_measure
+            else _enrich_choices(choices, county, title)
+        )
+
+        enriched.append({
+            **contest,
+            "is_measure":           is_measure,
+            "measure_description":  measure.get("description", ""),
+            "measure_jurisdiction": measure.get("jurisdiction", ""),
+            "choices":              enriched_choices,
+        })
+    return enriched
 
 
 # ---------------------------------------------------------------------------
@@ -280,17 +361,10 @@ def _normalize_clarity(raw: dict, county: str) -> dict:
         if not title:
             continue
 
-        is_measure = _is_measure(title)
-        enriched_choices = choices if is_measure else _enrich_choices(choices, county, title)
-        measure = _measure_info(county, title) if is_measure else {}
-
         contests.append({
             "title": title,
-            "is_measure": is_measure,
-            "measure_description":  measure.get("description", ""),
-            "measure_jurisdiction": measure.get("jurisdiction", ""),
             "precincts_reporting": precincts,
-            "choices": enriched_choices,
+            "choices": choices,
         })
 
     return {
@@ -326,17 +400,10 @@ def _normalize_non_clarity(raw: dict, county: str) -> dict:
         if not title:
             continue
 
-        is_measure = _is_measure(title)
-        enriched_choices = choices if is_measure else _enrich_choices(choices, county, title)
-        measure = _measure_info(county, title) if is_measure else {}
-
         contests.append({
             "title": title,
-            "is_measure": is_measure,
-            "measure_description":  measure.get("description", ""),
-            "measure_jurisdiction": measure.get("jurisdiction", ""),
             "precincts_reporting": precincts,
-            "choices": enriched_choices,
+            "choices": choices,
         })
 
     return {
@@ -582,9 +649,10 @@ def normalize(input_dir: Path, output_path: Path) -> dict:
             parsed = _parse_all_counties_csv(all_csv)
             if not parsed:
                 raise ValueError(f"all_counties.csv at {all_csv} contained no county data.")
-            # Attach anomalies and status then write master JSON.
+            # Enrich contests, attach anomalies and status, then write master JSON.
             master_counties = {}
             for county, data in parsed.items():
+                data["contests"] = _enrich_contests(data.get("contests") or [], county)
                 anomalies = _detect_anomalies(data)
                 data["anomalies"] = anomalies
                 data["scrape_status"] = _scrape_status(data, anomalies)
@@ -632,6 +700,9 @@ def normalize(input_dir: Path, output_path: Path) -> dict:
             county_data = _normalize_clarity(raw, county)
         else:
             county_data = _normalize_non_clarity(raw, county)
+
+        # Enrich contests with party, profession, and measure descriptions.
+        county_data["contests"] = _enrich_contests(county_data.get("contests") or [], county)
 
         # Detect anomalies and attach status.
         anomalies = _detect_anomalies(county_data)
