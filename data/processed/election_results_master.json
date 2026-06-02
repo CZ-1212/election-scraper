@@ -1,11 +1,11 @@
 {
-  "pipeline_timestamp": "2026-06-01T23:39:40.863761",
+  "pipeline_timestamp": "2026-06-02T02:05:18.988094",
   "county_count": 7,
   "counties": {
     "Contra_Costa": {
       "county": "Contra_Costa",
       "platform": "clarity",
-      "scrape_timestamp": "2026-06-01T23:39:18.135938",
+      "scrape_timestamp": "2026-06-02T02:04:56.009205",
       "last_updated": "Tuesday, December 2, 2025, 7:33:01 PM",
       "voter_turnout": {
         "ballots_cast": 413212,
@@ -36,7 +36,7 @@
     "Marin": {
       "county": "Marin",
       "platform": "clarity",
-      "scrape_timestamp": "2026-06-01T23:39:18.136465",
+      "scrape_timestamp": "2026-06-02T02:04:56.009697",
       "last_updated": "Tuesday, December 2, 2025, 6:37:54 PM",
       "voter_turnout": {
         "ballots_cast": 118495,
@@ -209,7 +209,7 @@
     "Santa_Clara": {
       "county": "Santa_Clara",
       "platform": "clarity",
-      "scrape_timestamp": "2026-06-01T23:39:28.190920",
+      "scrape_timestamp": "2026-06-02T02:05:06.160668",
       "last_updated": "Tuesday, December 2, 2025, 5:28:43 PM",
       "voter_turnout": {
         "ballots_cast": 553637,
@@ -1360,7 +1360,7 @@
     "Sonoma": {
       "county": "Sonoma",
       "platform": "clarity",
-      "scrape_timestamp": "2026-06-01T23:39:29.931619",
+      "scrape_timestamp": "2026-06-02T02:05:07.919472",
       "last_updated": "Tuesday, December 2, 2025, 11:20:16 PM",
       "voter_turnout": {
         "ballots_cast": 209450,
