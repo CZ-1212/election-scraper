@@ -33,14 +33,22 @@ ALLOWED_DOMAINS = [
     'clarityelections.com',
     'livevoterturnout.com',
     'sfelections.org',
+    'www.sf.gov',               # SF Elections moved to sf.gov for June 2026
+    'sf.gov',
     'santacruzcountyca.gov',
+    'votescount.santacruzcountyca.gov',
     'alamedacountyca.gov',
+    'acvote.alamedacountyca.gov',
     'mendocinocounty.gov',
     'co.mendocino.ca.us',
     'countyofmonterey.gov',
     'napacounty.gov',
     'content.solanocounty.gov',
-    'solanocounty.gov'
+    'solanocounty.gov',
+    'rovservices.sccgov.org',   # Santa Clara switched from Clarity to county site
+    'sccgov.org',
+    'www.sjgov.org',            # San Joaquin moved off LiveVoterTurnout
+    'sjgov.org',
 ]
 
 # Security: Allowed file extensions
