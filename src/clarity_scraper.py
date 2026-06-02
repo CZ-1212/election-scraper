@@ -40,7 +40,14 @@ ALLOWED_DOMAINS = [
     'clarityelections.com',
     'livevoterturnout.com',
     'sfelections.org',
-    'santacruzcountyca.gov'
+    'www.sf.gov',
+    'sf.gov',
+    'santacruzcountyca.gov',
+    'votescount.santacruzcountyca.gov',
+    'rovservices.sccgov.org',   # Santa Clara may switch to county site for June 2
+    'sccgov.org',
+    'www.sjgov.org',
+    'sjgov.org',
 ]
 
 # Security: Allowed file extensions
