@@ -104,6 +104,15 @@ def parse_args():
     )
 
     parser.add_argument(
+        "--live",
+        action="store_true",
+        help="Use live_url instead of test_url from county_links.csv. "
+             "For zero-report counties this is the same URL. For placeholder counties "
+             "this points to the actual June 2 election results page. "
+             "Use this on election night or to test the live endpoints beforehand.",
+    )
+
+    parser.add_argument(
         "--test-sheets",
         action="store_true",
         help="Test Google Sheets connection only — reads sheet metadata, writes nothing. "
@@ -140,6 +149,36 @@ def parse_args():
 # Call the existing scraper scripts as subprocesses. They save JSON files to
 # data/ which normalize.py will pick up in the next step.
 # ---------------------------------------------------------------------------
+def _apply_live_urls():
+    """
+    Overwrite the test_url column in county_links.csv with each county's
+    live_url value so src/run_all.py (which always reads test_url) picks up
+    the election-night endpoints.
+
+    On the next pipeline run the sync step will restore the file from the
+    Google Sheet, so this is safe to call without a manual undo step.
+    """
+    import csv as _csv
+    csv_path = PROJECT_ROOT / "election_data" / "county_links.csv"
+
+    rows = []
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = _csv.DictReader(f)
+        fieldnames = reader.fieldnames
+        for row in reader:
+            live = row.get("live_url", "").strip()
+            if live:
+                row["test_url"] = live
+            rows.append(row)
+
+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
+        writer = _csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    log.info("  ✓ county_links.csv test_url column set to live_url values for all counties.")
+
+
 def run_scrape(args):
     """
     Visit every county election website and download the latest results.
@@ -364,8 +403,10 @@ def main():
         log.info("MODE: TESTING with fake sample data (no real county websites will be visited).")
     elif args.dry_run:
         log.info("MODE: DRY RUN — using data already on disk, no websites will be visited.")
+    elif getattr(args, "live", False):
+        log.info("MODE: LIVE URLS — using election-night endpoints from county_links.csv live_url column.")
     else:
-        log.info("MODE: LIVE — will visit real county election websites.")
+        log.info("MODE: STANDARD — using test_url endpoints (zero-reports or past election links).")
 
     if args.push_wp:
         log.info("WordPress publish: ENABLED — you will be asked to confirm before anything posts.")
@@ -431,6 +472,12 @@ def main():
             log.info("  ✓ county_links.csv updated from Google Sheet.")
         else:
             log.warning("  Could not sync county links — using existing county_links.csv.")
+
+        # If --live is set, overwrite test_url with live_url so src/run_all.py
+        # (which always reads test_url) picks up the election-night endpoints.
+        if getattr(args, "live", False):
+            log.info("  Applying live URLs (overwriting test_url with live_url)...")
+            _apply_live_urls()
 
     # ── STEP 1: SCRAPE ───────────────────────────────────────────────────────
     if args.dry_run:
