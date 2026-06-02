@@ -435,19 +435,22 @@ def normalize(input_dir: Path, output_path: Path) -> dict:
             if filepath.stat().st_mtime > existing.stat().st_mtime:
                 county_files[county] = filepath
 
-    # If all_counties.csv exists and covers more counties than the individual JSON files,
-    # use it — it comes from src/run_all.py which scrapes all 13 counties at once
-    # with the correct URLs from county_links.csv.
+    # Prefer all_counties.csv over individual JSON files when it is NEWER than
+    # the most recent JSON file — src/run_all.py saves this file after each full
+    # 13-county scrape, so it always reflects the latest run.
     csv_candidates = sorted(
         input_dir.glob("all_counties*.csv"),
         key=lambda p: p.stat().st_mtime, reverse=True
     )
     if csv_candidates:
-        csv_counties = _parse_all_counties_csv(csv_candidates[0])
-        if len(csv_counties) > len(county_files):
-            print(f"[normalize] all_counties.csv has {len(csv_counties)} counties vs "
-                  f"{len(county_files)} JSON files — using {csv_candidates[0].name}")
-            county_files = {}  # discard JSON files, use CSV instead
+        newest_csv_mtime = csv_candidates[0].stat().st_mtime
+        newest_json_mtime = max(
+            (p.stat().st_mtime for p in county_files.values()), default=0
+        )
+        if newest_csv_mtime > newest_json_mtime:
+            print(f"[normalize] all_counties.csv is newer than JSON files — "
+                  f"using {csv_candidates[0].name}")
+            county_files = {}  # discard stale JSON files, fall through to CSV path
 
     if not county_files:
         csv_candidates = sorted(input_dir.glob("all_counties*.csv"),
