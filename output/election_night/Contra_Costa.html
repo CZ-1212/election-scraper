@@ -11,6 +11,28 @@
     .lnm-results-widget, .lnm-results-widget * { box-sizing: border-box; margin: 0; padding: 0; }
     .lnm-results-widget { font-family: Arial, sans-serif; }
 
+    /* County banner */
+    .lnm-results-widget .lnm-county-banner {
+      background-color: #1a3668;
+      color: white;
+      padding: 14px 18px;
+      border-radius: 5px;
+      margin-bottom: 12px;
+    }
+    .lnm-results-widget .lnm-county-name {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .lnm-results-widget .lnm-election-title {
+      font-size: 13px;
+      font-weight: 400;
+      color: #accf00;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 4px;
+    }
+
     /* Turnout bar */
     .lnm-results-widget .turnout-bar {
       background-color: #1a3668;
@@ -56,6 +78,83 @@
       text-decoration: none;
     }
     .lnm-results-widget .lnm-provenance a:hover { text-decoration: underline; }
+
+    /* Uncontested races dropdown */
+    .lnm-results-widget .uncontested-wrap {
+      margin-bottom: 16px;
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1px solid #1a3668;
+    }
+    .lnm-results-widget .uncontested-toggle {
+      background-color: #1a3668;
+      color: white;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .lnm-results-widget .uncontested-toggle-label {
+      font-size: 0.92em;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .lnm-results-widget .uncontested-toggle-count {
+      font-size: 0.82em;
+      color: #accf00;
+      margin-left: 8px;
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .lnm-results-widget .uncontested-chevron {
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+    .lnm-results-widget .uncontested-chevron.open { transform: rotate(180deg); }
+    .lnm-results-widget .uncontested-body { display: none; background: white; }
+    .lnm-results-widget .uncontested-body.open { display: block; }
+    .lnm-results-widget .uncontested-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid #f0e68c;
+      gap: 12px;
+      background: #fffde7;
+    }
+    .lnm-results-widget .uncontested-row:last-child { border-bottom: none; }
+    .lnm-results-widget .uncontested-race-name {
+      font-size: 0.88em;
+      font-weight: 700;
+      color: #1a3668;
+      flex: 1;
+    }
+    .lnm-results-widget .uncontested-candidate {
+      font-size: 0.85em;
+      color: #444;
+      flex: 1;
+    }
+    .lnm-results-widget .uncontested-profession {
+      font-size: 0.78em;
+      color: #888;
+      flex: 1;
+      font-style: italic;
+    }
+    .lnm-results-widget .uncontested-badge {
+      font-size: 0.72em;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: #f2f7d9;
+      color: #4a6020;
+      border: 1px solid #c8e050;
+      padding: 2px 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
 
     /* Race box */
     .lnm-results-widget .race-box {
@@ -289,6 +388,11 @@
 
 <div class="lnm-results-widget">
 
+  <div class="lnm-county-banner">
+    <div class="lnm-county-name">Contra Costa County</div>
+    <div class="lnm-election-title">June 2, 2026 Statewide Direct Primary</div>
+  </div>
+
   <div class="search-wrap">
     <input class="search-input" type="text" placeholder="Search for measures, candidates, contests…" id="electionSearch">
   </div>
@@ -309,7 +413,9 @@
     </div>
   </div>
 
-  <div class="lnm-provenance">Source: <a href="https://results.enr.clarityelections.com/CA/Contra_Costa/126374/web.345435/#/summary">Contra Costa Registrar of Voters</a> &middot; Updated: 2026-06-02 23:00:20</div>
+  <div class="lnm-provenance">Source: <a href="https://results.enr.clarityelections.com/CA/Contra_Costa/126374/web.345435/#/summary">Contra Costa Registrar of Voters</a> &middot; Updated: 2026-06-02 23:14:56</div>
+
+<div class="uncontested-wrap" id="uncontestedWrap"><div class="uncontested-toggle" id="uncontestedToggle"><span><span class="uncontested-toggle-label">Uncontested Races</span><span class="uncontested-toggle-count">4 races with no opposition</span></span><svg class="uncontested-chevron" id="uncontestedChevron" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6L8 10L12 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="uncontested-body" id="uncontestedBody"><div class="uncontested-row"><div class="uncontested-race-name">Supervisor, 1st District</div><div class="uncontested-candidate">John &quot;Joya&quot; Gioia</div><div class="uncontested-profession">County Supervisor</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Supervisor, 4th District</div><div class="uncontested-candidate">Ken Carlson</div><div class="uncontested-profession">N/A</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">County Treasurer-Tax Collector</div><div class="uncontested-candidate">Dan M. Mierzwa</div><div class="uncontested-profession">N/A</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">City of Richmond, Council District 2</div><div class="uncontested-candidate">Cesar Zepeda</div><div class="uncontested-profession">Councilmember, City of Richmond, D2</div><div class="uncontested-badge">Uncontested</div></div></div></div>
 
   <div class="race-box">
     <div class="race-title">Contra Costa County</div>
@@ -1163,6 +1269,17 @@
 
 <script>
   (function() {
+    // Uncontested dropdown toggle.
+    var _ut = document.getElementById('uncontestedToggle');
+    var _ub = document.getElementById('uncontestedBody');
+    var _uc = document.getElementById('uncontestedChevron');
+    if (_ut && _ub && _uc) {
+      _ut.addEventListener('click', function() {
+        _ub.classList.toggle('open');
+        _uc.classList.toggle('open');
+      });
+    }
+    // Race search filter.
     var input = document.getElementById('electionSearch');
     var noResults = document.getElementById('noResults');
     if (!input) return;

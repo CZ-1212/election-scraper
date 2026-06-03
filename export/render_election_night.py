@@ -48,6 +48,11 @@ LOCAL_RACES_CSV = PROJECT_ROOT / "election_data" / "local_races - Sheet1.csv"
 MASTER_JSON = PROJECT_ROOT / "data" / "processed" / "election_results_master.json"
 COUNTY_LINKS_CSV = PROJECT_ROOT / "election_data" / "county_links.csv"
 
+# Reuse the ballot-preview uncontested helpers so the same CSV drives both surfaces.
+import sys
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+from june2_utils import load_uncontested_races, render_uncontested_dropdown, UNCONTESTED_CSS  # noqa: E402
+
 # Primary deliverable: two columns only — county name + the entire HTML code.
 OUT_CSV = PROJECT_ROOT / "data" / "processed" / "election_night_by_county.csv"
 # Separate diagnostic report (rendered/unmatched counts), kept out of the main CSV.
@@ -147,6 +152,14 @@ def _candidate_match_score(a: str, b: str) -> float:
     # is merely a subset of the local name (e.g. 'CONTROLLER' inside 'County
     # Auditor-Controller') must NOT score a perfect match.
     score = len(ta & tb) / len(ta | tb)
+
+    # Containment bonus: if the LOCAL race name (a) is fully contained in the
+    # scraped title (b) — e.g. 'District Attorney' ⊂ 'District Attorney, Short
+    # Term' — that's a strong signal and worth lifting above the threshold,
+    # without symmetrically rewarding short scraped titles that are subsets of
+    # longer local names.
+    if ta and ta.issubset(tb):
+        score = max(score, 0.75)
 
     # Require the distinguishing number to be present on both sides when either
     # side has one, so 'Council District 3' can't match a numberless 'Council'.
@@ -487,6 +500,17 @@ _SEARCH_BAR = (
 
 _SEARCH_SCRIPT = """<script>
   (function() {
+    // Uncontested dropdown toggle.
+    var _ut = document.getElementById('uncontestedToggle');
+    var _ub = document.getElementById('uncontestedBody');
+    var _uc = document.getElementById('uncontestedChevron');
+    if (_ut && _ub && _uc) {
+      _ut.addEventListener('click', function() {
+        _ub.classList.toggle('open');
+        _uc.classList.toggle('open');
+      });
+    }
+    // Race search filter.
     var input = document.getElementById('electionSearch');
     var noResults = document.getElementById('noResults');
     if (!input) return;
@@ -538,10 +562,24 @@ def render_county_html(county_data: dict, local_defs: list[dict], source_url: st
     turnout = _render_turnout(county_data.get("voter_turnout") or {})
     provenance = _render_provenance(county_data, source_url)
 
-    widget_parts = [_SEARCH_BAR]
+    # Banner: county name + election title (always rendered, top of widget).
+    county_display = county_data.get("county", "").replace("_", " ")
+    banner = (
+        '  <div class="lnm-county-banner">\n'
+        f'    <div class="lnm-county-name">{_esc(county_display)} County</div>\n'
+        '    <div class="lnm-election-title">June 2, 2026 Statewide Direct Primary</div>\n'
+        '  </div>'
+    )
+
+    # Uncontested races: same CSV that drives the ballot-preview dropdown.
+    uncontested_html = render_uncontested_dropdown(load_uncontested_races(county_display))
+
+    widget_parts = [banner, _SEARCH_BAR]
     if turnout:
         widget_parts.append(turnout)
     widget_parts.append(provenance)
+    if uncontested_html:
+        widget_parts.append(uncontested_html)
     widget_parts.extend(blocks)
     widget = '<div class="lnm-results-widget">\n\n' + "\n\n".join(widget_parts) + "\n\n</div>"
 
