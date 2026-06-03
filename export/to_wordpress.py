@@ -32,6 +32,20 @@ import os
 import re
 import sys
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
+_PACIFIC = ZoneInfo("America/Los_Angeles")
+
+
+def _fmt_pacific(iso_str: str) -> str:
+    """Format an ISO timestamp as Pacific time for display (e.g. 'June 2, 2026, 8:45 PM PT')."""
+    try:
+        dt = datetime.fromisoformat(iso_str)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(_PACIFIC).strftime("%-B %-d, %Y, %-I:%M %p PT")
+    except (ValueError, TypeError):
+        return iso_str or ""
 from pathlib import Path
 
 # Load .env before anything else so credentials are in os.environ.
@@ -73,12 +87,7 @@ def _build_html(master: dict, include_counties: list[str] | None = None) -> str:
     counties = master.get("counties") or {}
     run_timestamp = master.get("pipeline_timestamp") or ""
 
-    # Format the timestamp for display — e.g. "June 2, 2026, 8:45 PM"
-    try:
-        dt = datetime.fromisoformat(run_timestamp)
-        display_time = dt.strftime("%B %-d, %Y, %-I:%M %p")
-    except (ValueError, TypeError):
-        display_time = run_timestamp
+    display_time = _fmt_pacific(run_timestamp)
 
     # Build a normalized set of requested counties for fast lookup.
     # Normalize by lowercasing and stripping spaces/underscores so callers
@@ -710,15 +719,11 @@ def inject_results_into_page(
 
     # 4. Update banner sub-line — raw string replacement, no BS serialisation.
     pipeline_ts = master_json.get("pipeline_timestamp") or ""
-    try:
-        dt = datetime.fromisoformat(pipeline_ts)
-        display_time = dt.strftime("%B %-d, %Y, %-I:%M %p")
-    except (ValueError, TypeError):
-        display_time = pipeline_ts or "unknown"
+    display_time = _fmt_pacific(pipeline_ts) or "unknown"
 
     updated_html = re.sub(
         r'(<div[^>]*class="preview-banner-sub"[^>]*>)[^<]*(</div>)',
-        rf'\g<1>Results last updated: {re.escape(display_time)}\g<2>',
+        r'\g<1>Results last updated: ' + display_time + r'\g<2>',
         updated_html,
     )
 

@@ -7,11 +7,14 @@ the project root. It chains four steps in order:
 
   1. SCRAPE    — Hit the county election websites and save raw JSON to data/
   2. NORMALIZE — Merge all county JSON files into one master JSON
+  2.5 RENDER   — (Optional) Render per-county election night HTML
   3. SHEETS    — Push the master JSON to the Google Sheet live dashboard
   4. WORDPRESS — (Manual only) Push HTML results to the BCN/LNM WordPress site
 
 Usage examples:
   python run_all.py                        # Full pipeline (scrape + normalize + sheets)
+  python run_all.py --render               # Also render per-county HTML after normalize
+  python run_all.py --render --embed       # Render embeddable widget blocks (no <html> wrapper)
   python run_all.py --scraper clarity      # Only scrape Clarity counties
   python run_all.py --no-sheets            # Scrape and normalize, skip sheets
   python run_all.py --mock                 # Use fixture files instead of live scraping
@@ -139,6 +142,21 @@ def parse_args():
         action="store_true",
         help="Build and print the WordPress HTML without posting anything. "
              "Use this to check what the publish would look like before going live.",
+    )
+
+    parser.add_argument(
+        "--render",
+        action="store_true",
+        help="Render per-county election night HTML after normalizing. "
+             "Writes output/election_night/<County>.html and "
+             "data/processed/election_night_by_county.csv.",
+    )
+
+    parser.add_argument(
+        "--embed",
+        action="store_true",
+        help="Used with --render. Emit embeddable widget blocks (no <html>/<style> wrapper) "
+             "for pasting into WordPress instead of standalone HTML files.",
     )
 
     parser.add_argument(
@@ -307,6 +325,48 @@ def run_normalize(args):
         return True
     except Exception as e:
         log.error("  ✗ Failed to combine county data: %s", e)
+        return False
+
+
+# ---------------------------------------------------------------------------
+# STEP 2.5 — RENDER
+# Only runs when --render is passed. Calls render_election_night.main() to
+# produce per-county HTML files and the by-county CSV.
+# ---------------------------------------------------------------------------
+def run_render(args):
+    """
+    Render per-county election night HTML from the normalized master JSON.
+    Writes output/election_night/<County>.html and
+    data/processed/election_night_by_county.csv.
+    """
+    log.info("=" * 60)
+    log.info("STEP 2.5 — RENDERING ELECTION NIGHT HTML")
+    log.info("  Building per-county HTML widgets from the master JSON.")
+    log.info("=" * 60)
+
+    export_dir = PROJECT_ROOT / "export"
+    if str(export_dir) not in sys.path:
+        sys.path.insert(0, str(export_dir))
+
+    import importlib.util
+    render_path = export_dir / "render_election_night.py"
+    spec = importlib.util.spec_from_file_location("render_election_night", render_path)
+    render_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(render_module)
+
+    master_json = PROJECT_ROOT / "data" / "processed" / "election_results_master.json"
+    if not master_json.exists():
+        log.error("  ✗ Master JSON not found — run normalize first.")
+        return False
+
+    standalone = not getattr(args, "embed", False)
+    try:
+        render_module.main(master_path=master_json, standalone=standalone)
+        log.info("  ✓ HTML rendered. Files saved to output/election_night/ and "
+                 "data/processed/election_night_by_county.csv")
+        return True
+    except Exception as e:
+        log.error("  ✗ Render failed: %s", e)
         return False
 
 
@@ -551,6 +611,12 @@ def main():
         log.error("Step 2 failed — could not combine county data. Cannot continue.")
         log.error("Check that county data files exist in data/ (or tests/fixtures/ in mock mode).")
         sys.exit(1)
+
+    # ── STEP 2.5: RENDER ─────────────────────────────────────────────────────
+    if getattr(args, "render", False):
+        run_render(args)
+    else:
+        log.info("Step 2.5 — HTML render skipped. (Pass --render to build per-county HTML.)")
 
     # ── STEP 3: GOOGLE SHEETS ────────────────────────────────────────────────
     # Skip if editor passed --no-sheets, or if this is just a local dry-run check.

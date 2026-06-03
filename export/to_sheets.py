@@ -29,6 +29,15 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 import gspread
 from google.oauth2.service_account import Credentials
+from zoneinfo import ZoneInfo
+
+_PACIFIC = ZoneInfo("America/Los_Angeles")
+
+
+def _now_pacific() -> str:
+    """Current time as a Pacific-timezone string for display."""
+    from datetime import timezone
+    return datetime.now(tz=timezone.utc).astimezone(_PACIFIC).strftime("%Y-%m-%d %H:%M PT")
 
 
 # ---------------------------------------------------------------------------
@@ -407,7 +416,7 @@ def _update_statewide_races(ws: gspread.Worksheet, counties: dict) -> None:
     statewide_races.sort(key=lambda x: (-len(x[2]), x[1]))
 
     # Step 3: build the rows list to write in one batch.
-    rows = [["STATEWIDE RACES — last updated: " + datetime.now().strftime("%Y-%m-%d %H:%M")]]
+    rows = [["STATEWIDE RACES — last updated: " + _now_pacific()]]
     rows.append([""])  # blank spacer
 
     for norm, display_title, by_county in statewide_races:
@@ -481,7 +490,7 @@ def update_sheets(master_json_path: Path) -> None:
         master = json.load(f)
 
     counties = master.get("counties") or {}
-    run_timestamp = master.get("pipeline_timestamp") or datetime.now().isoformat()
+    run_timestamp = master.get("pipeline_timestamp") or _now_pacific()
 
     if not counties:
         print("[sheets] WARNING: No county data found in master JSON. Nothing to push.")
