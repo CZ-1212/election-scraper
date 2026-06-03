@@ -75,7 +75,7 @@ KNOWN_COUNTIES = [
 # KEPT so state races stay distinct from same-named local races.
 _STOPWORDS = {
     "of", "the", "for", "and", "a", "an", "to", "member", "vote", "votes",
-    "required", "no", "office", "county",
+    "required", "no", "office", "county", "short", "term", "long",
 }
 
 # Trailing qualifier phrases the county appends to measure/contest titles.

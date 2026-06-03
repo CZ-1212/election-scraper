@@ -1280,12 +1280,9 @@ class AlamedaScraper(BaseScraper):
 
 class NapaScraper(BaseScraper):
     """Scraper for Napa County elections.
-    The results page links to a PDF Summary Report; we fetch and parse it with pdfplumber.
-    The PDF URL is discovered by scraping the election results page for the Nov 4 2025 election.
+    Fetches and parses the PDF summary report linked in county_links.csv (test_url / live_url).
+    Update that URL in the Google Sheet when Napa publishes a new election's PDF.
     """
-
-    # Known stable PDF URL for the Nov 4, 2025 Statewide Special Election summary
-    SUMMARY_PDF_URL = 'https://www.napacounty.gov/DocumentCenter/View/39913/'
 
     def scrape(self):
         self.rate_limiter.wait()
@@ -1294,7 +1291,7 @@ class NapaScraper(BaseScraper):
             import pdfplumber, io as _io
             print(f"[{self.county_name}] Fetching Napa County summary PDF...")
             headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
-            r = self._fetch_with_retry(self.SUMMARY_PDF_URL, headers=headers, timeout=20, verify=True)
+            r = self._fetch_with_retry(self.url, headers=headers, timeout=20, verify=True)
 
             with pdfplumber.open(_io.BytesIO(r.content)) as pdf:
                 text = '\n'.join(page.extract_text() or '' for page in pdf.pages)
