@@ -108,22 +108,6 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--push-rendered",
-        action="store_true",
-        help="Push per-county rendered HTML from output/election_night/ to each county's "
-             "WordPress page (reads WP_PAGE_IDS from .env). Skips counties with no vote "
-             "changes since the last push. NEVER runs automatically — pass this flag explicitly.",
-    )
-
-    parser.add_argument(
-        "--test-page",
-        type=int,
-        default=None,
-        help="Used with --push-rendered. Send all county HTML to this single WP page ID "
-             "instead of the production per-county pages. Use to verify layout before going live.",
-    )
-
-    parser.add_argument(
         "--force-inject",
         action="store_true",
         help="Force --inject-wp to push even when tallies haven't changed. "
@@ -475,58 +459,7 @@ def run_wordpress(args):
 
 
 # ---------------------------------------------------------------------------
-# STEP 4b — PUSH RENDERED HTML TO PER-COUNTY WORDPRESS PAGES
-# Only runs when --push-rendered is explicitly passed.
-# Reads rendered HTML from output/election_night/ and POSTs it to each
-# county's WP page listed in WP_PAGE_IDS. Skips unchanged counties.
-# Pass --test-page <id> to send all output to a single test page first.
-# ---------------------------------------------------------------------------
-def run_push_rendered(args):
-    """Push per-county rendered HTML to WordPress pages."""
-    log.info("=" * 60)
-    log.info("STEP 4b — PUSHING RENDERED HTML TO WORDPRESS")
-    log.info("  Reading output/election_night/<County>.html for each county.")
-    if getattr(args, "test_page", None):
-        log.info("  TEST MODE: all counties → page %s", args.test_page)
-    log.info("=" * 60)
-
-    export_dir = PROJECT_ROOT / "export"
-    if str(export_dir) not in sys.path:
-        sys.path.insert(0, str(export_dir))
-
-    import importlib.util
-    wp_path = export_dir / "to_wordpress.py"
-    spec = importlib.util.spec_from_file_location("to_wordpress", wp_path)
-    wp_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(wp_module)
-
-    rendered_dir = PROJECT_ROOT / "output" / "election_night"
-    master_json  = PROJECT_ROOT / "data" / "processed" / "election_results_master.json"
-
-    if not master_json.exists():
-        log.error("Master JSON not found — run scrape+normalize first.")
-        return False
-
-    county_list = [c.strip() for c in args.counties.split(",")] if getattr(args, "counties", None) else None
-
-    try:
-        wp_module.push_all_rendered_html(
-            rendered_html_dir=rendered_dir,
-            master_json_path=master_json,
-            force=getattr(args, "force_inject", False),
-            test_page_id=getattr(args, "test_page", None),
-            include_counties=county_list,
-        )
-        return True
-    except SystemExit as e:
-        return e.code == 0
-    except Exception as e:
-        log.error("Push rendered HTML failed: %s", e)
-        return False
-
-
-# ---------------------------------------------------------------------------
-# STEP 4c — INJECT INTO BALLOT PREVIEW PAGES
+# STEP 4b — INJECT INTO BALLOT PREVIEW PAGES
 # Only runs when --inject-wp is explicitly passed. Reads WP_PAGE_IDS from .env
 # and calls inject_all_counties. Skips counties whose tallies haven't changed.
 # ---------------------------------------------------------------------------
@@ -706,15 +639,7 @@ def main():
         log.info("Step 4 — WordPress publish skipped.")
         log.info("         (To publish to the website, re-run with --push-wp.)")
 
-    # ── STEP 4b: PUSH RENDERED HTML TO WORDPRESS ────────────────────────────
-    # Only when --push-rendered is explicitly passed.
-    if getattr(args, "push_rendered", False):
-        run_push_rendered(args)
-    else:
-        log.info("Step 4b — WordPress push skipped.")
-        log.info("          (Re-run with --push-rendered, or --push-rendered --test-page <id>.)")
-
-    # ── STEP 4c: INJECT INTO BALLOT PREVIEW PAGES ───────────────────────────
+    # ── STEP 4b: INJECT INTO BALLOT PREVIEW PAGES ───────────────────────────
     # Only when --inject-wp is explicitly passed. Skips counties with no tally changes.
     if getattr(args, "inject_wp", False):
         run_inject_wp(args)

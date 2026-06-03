@@ -478,6 +478,9 @@ def push_all_rendered_html(
     Push rendered HTML for every county listed in WP_PAGE_IDS (.env) to its
     WordPress page.  When test_page_id is set, ALL counties go to that one
     page — use this to verify layout before touching production pages.
+
+    Always requires a typed YES confirmation before touching any page,
+    unless WP_CI_CONFIRMED=YES is set (GitHub Actions only).
     """
     page_ids_raw = _get_env("WP_PAGE_IDS")
     try:
@@ -494,12 +497,53 @@ def push_all_rendered_html(
     else:
         include_set = None
 
-    pushed, skipped, errors = [], [], []
+    # Build the list of counties that will actually be pushed so the editor
+    # can see exactly what is about to happen before confirming.
+    planned = []
     for raw_key, prod_page_id in page_ids.items():
         county_key = _COUNTY_KEY_ALIASES.get(raw_key, raw_key)
         if include_set and county_key.lower().replace(" ", "_") not in include_set:
             continue
         effective_id = test_page_id if test_page_id is not None else prod_page_id
+        planned.append((county_key, effective_id))
+
+    if not planned:
+        print("[push_rendered] No matching counties found. Nothing to push.")
+        return
+
+    site_url = _get_env("WP_SITE_URL")
+    print()
+    print("=" * 60)
+    print("WORDPRESS PUSH — CONFIRMATION REQUIRED")
+    print("=" * 60)
+    print(f"  Target site : {site_url}")
+    if test_page_id:
+        print(f"  MODE        : TEST — all counties → page {test_page_id}")
+    else:
+        print(f"  MODE        : PRODUCTION — each county → its own page")
+    print(f"  Counties    : {len(planned)}")
+    for county_key, page_id in planned:
+        print(f"    {county_key.replace('_', ' '):20s} → page {page_id}")
+    print()
+    print("  Review the Google Sheet STATUS DASHBOARD before confirming.")
+    print("  All counties above will have their WordPress page replaced.")
+    print()
+
+    ci_confirmed = os.environ.get("WP_CI_CONFIRMED", "").strip().upper()
+    if ci_confirmed == "YES":
+        print("[push_rendered] CI confirmation received. Proceeding.")
+    else:
+        try:
+            answer = input("  Type YES to confirm and push, or anything else to abort: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\n[push_rendered] No input received. Aborting.")
+            return
+        if answer.upper() != "YES":
+            print(f"[push_rendered] Aborted (you typed: '{answer}'). Nothing was pushed.")
+            return
+
+    pushed, skipped, errors = []  , [], []
+    for county_key, effective_id in planned:
         result = push_rendered_html_to_wp(
             county_key, rendered_html_dir, effective_id,
             force=force, master_json=master,
