@@ -1,0 +1,34 @@
+{
+  "scrape_timestamp": "2026-06-02T20:01:15.000000",
+  "json_data": null,
+  "selenium_data": {
+    "timestamp": "2026-06-02T20:01:20.000000",
+    "url": "https://results.enr.clarityelections.com/CA/Santa_Clara/125157/web.345435/#/summary",
+    "page_title": "Election Night Reporting",
+    "voter_turnout": {
+      "ballots_cast": 187400,
+      "registered_voters": 1068535,
+      "turnout_percentage": 17.54
+    },
+    "contests": [
+      {
+        "title": "Measure B — Valley Transportation Authority Sales Tax",
+        "precincts_reporting": "Precincts Reporting 100%",
+        "choices": [
+          {"name": "Yes", "votes": 115000, "pct": 61.36},
+          {"name": "No", "votes": 72400, "pct": 38.64}
+        ]
+      },
+      {
+        "title": "Santa Clara County Supervisor — District 1",
+        "precincts_reporting": "Precincts Reporting 100%",
+        "choices": [
+          {"name": "Alicia Moreno", "votes": 55300, "pct": 55.30},
+          {"name": "David Chen", "votes": 44700, "pct": 44.70}
+        ]
+      }
+    ],
+    "last_updated": "Monday, June 2, 2026, 8:00:00 PM"
+  },
+  "reports": []
+}

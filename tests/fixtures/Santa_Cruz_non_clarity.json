@@ -1,0 +1,30 @@
+{
+  "county_name": "Santa_Cruz",
+  "platform": "santacruz",
+  "scrape_duration": 14.7,
+  "scrape_timestamp": "2026-06-02T20:01:30.000000",
+  "voter_turnout": {
+    "ballots_cast": 44800,
+    "registered_voters": 185040,
+    "turnout_percentage": 24.21
+  },
+  "contests": [
+    {
+      "title": "Measure G — Santa Cruz County Library Parcel Tax",
+      "precincts_reporting": "182 of 182 Precincts Reported",
+      "choices": [
+        {"name": "Yes", "votes": 31360, "pct": 70.00},
+        {"name": "No", "votes": 13440, "pct": 30.00}
+      ]
+    },
+    {
+      "title": "Santa Cruz City Council — District 3",
+      "precincts_reporting": "182 of 182 Precincts Reported",
+      "choices": [
+        {"name": "Yolanda Rivera", "votes": 23616, "pct": 52.71},
+        {"name": "Brian Hoffman", "votes": 21184, "pct": 47.29}
+      ]
+    }
+  ],
+  "last_updated": "June 2, 2026 8:00 PM"
+}

@@ -23,11 +23,17 @@ wheels/
 .installed.cfg
 *.egg
 
-# Scraped data (exclude actual scraped data but allow samples)
+# Scraped data (exclude actual scraped data but allow samples and processed output)
 data/*
 !data/samples/
-!data/samples/*.json
+!data/samples/service-account-key*.json
 !data/.gitkeep
+!data/processed/
+data/processed/*
+!data/processed/.gitkeep
+!data/processed/election_results_master.json
+!data/processed/wp_inject_state.json
+!data/processed/vote_count_state.json
 
 # Other data formats
 *.xml
@@ -37,7 +43,9 @@ data/*
 *.csv
 !election_data/*.csv
 
-# Logs
+# Logs — keep the folder but ignore the actual log files
+logs/*
+!logs/.gitkeep
 *.log
 scraper.log
 nohup.out
@@ -63,3 +71,5 @@ chromedriver.exe
 *.tmp
 *.temp
 
+.env
+service-account-key*.json

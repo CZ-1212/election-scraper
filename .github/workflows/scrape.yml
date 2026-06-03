@@ -1,0 +1,148 @@
+name: Scrape Election Results
+
+# This workflow runs automatically every 15 minutes on election night.
+# It scrapes all county websites, normalizes the data, and pushes to the Google Sheet.
+# It NEVER pushes to WordPress — that requires a human to trigger publish.yml separately.
+
+on:
+  schedule:
+    # Every 15 minutes. Cron syntax: minute hour day-of-month month day-of-week
+    - cron: "*/15 * * * *"
+
+  # Also allow manual triggering from the GitHub Actions UI (useful for testing).
+  workflow_dispatch:
+
+# Allow the workflow to write back to the repo (needed to commit updated data files).
+permissions:
+  contents: write
+
+jobs:
+  scrape-and-update:
+    runs-on: ubuntu-latest
+    # Keep running even if individual steps fail so we always attempt normalize + sheets.
+    # Each step records its own outcome and the final summary step reports everything.
+
+    steps:
+      # 1. Check out the repo so we have all the source files.
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # 2. Set up Python. Match the version used locally.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 3. Install Chrome for Selenium (required by the Clarity scraper).
+      #    We install Google Chrome from the official source so the version is stable.
+      - name: Install Google Chrome
+        id: install_chrome
+        continue-on-error: true
+        run: |
+          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+          echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update -q
+          sudo apt-get install -y google-chrome-stable
+
+      # 4. Create the virtual environment and install all Python dependencies.
+      - name: Create venv and install dependencies
+        id: install_deps
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # 5. Write the .env file from GitHub Secrets.
+      #    Secrets are set in the repo Settings → Secrets and variables → Actions.
+      #    They are never printed to the log — GitHub masks them automatically.
+      - name: Write .env from secrets
+        run: |
+          cat > .env << 'EOF'
+          GOOGLE_SERVICE_ACCOUNT_JSON=/home/runner/work/election-scraper/election-scraper/service-account-key.json
+          GOOGLE_SHEET_ID=${{ secrets.GOOGLE_SHEET_ID }}
+          WP_SITE_URL=${{ secrets.WP_SITE_URL }}
+          WP_USERNAME=${{ secrets.WP_USERNAME }}
+          WP_APP_PASSWORD=${{ secrets.WP_APP_PASSWORD }}
+          WP_PAGE_ID=${{ secrets.WP_PAGE_ID }}
+          EOF
+
+      # 6. Write the Google service account key file from the secret.
+      - name: Write Google service account key
+        run: |
+          echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}' > service-account-key.json
+
+      # 7. Scrape all county websites and save raw JSON files to data/.
+      #    continue-on-error so one county being down never blocks the rest.
+      - name: Scrape county websites
+        id: scrape
+        continue-on-error: true
+        run: |
+          source venv/bin/activate
+          python run_all.py --scraper both --no-sheets
+        env:
+          DISPLAY: ""
+
+      # 8. Normalize whatever landed in data/ into election_results_master.json.
+      #    Runs separately so it executes even if scrape had errors — partial
+      #    data is still better than nothing.
+      - name: Normalize scraped data
+        id: normalize
+        continue-on-error: true
+        run: |
+          source venv/bin/activate
+          python src/normalize.py
+
+      # 9. Push normalized data to the Google Sheet dashboard.
+      #    Runs regardless of prior step outcomes.
+      - name: Update Google Sheet
+        id: sheets
+        continue-on-error: true
+        run: |
+          source venv/bin/activate
+          python export/to_sheets.py
+
+      # 10. Commit the normalized master JSON back to the repo so editors and
+      #     the publish workflow can read the latest data from disk.
+      - name: Commit updated election data
+        id: commit
+        continue-on-error: true
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/processed/election_results_master.json data/processed/vote_count_state.json
+          # Only commit if there's actually something new — avoids empty commits.
+          git diff --staged --quiet || git commit -m "chore: auto-update election results [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 11. Print a clear summary of every step's outcome.
+      #     This always runs (even if earlier steps failed) so the log is never silent.
+      - name: Pipeline summary
+        if: always()
+        run: |
+          echo "============================================================"
+          echo "PIPELINE SUMMARY — $(date -u '+%Y-%m-%d %H:%M UTC')"
+          echo "============================================================"
+          echo "Chrome install : ${{ steps.install_chrome.outcome }}"
+          echo "Scrape         : ${{ steps.scrape.outcome }}"
+          echo "Normalize      : ${{ steps.normalize.outcome }}"
+          echo "Google Sheets  : ${{ steps.sheets.outcome }}"
+          echo "Git commit     : ${{ steps.commit.outcome }}"
+          echo "============================================================"
+
+          # Exit with failure if any critical step failed, so GitHub marks
+          # the run as failed and sends email/Slack alerts.
+          if [ "${{ steps.normalize.outcome }}" = "failure" ] || \
+             [ "${{ steps.sheets.outcome }}"   = "failure" ]; then
+            echo "ERROR: A critical pipeline step failed. Check the logs above."
+            exit 1
+          fi
+
+          if [ "${{ steps.scrape.outcome }}" = "failure" ]; then
+            echo "WARNING: The scrape step had errors. Some counties may be missing."
+            echo "         Check the normalize output — partial data was still published."
+          fi
+
+          echo "Pipeline completed."

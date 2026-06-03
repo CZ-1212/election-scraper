@@ -24,7 +24,6 @@ from bs4 import BeautifulSoup
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from scraper_utils import _parse_choice_str
 
 
 # Security: Allowed domains for URL validation
@@ -33,14 +32,22 @@ ALLOWED_DOMAINS = [
     'clarityelections.com',
     'livevoterturnout.com',
     'sfelections.org',
+    'www.sf.gov',               # SF Elections moved to sf.gov for June 2026
+    'sf.gov',
     'santacruzcountyca.gov',
+    'votescount.santacruzcountyca.gov',
     'alamedacountyca.gov',
+    'acvote.alamedacountyca.gov',
     'mendocinocounty.gov',
     'co.mendocino.ca.us',
     'countyofmonterey.gov',
     'napacounty.gov',
     'content.solanocounty.gov',
-    'solanocounty.gov'
+    'solanocounty.gov',
+    'rovservices.sccgov.org',   # Santa Clara switched from Clarity to county site
+    'sccgov.org',
+    'www.sjgov.org',            # San Joaquin moved off LiveVoterTurnout
+    'sjgov.org',
 ]
 
 # Security: Allowed file extensions
@@ -362,106 +369,61 @@ class LiveVoterTurnoutScraper(BaseScraper):
             
             # Extract contests
             print(f"[{self.county_name}] Extracting contests...")
-            
-            # Patterns to skip (headers, instructions, etc.)
-            skip_patterns = [
-                r'^SEMI-OFFICIAL',
-                r'^Results include:',
-                r'^Results do not include:',
-                r'^VOTER TURNOUT',
-                r'^Website Updated:',
-                r'^Statewide Elections Results',
-                r'^showing \d+ of \d+ contests',
-                r'^\s*$'  # Empty
-            ]
-            
+
             try:
-                # Find all contest elements (they're typically in divs with specific classes)
-                contest_elements = self.driver.find_elements(By.XPATH, 
-                    "//div[contains(@class, 'contest') or contains(@id, 'contest')] | " +
-                    "//section[contains(@class, 'contest')] | " +
-                    "//div[.//h2 | .//h3][.//table | .//div[contains(., 'Yes') or contains(., 'No')]]"
-                )
-                
-                for contest in contest_elements:
-                    try:
-                        contest_data = {
-                            'title': None,
-                            'precincts_reporting': None,
-                            'choices': []
-                        }
-                        
-                        # Get contest title
-                        try:
-                            title_elem = contest.find_element(By.XPATH, ".//h2 | .//h3 | .//*[contains(@class, 'title')]")
-                            contest_data['title'] = title_elem.text.strip()
-                        except:
-                            # Try to get title from parent or nearby elements
-                            contest_text = contest.text.split('\n')
-                            if contest_text:
-                                contest_data['title'] = contest_text[0].strip()
-                        
-                        if not contest_data['title']:
-                            continue
-                        
-                        # Skip non-contest headers
-                        should_skip = False
-                        for pattern in skip_patterns:
-                            if re.match(pattern, contest_data['title'], re.IGNORECASE):
-                                should_skip = True
-                                break
-                        
-                        if should_skip:
-                            continue
-                        
-                        # Get precincts reporting if available
-                        try:
-                            precincts_elem = contest.find_element(By.XPATH, ".//*[contains(text(), 'Precincts') or contains(text(), 'precinct')]")
-                            contest_data['precincts_reporting'] = precincts_elem.text.strip()
-                        except:
-                            pass
-                        
-                        # Get candidate/choice results
-                        try:
-                            # Try to find table rows or choice divs
-                            choice_elements = contest.find_elements(By.XPATH, 
-                                ".//tr[td] | .//div[contains(@class, 'choice')] | " +
-                                ".//div[contains(., 'YES') or contains(., 'NO') or contains(., 'Yes') or contains(., 'No')]"
-                            )
-                            
-                            # Keywords that only appear in containers/headers, never in individual choice rows
-                            junk_strings = ['VOTE FOR', 'Candidate Name', 'Total Votes\n', 'Percentage\n']
-                            seen_choices = set()
-                            for choice in choice_elements:
-                                choice_text = choice.text.strip()
-                                # Skip empty, header blobs, container divs, or duplicates
-                                if (choice_text and
-                                    any(char.isdigit() for char in choice_text) and
-                                    not choice_text.startswith('Candidate') and
-                                    not any(s in choice_text for s in junk_strings) and
-                                    choice_text not in seen_choices):
-                                    seen_choices.add(choice_text)
-                                    # Remove duplicate leading line caused by party column echoing candidate name
-                                    # e.g. "Yes\nYes\n101,892 54.11%" → "Yes\n101,892 54.11%"
-                                    lines = choice_text.split('\n')
-                                    if len(lines) >= 2 and lines[0].strip() == lines[1].strip():
-                                        choice_text = '\n'.join([lines[0]] + lines[2:])
-                                    choice = _parse_choice_str(
-                                        choice_text, self.county_name,
-                                        contest_data.get('title', '')
-                                    )
-                                    if choice is not None:
-                                        contest_data['choices'].append(choice)
-                        except:
-                            pass
-                        
-                        if contest_data['title'] and (contest_data['choices'] or contest_data['precincts_reporting']):
-                            data['contests'].append(contest_data)
-                    except Exception as e:
+                # Parse the loaded page with BeautifulSoup to extract proper contest names.
+                # LiveVoterTurnout uses a dropdown-per-contest structure:
+                #   <a class="heading align-center">
+                #     <span class="sr-only">Contest: Governor, VOTE FOR 1</span>
+                #   </a>
+                #   <div class="content"> <table> ... </table> </div>
+                # The visible h3 text only says the section name ("State Contests") —
+                # the actual contest name is in the sr-only span.
+                page_soup = BeautifulSoup(self.driver.page_source, 'html.parser')
+
+                for heading_a in page_soup.find_all("a", class_="heading"):
+                    sr = heading_a.find("span", class_="sr-only")
+                    if not sr:
                         continue
-                
+
+                    # Strip "Contest: " prefix and ", VOTE FOR X" suffix from the label.
+                    raw_title = sr.get_text(strip=True)
+                    title = re.sub(r'^Contest:\s*', '', raw_title)
+                    title = re.sub(r',?\s*VOTE FOR\s+\d+\s*$', '', title, flags=re.I).strip()
+                    if not title:
+                        continue
+
+                    # Candidates live in the sibling <div class="content"> table.
+                    content_div = heading_a.find_next_sibling("div")
+                    table = content_div.find("table") if content_div else None
+
+                    choices = []
+                    if table:
+                        for row in table.find_all("tr"):
+                            cells = row.find_all(["td", "th"])
+                            if len(cells) < 5:
+                                continue
+                            # Name cell (index 1): two spans — take the visible one (aria-hidden).
+                            name_cell = cells[1]
+                            visible = name_cell.find("span", attrs={"aria-hidden": "true"})
+                            name = visible.get_text(strip=True) if visible else name_cell.get_text(strip=True)
+                            if not name or name.lower() in ("candidate name", "candidate"):
+                                continue
+                            try:
+                                votes = int(cells[3].get_text(strip=True).replace(",", ""))
+                                pct   = float(cells[4].get_text(strip=True).rstrip("%"))
+                            except (ValueError, IndexError):
+                                continue
+                            choices.append({"name": name, "votes": votes, "pct": pct})
+
+                    data['contests'].append({
+                        "title":               title,
+                        "precincts_reporting": "",
+                        "choices":             choices,
+                    })
+
                 print(f"[{self.county_name}] ✓ Extracted {len(data['contests'])} contests")
-                
+
             except Exception as e:
                 print(f"[{self.county_name}] ⚠ Error extracting contests: {e}")
             
@@ -481,10 +443,17 @@ class SFElectionsScraper(BaseScraper):
     """Scraper for SF Elections (sfelections.org).
     Discovers the latest certified summary.xml from the detail page and parses
     the SSRS XML report directly — no Selenium needed.
+
+    The election ID (e.g. '20260602w') is derived from self.url so this
+    scraper automatically uses whichever election the county_links.csv points to.
     """
 
-    DETAIL_URL = 'https://sfelections.org/results/20251104w/detail.html'
-    BASE_URL   = 'https://www.sfelections.org'
+    BASE_URL = 'https://www.sfelections.org'
+
+    def _election_id_from_url(self):
+        """Extract the election ID (e.g. '20260602w') from the passed-in URL."""
+        m = re.search(r'/results/(\w+)/', self.url)
+        return m.group(1) if m else '20260602w'
 
     def scrape(self):
         self.rate_limiter.wait()
@@ -492,17 +461,24 @@ class SFElectionsScraper(BaseScraper):
         try:
             headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
 
-            # Find the most recent dated folder from the detail page
-            print(f"[{self.county_name}] Finding latest certified XML...")
-            r = self._fetch_with_retry(self.DETAIL_URL, headers=headers, timeout=20, verify=True)
+            # Derive the election ID from the URL passed in via county_links.csv.
+            # This makes the scraper work for any election without code changes —
+            # just update the URL in the Google Sheet links tab.
+            election_id = self._election_id_from_url()
+            election_date = election_id.rstrip('w')  # '20260602w' → '20260602'
+            detail_url = f'https://sfelections.org/results/{election_id}/detail.html'
+
+            print(f"[{self.county_name}] Election ID: {election_id}")
+            print(f"[{self.county_name}] Finding latest certified XML from {detail_url}...")
+            r = self._fetch_with_retry(detail_url, headers=headers, timeout=20, verify=True)
             soup = BeautifulSoup(r.text, 'html.parser')
 
             xml_url = None
-            # Links are like /results/20251104/data/20251203/summary.xml — pick the latest date folder
+            # Links are like /results/20260602/data/20260603/summary.xml — pick the latest date folder
             candidates = []
             for a in soup.find_all('a', href=True):
                 href = a['href']
-                m = re.search(r'/results/20251104/data/(\d+)/summary\.xml', href)
+                m = re.search(rf'/results/{election_date}/data/(\d+)/summary\.xml', href)
                 if m:
                     candidates.append((m.group(1), href))
             if candidates:
@@ -511,7 +487,8 @@ class SFElectionsScraper(BaseScraper):
                 xml_url = latest_href if latest_href.startswith('http') else self.BASE_URL + latest_href
 
             if not xml_url:
-                print(f"[{self.county_name}] ✗ Could not find summary.xml URL")
+                print(f"[{self.county_name}] ✗ Could not find summary.xml URL on {detail_url}")
+                print(f"[{self.county_name}]   Results may not be posted yet for election {election_id}.")
                 return None
 
             print(f"[{self.county_name}] Fetching XML: {xml_url}")
@@ -1318,25 +1295,31 @@ class NapaScraper(BaseScraper):
 
 class SolanoScraper(BaseScraper):
     """Scraper for Solano County elections.
-    Results are published as a signed PDF. We fetch it directly and parse with pdfplumber.
-    PDF format: multi-column with Election Day / Vote by Mail / Provisional / Total columns.
+    Results are published as a PDF or HTML summary file. The URL comes from
+    county_links.csv (synced from the Google Sheet) so it can be updated
+    without touching code when Solano publishes a new results page.
     """
-
-    PDF_URL = 'https://content.solanocounty.gov/sites/default/files/2026-01/Official_Summary_Results_-_SIGNED.pdf'
 
     def scrape(self):
         self.rate_limiter.wait()
         partial_data = None
         try:
-            import pdfplumber, io as _io
-            print(f"[{self.county_name}] Fetching Solano County summary PDF...")
             headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
-            r = self._fetch_with_retry(self.PDF_URL, headers=headers, timeout=20, verify=True)
+            fetch_url = self.url  # use the URL from county_links.csv, not a hardcoded value
+            print(f"[{self.county_name}] Fetching Solano County results from {fetch_url[:80]}...")
+            r = self._fetch_with_retry(fetch_url, headers=headers, timeout=20, verify=True)
 
-            with pdfplumber.open(_io.BytesIO(r.content)) as pdf:
-                text = '\n'.join(page.extract_text() or '' for page in pdf.pages)
+            if fetch_url.lower().endswith('.pdf'):
+                # PDF path — extract text with pdfplumber then use text-based parser
+                import pdfplumber, io as _io
+                with pdfplumber.open(_io.BytesIO(r.content)) as pdf:
+                    text = '\n'.join(page.extract_text() or '' for page in pdf.pages)
+                partial_data = self._parse(text)
+            else:
+                # HTML path — Solano publishes a structured HTML report.
+                # Parse directly with BeautifulSoup for accurate contest data.
+                partial_data = self._parse_html(r.text)
 
-            partial_data = self._parse(text)
             return partial_data
         except Exception as e:
             print(f"[{self.county_name}] ✗ Error: {e}")
@@ -1410,6 +1393,104 @@ class SolanoScraper(BaseScraper):
             print(f"[{self.county_name}] ✓ Extracted {len(data['contests'])} contests")
         except Exception as e:
             print(f"[{self.county_name}] ⚠ Error extracting contests: {e}")
+
+        return data
+
+    def _parse_html(self, html_text):
+        """
+        Parse Solano's HTML cumulative report format.
+
+        Solano publishes results as an HTML file where each contest is a table row
+        with the title "ContestName - Vote for ONE (1) on this page" and candidate
+        rows with 14 cells: [Name, Party, '', ED_votes, ED_pct, '', VBM_votes,
+        VBM_pct, '', Prov_votes, Prov_pct, '', Total_votes, Total_pct].
+
+        We take the Total column (last two cells) for each candidate.
+        """
+        from bs4 import BeautifulSoup as _BS
+
+        data = {
+            'timestamp': datetime.now().isoformat(),
+            'url': self.url,
+            'county_name': self.county_name,
+            'page_title': 'Solano County Election Results',
+            'last_updated': None,
+            'voter_turnout': {},
+            'contests': [],
+        }
+
+        soup = _BS(html_text, 'html.parser')
+
+        # Extract voter turnout from the "X of Y = Z%" pattern
+        print(f"[{self.county_name}] Extracting voter turnout data...")
+        try:
+            text = soup.get_text(separator=' ')
+            m = re.search(r'Registered Voters\s*([\d,]+)\s*of\s*([\d,]+)\s*=\s*([\d.]+)%', text)
+            if not m:
+                # Try alternate "ballots of registered = pct" pattern
+                m = re.search(r'([\d,]+)\s+of\s+([\d,]+)\s+=\s+([\d.]+)%', text)
+            if m:
+                data['voter_turnout']['ballots_cast']      = int(m.group(1).replace(',', ''))
+                data['voter_turnout']['registered_voters'] = int(m.group(2).replace(',', ''))
+                data['voter_turnout']['turnout_percentage'] = float(m.group(3))
+            m2 = re.search(r'Precincts\D+([\d]+)\s+of\s+([\d]+)\s*=\s*([\d.]+)%', text)
+            if m2:
+                data['voter_turnout']['precincts_reported'] = f"{m2.group(1)} / {m2.group(2)} ({m2.group(3)}%)"
+            print(f"[{self.county_name}] ✓ Voter turnout: {data['voter_turnout']}")
+        except Exception as e:
+            print(f"[{self.county_name}] ⚠ Turnout error: {e}")
+
+        # Extract contests from table rows
+        print(f"[{self.county_name}] Extracting contests...")
+        try:
+            current_contest = None
+            current_choices = []
+
+            def _save():
+                if current_contest and current_choices:
+                    data['contests'].append({
+                        'title': current_contest,
+                        'precincts_reporting': '',
+                        'choices': list(current_choices),
+                    })
+
+            # Use recursive=False on td/th so colspan="14" header cells count as
+            # one cell rather than being flattened by deeply nested tables.
+            seen_contests: set = set()
+            for row in soup.find_all("tr"):
+                cells = [td.get_text(strip=True)
+                         for td in row.find_all(["td", "th"], recursive=False)]
+                if not cells:
+                    continue
+
+                first = cells[0]
+
+                # Contest header: "Governor - Vote for ONE (1) on this page"
+                # or  "Lieutenant Governor - Vote for ONE (1)"  (no trailing phrase)
+                if len(cells) == 1 and '- Vote for' in first:
+                    title = re.sub(r'\s*-\s*Vote for.*', '', first).strip()
+                    if title and title not in seen_contests:
+                        _save()
+                        current_contest = title
+                        current_choices = []
+                        seen_contests.add(title)
+                    continue
+
+                # Candidate row: 14 direct cells, first cell is ALL-CAPS name
+                if (current_contest and len(cells) == 14
+                        and re.match(r'^[A-Z][A-Z\s\.\-\'\(\)\/]+$', first)
+                        and first not in ('CHOICE', 'CANDIDATE NAME')):
+                    try:
+                        votes = int(cells[12].replace(',', '')) if cells[12] else 0
+                        pct   = float(cells[13].rstrip('%')) if cells[13] else 0.0
+                        current_choices.append({'name': first, 'votes': votes, 'pct': pct})
+                    except (ValueError, IndexError):
+                        pass
+
+            _save()  # save the last contest
+            print(f"[{self.county_name}] ✓ Extracted {len(data['contests'])} contests")
+        except Exception as e:
+            print(f"[{self.county_name}] ⚠ Contest error: {e}")
 
         return data
 

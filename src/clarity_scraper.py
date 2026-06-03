@@ -40,7 +40,14 @@ ALLOWED_DOMAINS = [
     'clarityelections.com',
     'livevoterturnout.com',
     'sfelections.org',
-    'santacruzcountyca.gov'
+    'www.sf.gov',
+    'sf.gov',
+    'santacruzcountyca.gov',
+    'votescount.santacruzcountyca.gov',
+    'rovservices.sccgov.org',   # Santa Clara may switch to county site for June 2
+    'sccgov.org',
+    'www.sjgov.org',
+    'sjgov.org',
 ]
 
 # Security: Allowed file extensions
@@ -426,38 +433,118 @@ class ClarityScraper:
     
     def check_for_json_data(self):
         """
-        Attempt to find JSON data endpoints by analyzing network requests
-        Clarity sites often load data from JSON APIs
+        Fetch ALL contests directly from the Clarity JSON API.
+
+        Clarity exposes a versioned summary.json that contains every contest —
+        statewide, county, local, and measures — with choices, votes, and
+        percentages. This is faster than Selenium and gets races that the
+        summary page doesn't show without scrolling into collapsed sections.
+
+        Steps:
+          1. GET /current_ver.txt → version number (e.g. "372713")
+          2. GET /{version}/json/en/summary.json → full contest list
+          3. Parse into the selenium_data-compatible format so normalize.py
+             can read it without any changes.
+
+        Returns a dict matching the selenium_data structure, or None if the
+        API is unavailable (fall through to Selenium scraping).
         """
         try:
-            # Common Clarity Elections JSON endpoints
-            potential_endpoints = [
-                f"{self.base_url}/json/en/summary.json",
-                f"{self.base_url}/json/summary.json",
-                f"{self.base_url}/en/summary.json",
-            ]
-            
-            for endpoint in potential_endpoints:
-                try:
-                    # Security: Rate limit requests
-                    self.rate_limiter.wait()
-                    
-                    # Security: Explicit SSL verification
-                    response = self.session.get(
-                        endpoint,
-                        headers={'Referer': self.url},
-                        timeout=10,
-                        verify=True
-                    )
-                    if response.status_code == 200:
-                        return response.json()
-                except:
+            self.rate_limiter.wait()
+            headers = {'User-Agent': self.session.headers.get('User-Agent', 'Mozilla/5.0'),
+                       'Referer': self.url}
+
+            # The Clarity JSON API lives one level above the web.XXXXX sub-path,
+            # e.g. base_url is ".../126374/web.345435" but current_ver.txt is at
+            # ".../126374/current_ver.txt". Use the parent directory.
+            election_base = '/'.join(self.base_url.rstrip('/').split('/')[:-1])
+
+            # Step 1 — get the current version number.
+            ver_url = f"{election_base}/current_ver.txt"
+            r = self.session.get(ver_url, headers=headers, timeout=10, verify=True)
+            if r.status_code != 200:
+                return None
+            version = r.text.strip()
+            if not version.isdigit():
+                return None
+            print(f"  Clarity JSON API version: {version}")
+
+            # Step 2 — download the versioned summary that has every contest.
+            summary_url = f"{election_base}/{version}/json/en/summary.json"
+            r = self.session.get(summary_url, headers=headers, timeout=15, verify=True)
+            if r.status_code != 200:
+                return None
+            contests_raw = r.json()
+            print(f"  JSON API returned {len(contests_raw)} contest entries")
+
+            # Step 3 — parse into the selenium_data structure.
+            contests = []
+            total_ballots = 0
+            registered_voters = 0
+
+            for item in contests_raw:
+                title     = (item.get("C") or "").strip()
+                choices   = item.get("CH") or []
+                votes_arr = item.get("V")  or []
+                pct_arr   = item.get("PCT") or []
+                total_pr  = item.get("TP") or 0   # total precincts
+                rep_pr    = item.get("PR") or 0    # precincts reporting
+                bc        = item.get("BCxContest") or 0  # ballots cast for this contest
+                reg       = item.get("regvoters")  or 0
+
+                if not title or not choices:
                     continue
-                    
+
+                # Build canonical choice dicts.
+                parsed_choices = []
+                for i, name in enumerate(choices):
+                    name = str(name).strip()
+                    if not name:
+                        continue
+                    votes = int(votes_arr[i]) if i < len(votes_arr) else 0
+                    pct   = float(pct_arr[i]) if i < len(pct_arr)  else 0.0
+                    parsed_choices.append({"name": name, "votes": votes, "pct": pct})
+
+                # Precinct string.
+                precincts_str = ""
+                if total_pr:
+                    precincts_str = f"{rep_pr} of {total_pr} Precincts Reported"
+
+                contests.append({
+                    "title":              title,
+                    "precincts_reporting": precincts_str,
+                    "choices":            parsed_choices,
+                })
+
+                # Use the highest ballots-cast and registered-voters values
+                # across all contests as the county-level turnout figure.
+                if bc > total_ballots:
+                    total_ballots = bc
+                if reg > registered_voters:
+                    registered_voters = reg
+
+            if not contests:
+                return None
+
+            # Compute turnout percentage.
+            turnout_pct = round(total_ballots / registered_voters * 100, 2) if registered_voters else 0.0
+
+            return {
+                "timestamp":    datetime.now().isoformat(),
+                "url":          self.url,
+                "page_title":   "Election Night Reporting (JSON API)",
+                "voter_turnout": {
+                    "ballots_cast":       total_ballots,
+                    "registered_voters":  registered_voters,
+                    "turnout_percentage": turnout_pct,
+                },
+                "contests":     contests,
+                "last_updated": datetime.now().strftime("%A, %B %-d, %Y, %-I:%M:%S %p"),
+            }
+
         except Exception as e:
-            print(f"Error checking JSON endpoints: {e}")
-        
-        return None
+            print(f"  Clarity JSON API error: {e}")
+            return None
     
     # CSS selectors used to identify individual contest blocks on Clarity SPAs.
     # Clarity renders each contest as a Bootstrap card: <div class="card contest">.
@@ -484,35 +571,40 @@ class ClarityScraper:
     def _find_contest_elements(self):
         """Return contest card elements from the current page.
 
-        Clarity renders each contest as a Bootstrap card-level div, e.g.:
-          <div class="card contest"> or <div class="contest mb-3 col-12">
+        Clarity renders contests using Bootstrap card-level divs. The precise
+        CSS class varies — statewide races often use .card.contest while local
+        races use .contest.col-12 or similar. We collect from all known selectors
+        then deduplicate by DOM element identity so local races aren't missed.
 
-        We try precise card-level selectors first.  If none match we fall back
-        to the broad [class*='contest'] net and filter out elements whose text
-        is clearly not a full contest card (empty, just a number, etc.).
+        On zero-report pages local races may not yet have vote percentages,
+        so we do NOT require % in the text — we just need a title and content.
         """
-        # Try precise selectors first — these target the card level directly
-        # and avoid picking up sub-elements like contest-name or btn-contest.
-        for sel in self._CONTEST_PRECISE_SELECTORS:
-            elems = self.driver.find_elements(By.CSS_SELECTOR, sel)
-            elems = [e for e in elems if e.text.strip() and len(e.text.strip()) > 10]
-            if elems:
-                return elems
-
-        # Fallback: broad selector, keep only elements that look like full cards
-        # (have substantial text containing vote data).
-        all_elems = self.driver.find_elements(By.CSS_SELECTOR, self._CONTEST_CARD_SELECTOR)
+        seen_ids = set()
         result = []
-        for elem in all_elems:
-            try:
-                txt = elem.text.strip()
-                if not txt or len(txt) < 10:
+
+        def _add(elems):
+            for e in elems:
+                try:
+                    eid = e.id  # Selenium's internal element ID — unique per DOM node
+                    if eid in seen_ids:
+                        continue
+                    txt = e.text.strip()
+                    if not txt or len(txt) < 15:
+                        continue
+                    seen_ids.add(eid)
+                    result.append(e)
+                except Exception:
                     continue
-                # Must contain something that looks like vote data
-                if re.search(r'\d+\.?\d*%', txt):
-                    result.append(elem)
-            except Exception:
-                continue
+
+        # Try each precise selector and collect unique elements from all of them.
+        for sel in self._CONTEST_PRECISE_SELECTORS:
+            _add(self.driver.find_elements(By.CSS_SELECTOR, sel))
+
+        # Also sweep with the broad selector to catch local races that use
+        # different class names — filter out tiny/empty sub-elements only.
+        all_elems = self.driver.find_elements(By.CSS_SELECTOR, self._CONTEST_CARD_SELECTOR)
+        _add([e for e in all_elems if len(e.text.strip()) > 15])
+
         return result
 
     def scrape_with_selenium(self):
@@ -578,6 +670,24 @@ class ClarityScraper:
             if _timed_out():
                 print("Hard timeout reached after content wait — aborting")
                 return None
+
+            # Scroll the page incrementally so Clarity lazy-loads all contest cards.
+            # Without scrolling, only the contests visible in the initial viewport are
+            # rendered — local races below the fold never appear in the DOM.
+            print("Scrolling page to load all contests...")
+            last_height = self.driver.execute_script("return document.body.scrollHeight")
+            scroll_attempts = 0
+            while scroll_attempts < 20 and not _timed_out():
+                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                time.sleep(0.5)
+                new_height = self.driver.execute_script("return document.body.scrollHeight")
+                if new_height == last_height:
+                    break  # no more content loaded
+                last_height = new_height
+                scroll_attempts += 1
+            # Scroll back to the top so element coordinates are stable for extraction.
+            self.driver.execute_script("window.scrollTo(0, 0);")
+            time.sleep(0.3)
 
             # Quick recon — log element count before extraction.
             contest_elements = self.driver.find_elements(By.CSS_SELECTOR, self._CONTEST_CARD_SELECTOR)
@@ -935,20 +1045,21 @@ class ClarityScraper:
             'reports': []
         }
         
-        # Try 1: Check for direct JSON endpoints
+        # Try 1: Clarity versioned JSON API — fastest and gets ALL contests including
+        # county and local races that the summary page hides in collapsed sections.
         print("\n[1] Checking for JSON data endpoints...")
         json_data = self.check_for_json_data()
         if json_data:
-            print("JSON data found - skipping Selenium (JSON API is sufficient)")
-            results['json_data'] = json_data
+            contest_count = len(json_data.get("contests", []))
+            print(f"JSON data found — {contest_count} contests. Skipping Selenium.")
+            # Store in selenium_data so normalize.py reads it (normalize reads that key).
+            results['json_data']    = json_data
+            results['selenium_data'] = json_data
 
-            # Save results to JSON file only if enabled
             if self.save_files:
                 output_file = validate_and_secure_filepath(DATA_DIR, "scrape", "json")
-
                 with open(output_file, 'w', encoding='utf-8') as f:
                     json.dump(results, f, indent=2, ensure_ascii=False)
-
                 print(f"\nResults saved to: {output_file}")
                 print(f"{'='*60}\n")
 

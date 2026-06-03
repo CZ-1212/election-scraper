@@ -1,0 +1,30 @@
+{
+  "county_name": "San_Joaquin",
+  "platform": "livevoterturnout",
+  "scrape_duration": 21.1,
+  "scrape_timestamp": "2026-06-02T20:01:30.000000",
+  "voter_turnout": {
+    "ballots_cast": 75300,
+    "registered_voters": 332180,
+    "turnout_percentage": 22.67
+  },
+  "contests": [
+    {
+      "title": "Measure D — Stockton Unified School District Parcel Tax",
+      "precincts_reporting": "412 of 412 Precincts Reported",
+      "choices": [
+        {"name": "Yes", "votes": 42168, "pct": 56.00},
+        {"name": "No", "votes": 33132, "pct": 44.00}
+      ]
+    },
+    {
+      "title": "San Joaquin County Supervisor — District 2",
+      "precincts_reporting": "412 of 412 Precincts Reported",
+      "choices": [
+        {"name": "Carlos Reyes", "votes": 38403, "pct": 51.00},
+        {"name": "Angela Wu", "votes": 36897, "pct": 49.00}
+      ]
+    }
+  ],
+  "last_updated": "June 2, 2026 8:00 PM"
+}

@@ -1,0 +1,30 @@
+{
+  "county_name": "San_Mateo",
+  "platform": "livevoterturnout",
+  "scrape_duration": 18.4,
+  "scrape_timestamp": "2026-06-02T20:01:30.000000",
+  "voter_turnout": {
+    "ballots_cast": 98500,
+    "registered_voters": 415220,
+    "turnout_percentage": 23.72
+  },
+  "contests": [
+    {
+      "title": "Measure A — San Mateo County Parks Bond",
+      "precincts_reporting": "539 of 539 Precincts Reported",
+      "choices": [
+        {"name": "Yes", "votes": 64125, "pct": 65.10},
+        {"name": "No", "votes": 34375, "pct": 34.90}
+      ]
+    },
+    {
+      "title": "San Mateo County Board of Supervisors — District 3",
+      "precincts_reporting": "539 of 539 Precincts Reported",
+      "choices": [
+        {"name": "Diana Lopez", "votes": 51220, "pct": 52.00},
+        {"name": "Robert Kim", "votes": 47280, "pct": 48.00}
+      ]
+    }
+  ],
+  "last_updated": "June 2, 2026 8:00 PM"
+}
