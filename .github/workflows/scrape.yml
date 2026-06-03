@@ -22,6 +22,12 @@ jobs:
     # Keep running even if individual steps fail so we always attempt normalize + sheets.
     # Each step records its own outcome and the final summary step reports everything.
 
+    # Render every timestamp in this job (git commit messages, summary echoes) in
+    # Pacific time to match the Google Sheet and the master JSON, which are already
+    # Pacific. GitHub runners default to UTC; this overrides that for the whole job.
+    env:
+      TZ: America/Los_Angeles
+
     steps:
       # 1. Check out the repo so we have all the source files.
       - name: Check out repository
@@ -34,15 +40,22 @@ jobs:
           python-version: "3.11"
 
       # 3. Install Chrome for Selenium (required by the Clarity scraper).
-      #    We install Google Chrome from the official source so the version is stable.
+      #    Uses the modern signed-by method — apt-key add is deprecated on Ubuntu 22.04.
+      #    Selenium 4.6+ includes Selenium Manager which auto-downloads the matching
+      #    ChromeDriver once Chrome is installed, so no separate chromedriver step needed.
       - name: Install Google Chrome
         id: install_chrome
         continue-on-error: true
         run: |
-          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-          echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub \
+            | gpg --dearmor \
+            | sudo tee /usr/share/keyrings/google-chrome.gpg > /dev/null
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] \
+            http://dl.google.com/linux/chrome/deb/ stable main" \
+            | sudo tee /etc/apt/sources.list.d/google-chrome.list
           sudo apt-get update -q
           sudo apt-get install -y google-chrome-stable
+          google-chrome --version
 
       # 4. Create the virtual environment and install all Python dependencies.
       - name: Create venv and install dependencies
@@ -73,13 +86,15 @@ jobs:
           echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}' > service-account-key.json
 
       # 7. Scrape all county websites and save raw JSON files to data/.
+      #    --live uses live_url from county_links.csv (the actual election-night
+      #    endpoints) instead of test_url (zero reports / past-election links).
       #    continue-on-error so one county being down never blocks the rest.
       - name: Scrape county websites
         id: scrape
         continue-on-error: true
         run: |
           source venv/bin/activate
-          python run_all.py --scraper both --no-sheets
+          python run_all.py --scraper both --no-sheets --live
         env:
           DISPLAY: ""
 
@@ -112,7 +127,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/processed/election_results_master.json data/processed/vote_count_state.json
           # Only commit if there's actually something new — avoids empty commits.
-          git diff --staged --quiet || git commit -m "chore: auto-update election results [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+          git diff --staged --quiet || git commit -m "chore: auto-update election results [$(date '+%Y-%m-%d %H:%M %Z')]"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -123,7 +138,7 @@ jobs:
         if: always()
         run: |
           echo "============================================================"
-          echo "PIPELINE SUMMARY — $(date -u '+%Y-%m-%d %H:%M UTC')"
+          echo "PIPELINE SUMMARY — $(date '+%Y-%m-%d %H:%M %Z')"
           echo "============================================================"
           echo "Chrome install : ${{ steps.install_chrome.outcome }}"
           echo "Scrape         : ${{ steps.scrape.outcome }}"

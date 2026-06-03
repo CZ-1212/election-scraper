@@ -1,65 +1,30 @@
 {
-  "pipeline_timestamp": "2026-06-03T00:05:33.016353",
+  "pipeline_timestamp": "2026-06-02T19:45:57.660782-07:00",
   "county_count": 13,
   "counties": {
     "Alameda": {
       "county": "Alameda",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-03 00:05:32",
+      "last_updated": "2026-06-02 19:45:57",
       "voter_turnout": {
-        "ballots_cast": 508730,
-        "registered_voters": 965876,
-        "turnout_percentage": 52.67
+        "ballots_cast": 0,
+        "registered_voters": 0,
+        "turnout_percentage": 0.0
       },
-      "contests": [
-        {
-          "title": "Proposition 50",
-          "precincts_reporting": "",
-          "choices": [
-            {
-              "name": "Yes",
-              "votes": 409301,
-              "pct": 80.58
-            },
-            {
-              "name": "No",
-              "votes": 98653,
-              "pct": 19.42
-            }
-          ],
-          "is_measure": true,
-          "measure_description": "",
-          "measure_jurisdiction": ""
-        },
-        {
-          "title": "Measure B - Washington Township Healthcare District",
-          "precincts_reporting": "",
-          "choices": [
-            {
-              "name": "Yes",
-              "votes": 57647,
-              "pct": 65.2
-            },
-            {
-              "name": "No",
-              "votes": 30774,
-              "pct": 34.8
-            }
-          ],
-          "is_measure": true,
-          "measure_description": "",
-          "measure_jurisdiction": ""
-        }
+      "contests": [],
+      "anomalies": [
+        "ZERO_BALLOTS: ballots_cast is 0 — results may not be posted yet",
+        "NO_CONTESTS: contests list is empty — check the county website",
+        "MISSING_TURNOUT: no turnout data available for this county"
       ],
-      "anomalies": [],
-      "scrape_status": "OK"
+      "scrape_status": "WARN"
     },
     "Contra_Costa": {
       "county": "Contra_Costa",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-03 00:05:32",
+      "last_updated": "2026-06-02 19:45:57",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 731497,
@@ -1412,7 +1377,7 @@
       "county": "Marin",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-03 00:05:32",
+      "last_updated": "2026-06-02 19:45:57",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 173082,
@@ -2784,7 +2749,7 @@
       "county": "Mendocino",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-03 00:05:32",
+      "last_updated": "2026-06-02 19:45:57",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 0,
@@ -2802,7 +2767,7 @@
       "county": "Monterey",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-03 00:05:32",
+      "last_updated": "2026-06-02 19:45:57",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 0,
@@ -4169,7 +4134,7 @@
       "county": "Napa",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-03 00:05:32",
+      "last_updated": "2026-06-02 19:45:57",
       "voter_turnout": {
         "ballots_cast": 52409,
         "registered_voters": 86390,
@@ -4203,7 +4168,7 @@
       "county": "San_Francisco",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-03 00:05:32",
+      "last_updated": "2026-06-02 19:45:57",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 531781,
@@ -5765,7 +5730,7 @@
       "county": "San_Joaquin",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-03 00:05:32",
+      "last_updated": "2026-06-02 19:45:57",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 410058,
@@ -7265,7 +7230,7 @@
       "county": "San_Mateo",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-03 00:05:32",
+      "last_updated": "2026-06-02 19:45:57",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 447306,
@@ -8644,7 +8609,7 @@
       "county": "Santa_Clara",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-03 00:05:32",
+      "last_updated": "2026-06-02 19:45:57",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 1075142,
@@ -9997,7 +9962,7 @@
       "county": "Santa_Cruz",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-03 00:05:32",
+      "last_updated": "2026-06-02 19:45:57",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 0,
@@ -11506,7 +11471,7 @@
       "county": "Solano",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-03 00:05:32",
+      "last_updated": "2026-06-02 19:45:57",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 275572,
@@ -12594,7 +12559,7 @@
       "county": "Sonoma",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-03 00:05:32",
+      "last_updated": "2026-06-02 19:45:57",
       "voter_turnout": {
         "ballots_cast": 0,
         "registered_voters": 319260,
