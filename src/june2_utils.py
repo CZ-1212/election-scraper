@@ -799,20 +799,22 @@ def render_uncontested_dropdown(uncontested: list[dict]) -> str:
             "</div>"
         )
 
+    # Use native <details>/<summary> so the toggle works without JavaScript —
+    # WordPress and other CMSes strip <script> tags, which broke the old JS toggle.
     return (
-        '<div class="uncontested-wrap" id="uncontestedWrap">'
-        '<div class="uncontested-toggle" id="uncontestedToggle">'
+        '<details class="uncontested-wrap">'
+        '<summary class="uncontested-toggle">'
         "<span>"
         '<span class="uncontested-toggle-label">Uncontested Races</span>'
         f'<span class="uncontested-toggle-count">{_html.escape(count_label)}</span>'
         "</span>"
-        '<svg class="uncontested-chevron" id="uncontestedChevron" width="16" height="16" '
+        '<svg class="uncontested-chevron" width="16" height="16" '
         'viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">'
         '<path d="M4 6L8 10L12 6" stroke="white" stroke-width="2" '
         'stroke-linecap="round" stroke-linejoin="round"/>'
         "</svg>"
-        "</div>"
-        '<div class="uncontested-body" id="uncontestedBody">'
+        "</summary>"
+        '<div class="uncontested-body">'
         + "".join(rows_html)
-        + "</div></div>"
+        + "</div></details>"
     )
