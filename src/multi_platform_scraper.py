@@ -474,27 +474,47 @@ class SFElectionsScraper(BaseScraper):
             soup = BeautifulSoup(r.text, 'html.parser')
 
             xml_url = None
-            # Links are like /results/20260602/data/20260603/summary.xml — pick the latest date folder
-            candidates = []
+            pdf_url = None
+            # Folder names can be numeric ('20260602') or have a suffix ('20260602_1').
+            # Match both with [\d_]+ instead of \d+.
+            candidates_xml = []
+            candidates_pdf = []
             for a in soup.find_all('a', href=True):
                 href = a['href']
-                m = re.search(rf'/results/{election_date}/data/(\d+)/summary\.xml', href)
+                m = re.search(rf'/results/{election_date}/data/([\d_]+)/summary\.xml', href)
                 if m:
-                    candidates.append((m.group(1), href))
-            if candidates:
-                candidates.sort(key=lambda x: x[0], reverse=True)
-                latest_href = candidates[0][1]
-                xml_url = latest_href if latest_href.startswith('http') else self.BASE_URL + latest_href
+                    candidates_xml.append((m.group(1), href))
+                    continue
+                m = re.search(rf'/results/{election_date}/data/([\d_]+)/summary\.pdf', href)
+                if m:
+                    candidates_pdf.append((m.group(1), href))
 
-            if not xml_url:
-                print(f"[{self.county_name}] ✗ Could not find summary.xml URL on {detail_url}")
+            if candidates_xml:
+                candidates_xml.sort(key=lambda x: x[0], reverse=True)
+                latest_href = candidates_xml[0][1]
+                xml_url = latest_href if latest_href.startswith('http') else self.BASE_URL + latest_href
+            elif candidates_pdf:
+                candidates_pdf.sort(key=lambda x: x[0], reverse=True)
+                latest_href = candidates_pdf[0][1]
+                pdf_url = latest_href if latest_href.startswith('http') else self.BASE_URL + latest_href
+
+            if xml_url:
+                print(f"[{self.county_name}] Fetching XML: {xml_url}")
+                r = self._fetch_with_retry(xml_url, headers=headers, timeout=20, verify=True)
+                partial_data = self._parse_ssrs_xml(r.text)
+                return partial_data
+            elif pdf_url:
+                print(f"[{self.county_name}] No XML found — fetching PDF: {pdf_url}")
+                r = self._fetch_with_retry(pdf_url, headers=headers, timeout=30, verify=True)
+                import pdfplumber, io as _io
+                with pdfplumber.open(_io.BytesIO(r.content)) as pdf:
+                    text = '\n'.join(page.extract_text() or '' for page in pdf.pages)
+                partial_data = self._parse_pdf(text)
+                return partial_data
+            else:
+                print(f"[{self.county_name}] ✗ Could not find summary.xml or summary.pdf on {detail_url}")
                 print(f"[{self.county_name}]   Results may not be posted yet for election {election_id}.")
                 return None
-
-            print(f"[{self.county_name}] Fetching XML: {xml_url}")
-            r = self._fetch_with_retry(xml_url, headers=headers, timeout=20, verify=True)
-            partial_data = self._parse_ssrs_xml(r.text)
-            return partial_data
 
         except Exception as e:
             print(f"[{self.county_name}] ✗ Error: {e}")
@@ -589,6 +609,83 @@ class SFElectionsScraper(BaseScraper):
         except Exception as e:
             print(f"[{self.county_name}] ⚠ Error extracting contests: {e}")
 
+        return data
+
+    def _parse_pdf(self, text):
+        """
+        Parse SF Elections summary PDF (pdfplumber plain-text extraction).
+
+        SF PDFs use a consistent layout:
+          - Contest header line (e.g. 'MAYOR')
+          - Candidate rows: 'CANDIDATE NAME   1,234  56.78%'
+          - Voter turnout block: 'Ballots Cast: 12,345' etc.
+        """
+        data = {
+            'timestamp': datetime.now().isoformat(),
+            'url': self.url,
+            'county_name': self.county_name,
+            'page_title': 'San Francisco Election Results',
+            'last_updated': None,
+            'voter_turnout': {},
+            'contests': [],
+        }
+
+        lines = [l.strip() for l in text.splitlines() if l.strip()]
+
+        # Voter turnout
+        for line in lines:
+            m = re.search(r'Ballots\s+Cast[:\s]+([\d,]+)', line, re.I)
+            if m:
+                data['voter_turnout']['ballots_cast'] = int(m.group(1).replace(',', ''))
+            m = re.search(r'Registered\s+Voters[:\s]+([\d,]+)', line, re.I)
+            if m:
+                data['voter_turnout']['registered_voters'] = int(m.group(1).replace(',', ''))
+            m = re.search(r'Voter\s+Turnout[:\s]+([\d.]+)%', line, re.I)
+            if m:
+                data['voter_turnout']['turnout_percentage'] = float(m.group(1))
+            m = re.search(r'Precincts\s+Reporting[:\s]+([\d,]+)\s+of\s+([\d,]+)', line, re.I)
+            if m:
+                rep, tot = int(m.group(1).replace(',', '')), int(m.group(2).replace(',', ''))
+                data['voter_turnout']['precincts_reported'] = f"{rep} / {tot} ({rep/tot*100:.2f}%)"
+
+        # Contests — a line with no digits is a candidate race header;
+        # candidate rows end with  votes  pct%
+        choice_re = re.compile(r'^(.+?)\s+([\d,]+)\s+([\d.]+)%\s*$')
+        current_contest = None
+        current_choices = []
+
+        def _save():
+            if current_contest and current_choices:
+                data['contests'].append({
+                    'title': current_contest,
+                    'precincts_reporting': '',
+                    'choices': list(current_choices),
+                })
+
+        for line in lines:
+            cm = choice_re.match(line)
+            if cm:
+                if current_contest is None:
+                    continue
+                name = cm.group(1).strip()
+                if name.upper() in ('CANDIDATE', 'TOTAL', 'CHOICE'):
+                    continue
+                try:
+                    current_choices.append({
+                        'name': name,
+                        'votes': int(cm.group(2).replace(',', '')),
+                        'pct': float(cm.group(3)),
+                    })
+                except (ValueError, TypeError):
+                    pass
+            elif re.match(r'^[A-Z][A-Z0-9\s,\.\-\'\"/\(\)&]+$', line) and not re.search(r'\d', line):
+                _save()
+                current_contest = line.strip()
+                current_choices = []
+
+        _save()
+        print(f"[{self.county_name}] ✓ PDF parsed: {len(data['contests'])} contests, "
+              f"turnout: {data['voter_turnout']}")
         return data
 
 
@@ -1478,7 +1575,7 @@ class SolanoScraper(BaseScraper):
 
                 # Candidate row: 14 direct cells, first cell is ALL-CAPS name
                 if (current_contest and len(cells) == 14
-                        and re.match(r'^[A-Z][A-Z\s\.\-\'\(\)\/]+$', first)
+                        and re.match(r'^[A-Z][A-Z\s\.\-\'\"\(\)\/]+$', first)
                         and first not in ('CHOICE', 'CANDIDATE NAME')):
                     try:
                         votes = int(cells[12].replace(',', '')) if cells[12] else 0
