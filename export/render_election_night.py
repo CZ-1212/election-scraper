@@ -406,7 +406,7 @@ def _render_candidate_race(race_def: dict, contest: dict) -> str:
             f'      <div class="candidate-bar-cell">\n'
             f'        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:{_bar_width(ch.get("pct"))}%"></div></div>\n'
             f'      </div>\n'
-            f'      <div class="candidate-pct pct-n">{float(ch.get("pct") or 0):.1f}%</div>\n'
+            f'      <div class="candidate-pct pct-n">{float(ch.get("pct") or 0):.2f}%</div>\n'
             f'      <div class="candidate-votes">{_fmt_int(ch.get("votes"))}</div>\n'
             f'    </div>'
         )
