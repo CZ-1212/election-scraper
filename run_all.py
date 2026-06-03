@@ -12,8 +12,9 @@ the project root. It chains four steps in order:
   4. WORDPRESS — (Manual only) Push HTML results to the BCN/LNM WordPress site
 
 Usage examples:
-  python run_all.py                        # Full pipeline (scrape + normalize + sheets)
-  python run_all.py --render               # Also render per-county HTML after normalize
+  python run_all.py                        # Full pipeline — live URLs + render (both on by default)
+  python run_all.py --no-live              # Use test URLs (zero reports / past-election links)
+  python run_all.py --no-render            # Skip HTML rendering
   python run_all.py --render --embed       # Render embeddable widget blocks (no <html> wrapper)
   python run_all.py --scraper clarity      # Only scrape Clarity counties
   python run_all.py --no-sheets            # Scrape and normalize, skip sheets
@@ -124,11 +125,11 @@ def parse_args():
     parser.add_argument(
         "--live",
         action="store_true",
-        help="Use live_url instead of test_url from county_links.csv. "
-             "For zero-report counties this is the same URL. For placeholder counties "
-             "this points to the actual June 2 election results page. "
-             "Use this on election night or to test the live endpoints beforehand.",
+        default=True,
+        help="Use live_url instead of test_url from county_links.csv (default: on). "
+             "Pass --no-live to use test URLs (zero reports / past-election links).",
     )
+    parser.add_argument("--no-live", dest="live", action="store_false")
 
     parser.add_argument(
         "--test-sheets",
@@ -147,10 +148,11 @@ def parse_args():
     parser.add_argument(
         "--render",
         action="store_true",
-        help="Render per-county election night HTML after normalizing. "
-             "Writes output/election_night/<County>.html and "
-             "data/processed/election_night_by_county.csv.",
+        default=True,
+        help="Render per-county election night HTML after normalizing (default: on). "
+             "Pass --no-render to skip HTML generation.",
     )
+    parser.add_argument("--no-render", dest="render", action="store_false")
 
     parser.add_argument(
         "--embed",

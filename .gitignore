@@ -35,6 +35,9 @@ data/processed/*
 !data/processed/wp_inject_state.json
 !data/processed/vote_count_state.json
 
+# Renderer outputs — generated on every pipeline run, never commit these
+output/election_night/
+
 # Other data formats
 *.xml
 *.xls
