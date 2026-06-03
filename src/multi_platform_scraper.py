@@ -474,27 +474,47 @@ class SFElectionsScraper(BaseScraper):
             soup = BeautifulSoup(r.text, 'html.parser')
 
             xml_url = None
-            # Links are like /results/20260602/data/20260603/summary.xml — pick the latest date folder
-            candidates = []
+            pdf_url = None
+            # Folder names can be numeric ('20260602') or have a suffix ('20260602_1').
+            # Match both with [\d_]+ instead of \d+.
+            candidates_xml = []
+            candidates_pdf = []
             for a in soup.find_all('a', href=True):
                 href = a['href']
-                m = re.search(rf'/results/{election_date}/data/(\d+)/summary\.xml', href)
+                m = re.search(rf'/results/{election_date}/data/([\d_]+)/summary\.xml', href)
                 if m:
-                    candidates.append((m.group(1), href))
-            if candidates:
-                candidates.sort(key=lambda x: x[0], reverse=True)
-                latest_href = candidates[0][1]
-                xml_url = latest_href if latest_href.startswith('http') else self.BASE_URL + latest_href
+                    candidates_xml.append((m.group(1), href))
+                    continue
+                m = re.search(rf'/results/{election_date}/data/([\d_]+)/summary\.pdf', href)
+                if m:
+                    candidates_pdf.append((m.group(1), href))
 
-            if not xml_url:
-                print(f"[{self.county_name}] ✗ Could not find summary.xml URL on {detail_url}")
+            if candidates_xml:
+                candidates_xml.sort(key=lambda x: x[0], reverse=True)
+                latest_href = candidates_xml[0][1]
+                xml_url = latest_href if latest_href.startswith('http') else self.BASE_URL + latest_href
+            elif candidates_pdf:
+                candidates_pdf.sort(key=lambda x: x[0], reverse=True)
+                latest_href = candidates_pdf[0][1]
+                pdf_url = latest_href if latest_href.startswith('http') else self.BASE_URL + latest_href
+
+            if xml_url:
+                print(f"[{self.county_name}] Fetching XML: {xml_url}")
+                r = self._fetch_with_retry(xml_url, headers=headers, timeout=20, verify=True)
+                partial_data = self._parse_ssrs_xml(r.text)
+                return partial_data
+            elif pdf_url:
+                print(f"[{self.county_name}] No XML found — fetching PDF: {pdf_url}")
+                r = self._fetch_with_retry(pdf_url, headers=headers, timeout=30, verify=True)
+                import pdfplumber, io as _io
+                with pdfplumber.open(_io.BytesIO(r.content)) as pdf:
+                    text = '\n'.join(page.extract_text() or '' for page in pdf.pages)
+                partial_data = self._parse_pdf(text)
+                return partial_data
+            else:
+                print(f"[{self.county_name}] ✗ Could not find summary.xml or summary.pdf on {detail_url}")
                 print(f"[{self.county_name}]   Results may not be posted yet for election {election_id}.")
                 return None
-
-            print(f"[{self.county_name}] Fetching XML: {xml_url}")
-            r = self._fetch_with_retry(xml_url, headers=headers, timeout=20, verify=True)
-            partial_data = self._parse_ssrs_xml(r.text)
-            return partial_data
 
         except Exception as e:
             print(f"[{self.county_name}] ✗ Error: {e}")
@@ -589,6 +609,83 @@ class SFElectionsScraper(BaseScraper):
         except Exception as e:
             print(f"[{self.county_name}] ⚠ Error extracting contests: {e}")
 
+        return data
+
+    def _parse_pdf(self, text):
+        """
+        Parse SF Elections summary PDF (pdfplumber plain-text extraction).
+
+        SF PDFs use a consistent layout:
+          - Contest header line (e.g. 'MAYOR')
+          - Candidate rows: 'CANDIDATE NAME   1,234  56.78%'
+          - Voter turnout block: 'Ballots Cast: 12,345' etc.
+        """
+        data = {
+            'timestamp': datetime.now().isoformat(),
+            'url': self.url,
+            'county_name': self.county_name,
+            'page_title': 'San Francisco Election Results',
+            'last_updated': None,
+            'voter_turnout': {},
+            'contests': [],
+        }
+
+        lines = [l.strip() for l in text.splitlines() if l.strip()]
+
+        # Voter turnout
+        for line in lines:
+            m = re.search(r'Ballots\s+Cast[:\s]+([\d,]+)', line, re.I)
+            if m:
+                data['voter_turnout']['ballots_cast'] = int(m.group(1).replace(',', ''))
+            m = re.search(r'Registered\s+Voters[:\s]+([\d,]+)', line, re.I)
+            if m:
+                data['voter_turnout']['registered_voters'] = int(m.group(1).replace(',', ''))
+            m = re.search(r'Voter\s+Turnout[:\s]+([\d.]+)%', line, re.I)
+            if m:
+                data['voter_turnout']['turnout_percentage'] = float(m.group(1))
+            m = re.search(r'Precincts\s+Reporting[:\s]+([\d,]+)\s+of\s+([\d,]+)', line, re.I)
+            if m:
+                rep, tot = int(m.group(1).replace(',', '')), int(m.group(2).replace(',', ''))
+                data['voter_turnout']['precincts_reported'] = f"{rep} / {tot} ({rep/tot*100:.2f}%)"
+
+        # Contests — a line with no digits is a candidate race header;
+        # candidate rows end with  votes  pct%
+        choice_re = re.compile(r'^(.+?)\s+([\d,]+)\s+([\d.]+)%\s*$')
+        current_contest = None
+        current_choices = []
+
+        def _save():
+            if current_contest and current_choices:
+                data['contests'].append({
+                    'title': current_contest,
+                    'precincts_reporting': '',
+                    'choices': list(current_choices),
+                })
+
+        for line in lines:
+            cm = choice_re.match(line)
+            if cm:
+                if current_contest is None:
+                    continue
+                name = cm.group(1).strip()
+                if name.upper() in ('CANDIDATE', 'TOTAL', 'CHOICE'):
+                    continue
+                try:
+                    current_choices.append({
+                        'name': name,
+                        'votes': int(cm.group(2).replace(',', '')),
+                        'pct': float(cm.group(3)),
+                    })
+                except (ValueError, TypeError):
+                    pass
+            elif re.match(r'^[A-Z][A-Z0-9\s,\.\-\'\"/\(\)&]+$', line) and not re.search(r'\d', line):
+                _save()
+                current_contest = line.strip()
+                current_choices = []
+
+        _save()
+        print(f"[{self.county_name}] ✓ PDF parsed: {len(data['contests'])} contests, "
+              f"turnout: {data['voter_turnout']}")
         return data
 
 
@@ -1183,26 +1280,61 @@ class AlamedaScraper(BaseScraper):
 
 class NapaScraper(BaseScraper):
     """Scraper for Napa County elections.
-    The results page links to a PDF Summary Report; we fetch and parse it with pdfplumber.
-    The PDF URL is discovered by scraping the election results page for the Nov 4 2025 election.
+
+    county_links.csv should point to the election results INDEX page:
+      https://www.napacounty.gov/402/Election-Results
+
+    The scraper auto-discovers the latest PDF from that page so it always
+    picks up the most recent unofficial report without needing a URL update
+    each time Napa posts a new one.  If the URL is already a direct
+    DocumentCenter link it is used as-is (backwards compatible).
     """
 
-    # Known stable PDF URL for the Nov 4, 2025 Statewide Special Election summary
-    SUMMARY_PDF_URL = 'https://www.napacounty.gov/DocumentCenter/View/39913/'
+    def _discover_latest_pdf_url(self) -> str:
+        """
+        Fetch the Napa elections index page and return the URL of the first
+        (latest) DocumentCenter PDF link found.  Falls back to self.url if
+        no PDF link is found.
+        """
+        from bs4 import BeautifulSoup as _BS
+        from urllib.parse import urljoin as _urljoin
+        headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
+        r = self._fetch_with_retry(self.url, headers=headers, timeout=15, verify=True)
+        soup = _BS(r.text, 'html.parser')
+        base = 'https://www.napacounty.gov'
+        for a in soup.find_all('a', href=True):
+            href = a['href']
+            text = a.get_text(strip=True)
+            if 'DocumentCenter' in href and ('PDF' in text or 'Report' in text or 'Result' in text):
+                full = href if href.startswith('http') else base + href
+                print(f"[{self.county_name}] Latest PDF: {text[:70]}  →  {full}")
+                return full
+        print(f"[{self.county_name}] ⚠ No PDF link found on index page — using self.url directly")
+        return self.url
 
     def scrape(self):
         self.rate_limiter.wait()
         partial_data = None
         try:
             import pdfplumber, io as _io
-            print(f"[{self.county_name}] Fetching Napa County summary PDF...")
+            # Auto-discover latest PDF when the URL is the index page.
+            if 'DocumentCenter' in self.url:
+                pdf_url = self.url
+                print(f"[{self.county_name}] Fetching Napa County PDF directly: {pdf_url}")
+            else:
+                print(f"[{self.county_name}] Discovering latest PDF from index page...")
+                pdf_url = self._discover_latest_pdf_url()
+
             headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
-            r = self._fetch_with_retry(self.SUMMARY_PDF_URL, headers=headers, timeout=20, verify=True)
+            r = self._fetch_with_retry(pdf_url, headers=headers, timeout=20, verify=True)
 
             with pdfplumber.open(_io.BytesIO(r.content)) as pdf:
                 text = '\n'.join(page.extract_text() or '' for page in pdf.pages)
 
             partial_data = self._parse(text)
+            # Store the actual PDF URL in the result for provenance.
+            if partial_data:
+                partial_data['url'] = pdf_url
             return partial_data
         except Exception as e:
             print(f"[{self.county_name}] ✗ Error: {e}")
@@ -1478,7 +1610,7 @@ class SolanoScraper(BaseScraper):
 
                 # Candidate row: 14 direct cells, first cell is ALL-CAPS name
                 if (current_contest and len(cells) == 14
-                        and re.match(r'^[A-Z][A-Z\s\.\-\'\(\)\/]+$', first)
+                        and re.match(r'^[A-Z][A-Z\s\.\-\'\"\(\)\/]+$', first)
                         and first not in ('CHOICE', 'CANDIDATE NAME')):
                     try:
                         votes = int(cells[12].replace(',', '')) if cells[12] else 0

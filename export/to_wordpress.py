@@ -32,6 +32,20 @@ import os
 import re
 import sys
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
+_PACIFIC = ZoneInfo("America/Los_Angeles")
+
+
+def _fmt_pacific(iso_str: str) -> str:
+    """Format an ISO timestamp as Pacific time for display (e.g. 'June 2, 2026, 8:45 PM PT')."""
+    try:
+        dt = datetime.fromisoformat(iso_str)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(_PACIFIC).strftime("%-B %-d, %Y, %-I:%M %p PT")
+    except (ValueError, TypeError):
+        return iso_str or ""
 from pathlib import Path
 
 # Load .env before anything else so credentials are in os.environ.
@@ -73,12 +87,7 @@ def _build_html(master: dict, include_counties: list[str] | None = None) -> str:
     counties = master.get("counties") or {}
     run_timestamp = master.get("pipeline_timestamp") or ""
 
-    # Format the timestamp for display — e.g. "June 2, 2026, 8:45 PM"
-    try:
-        dt = datetime.fromisoformat(run_timestamp)
-        display_time = dt.strftime("%B %-d, %Y, %-I:%M %p")
-    except (ValueError, TypeError):
-        display_time = run_timestamp
+    display_time = _fmt_pacific(run_timestamp)
 
     # Build a normalized set of requested counties for fast lookup.
     # Normalize by lowercasing and stripping spaces/underscores so callers
@@ -342,6 +351,221 @@ def preview_html(master_json_path: Path, include_counties: list[str] | None = No
     print()
     print(f"Total HTML length: {len(html):,} characters")
     print("Preview complete. Nothing was posted.")
+
+
+# ---------------------------------------------------------------------------
+# PUSH RENDERED HTML
+# Reads the rendered standalone HTML files from output/election_night/,
+# extracts the embeddable widget content (<style> + body), and pushes it
+# to each county's WordPress page via the REST API.
+#
+# This is the primary publish method — simple, reliable, no DOM matching.
+# Each push replaces the page content with a fresh render. Since all static
+# content (race names, candidates, measure text) comes from local_races.csv
+# and only the numbers come from the scrape, the page always looks correct.
+#
+# Usage:
+#   python export/to_wordpress.py --push-rendered --test-page 183978 --counties Marin
+#   python export/to_wordpress.py --push-rendered           # push all counties live
+# ---------------------------------------------------------------------------
+
+_RENDERED_HTML_DIR = Path(__file__).resolve().parent.parent / "output" / "election_night"
+
+
+def _extract_wp_embed_content(html_path: Path) -> str:
+    """
+    Read a standalone rendered HTML file and return it wrapped in a Gutenberg
+    Custom HTML block (<!-- wp:html -->).  That block type tells WordPress to
+    preserve the content byte-for-byte — styles, scripts, and all — without
+    sanitisation.  A plain <style> tag pushed as page content is stripped by
+    WordPress's kses filter; the block wrapper is what keeps the CSS intact.
+    """
+    full_html = html_path.read_text(encoding="utf-8")
+    soup = BeautifulSoup(full_html, "html.parser")
+    style = soup.find("style")
+    body = soup.find("body")
+    style_str = str(style) if style else ""
+    body_str = body.decode_contents().strip() if body else full_html
+    inner = style_str + "\n" + body_str
+    return "<!-- wp:html -->\n" + inner + "\n<!-- /wp:html -->"
+
+
+def push_rendered_html_to_wp(
+    county_key: str,
+    rendered_html_dir: Path,
+    page_id: int | str,
+    force: bool = False,
+    master_json: dict | None = None,
+) -> str:
+    """
+    Push the rendered HTML for one county to a WordPress page.
+
+    Reads rendered_html_dir/<county_key>.html (case-insensitive fallback).
+    Skips if vote tallies are unchanged since the last push, unless force=True.
+    Returns "pushed", "skipped", or "error".
+    """
+    site_url     = _get_env("WP_SITE_URL")
+    username     = _get_env("WP_USERNAME")
+    app_password = _get_env("WP_APP_PASSWORD")
+    auth = (username, app_password)
+
+    rendered_html_dir = Path(rendered_html_dir)
+    html_path = rendered_html_dir / f"{county_key}.html"
+
+    # Fallback: case-insensitive scan (e.g. "san_francisco" → "San_Francisco.html")
+    if not html_path.exists():
+        for f in rendered_html_dir.glob("*.html"):
+            if f.stem.lower().replace(" ", "_") == county_key.lower().replace(" ", "_"):
+                html_path = f
+                break
+
+    if not html_path.exists():
+        print(f"[push_rendered] {county_key}: rendered HTML not found in {rendered_html_dir}")
+        return "error"
+
+    # Hash check — skip push when tallies haven't changed.
+    county_norm = county_key.lower().replace(" ", "_").replace("-", "_")
+    county_data = None
+    if master_json is not None:
+        county_data = next(
+            (v for k, v in master_json.get("counties", {}).items()
+             if k.lower().replace(" ", "_") == county_norm),
+            None,
+        )
+    if not force and county_data is not None:
+        current_hash = _contests_hash(county_data)
+        state = _load_inject_state()
+        if state.get(f"rendered_{county_norm}", {}).get("last_hash") == current_hash:
+            print(f"[push_rendered] {county_key}: no vote changes since last push — skipping.")
+            return "skipped"
+
+    wp_content = _extract_wp_embed_content(html_path)
+
+    api_url = f"{site_url.rstrip('/')}/wp-json/wp/v2/pages/{page_id}"
+    print(f"[push_rendered] Pushing {county_key} → page {page_id}  ({len(wp_content):,} chars)...")
+    resp = requests.post(
+        api_url,
+        json={"content": wp_content, "status": "publish"},
+        auth=auth,
+        timeout=30,
+    )
+
+    if resp.status_code in (200, 201):
+        print(f"[push_rendered] ✓ {county_key} → page {page_id}  (HTTP {resp.status_code})")
+        if county_data is not None:
+            state = _load_inject_state()
+            state[f"rendered_{county_norm}"] = {
+                "last_hash": _contests_hash(county_data),
+                "last_push": datetime.now(tz=timezone.utc).isoformat(timespec="seconds"),
+                "wp_page_id": str(page_id),
+            }
+            _save_inject_state(state)
+        return "pushed"
+
+    print(f"[push_rendered] ERROR: HTTP {resp.status_code} — {county_key} page {page_id}")
+    print(f"[push_rendered] {resp.text[:400]}")
+    return "error"
+
+
+def push_all_rendered_html(
+    rendered_html_dir: Path,
+    master_json_path: Path,
+    force: bool = False,
+    test_page_id: int | str | None = None,
+    include_counties: list[str] | None = None,
+) -> None:
+    """
+    Push rendered HTML for every county listed in WP_PAGE_IDS (.env) to its
+    WordPress page.  When test_page_id is set, ALL counties go to that one
+    page — use this to verify layout before touching production pages.
+
+    Always requires a typed YES confirmation before touching any page,
+    unless WP_CI_CONFIRMED=YES is set (GitHub Actions only).
+    """
+    page_ids_raw = _get_env("WP_PAGE_IDS")
+    try:
+        page_ids: dict = json.loads(page_ids_raw)
+    except json.JSONDecodeError:
+        print("[push_rendered] ERROR: WP_PAGE_IDS in .env is not valid JSON.")
+        sys.exit(1)
+
+    with open(master_json_path, encoding="utf-8") as f:
+        master = json.load(f)
+
+    if include_counties:
+        include_set = {c.lower().replace(" ", "_") for c in include_counties}
+    else:
+        include_set = None
+
+    # Build the list of counties that will actually be pushed so the editor
+    # can see exactly what is about to happen before confirming.
+    planned = []
+    for raw_key, prod_page_id in page_ids.items():
+        county_key = _COUNTY_KEY_ALIASES.get(raw_key, raw_key)
+        if include_set and county_key.lower().replace(" ", "_") not in include_set:
+            continue
+        effective_id = test_page_id if test_page_id is not None else prod_page_id
+        planned.append((county_key, effective_id))
+
+    if not planned:
+        print("[push_rendered] No matching counties found. Nothing to push.")
+        return
+
+    site_url = _get_env("WP_SITE_URL")
+    print()
+    print("=" * 60)
+    print("WORDPRESS PUSH — CONFIRMATION REQUIRED")
+    print("=" * 60)
+    print(f"  Target site : {site_url}")
+    if test_page_id:
+        print(f"  MODE        : TEST — all counties → page {test_page_id}")
+    else:
+        print(f"  MODE        : PRODUCTION — each county → its own page")
+    print(f"  Counties    : {len(planned)}")
+    for county_key, page_id in planned:
+        print(f"    {county_key.replace('_', ' '):20s} → page {page_id}")
+    print()
+    print("  Review the Google Sheet STATUS DASHBOARD before confirming.")
+    print("  All counties above will have their WordPress page replaced.")
+    print()
+
+    ci_confirmed = os.environ.get("WP_CI_CONFIRMED", "").strip().upper()
+    if ci_confirmed == "YES":
+        print("[push_rendered] CI confirmation received. Proceeding.")
+    else:
+        try:
+            answer = input("  Type YES to confirm and push, or anything else to abort: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\n[push_rendered] No input received. Aborting.")
+            return
+        if answer.upper() != "YES":
+            print(f"[push_rendered] Aborted (you typed: '{answer}'). Nothing was pushed.")
+            return
+
+    pushed, skipped, errors = []  , [], []
+    for county_key, effective_id in planned:
+        result = push_rendered_html_to_wp(
+            county_key, rendered_html_dir, effective_id,
+            force=force, master_json=master,
+        )
+        if result == "pushed":
+            pushed.append(county_key)
+        elif result == "skipped":
+            skipped.append(county_key)
+        else:
+            errors.append(county_key)
+
+    print()
+    print("=" * 55)
+    label = f"TEST PAGE {test_page_id}" if test_page_id else "PRODUCTION PAGES"
+    print(f"PUSH RENDERED HTML SUMMARY — {label}")
+    print(f"  Pushed  : {len(pushed)}  {pushed}")
+    print(f"  Skipped : {len(skipped)}  (votes unchanged since last push)")
+    print(f"  Errors  : {len(errors)}  {errors}")
+    print("=" * 55)
+
+    if errors:
+        sys.exit(1)
 
 
 # ---------------------------------------------------------------------------
@@ -710,15 +934,11 @@ def inject_results_into_page(
 
     # 4. Update banner sub-line — raw string replacement, no BS serialisation.
     pipeline_ts = master_json.get("pipeline_timestamp") or ""
-    try:
-        dt = datetime.fromisoformat(pipeline_ts)
-        display_time = dt.strftime("%B %-d, %Y, %-I:%M %p")
-    except (ValueError, TypeError):
-        display_time = pipeline_ts or "unknown"
+    display_time = _fmt_pacific(pipeline_ts) or "unknown"
 
     updated_html = re.sub(
         r'(<div[^>]*class="preview-banner-sub"[^>]*>)[^<]*(</div>)',
-        rf'\g<1>Results last updated: {re.escape(display_time)}\g<2>',
+        r'\g<1>Results last updated: ' + display_time + r'\g<2>',
         updated_html,
     )
 
@@ -834,20 +1054,34 @@ if __name__ == "__main__":
     parser.add_argument("--master-json", default=_default_master,
                         help="Path to election_results_master.json")
     parser.add_argument("--counties", default=None,
-                        help="Comma-separated county names (publish/inject only). "
-                             "Omit for all counties.")
+                        help="Comma-separated county names. Omit for all counties.")
     parser.add_argument("--preview", action="store_true",
                         help="Print the HTML that would be posted — posts nothing.")
     parser.add_argument("--inject-wp", action="store_true",
                         help="Inject live tallies into county ballot-preview pages. "
                              "Skips pages whose votes haven't changed since the last push.")
+    parser.add_argument("--push-rendered", action="store_true",
+                        help="Push per-county rendered HTML from output/election_night/ "
+                             "to each county's WordPress page (reads WP_PAGE_IDS from .env). "
+                             "Use --test-page to send all output to a single test page first.")
+    parser.add_argument("--test-page", type=int, default=None,
+                        help="Override: send all --push-rendered output to this single WP page ID. "
+                             "Use to verify layout on a test page before touching production pages.")
     parser.add_argument("--force", action="store_true",
-                        help="Force injection even when tallies haven't changed.")
+                        help="Force push even when tallies haven't changed since the last push.")
     args = parser.parse_args()
 
     county_list = [c.strip() for c in args.counties.split(",")] if args.counties else None
 
-    if args.inject_wp:
+    if args.push_rendered:
+        push_all_rendered_html(
+            rendered_html_dir=_RENDERED_HTML_DIR,
+            master_json_path=Path(args.master_json),
+            force=args.force,
+            test_page_id=args.test_page,
+            include_counties=county_list,
+        )
+    elif args.inject_wp:
         inject_all_counties(master_json_path=Path(args.master_json), force=args.force)
     elif args.preview:
         preview_html(master_json_path=Path(args.master_json), include_counties=county_list)

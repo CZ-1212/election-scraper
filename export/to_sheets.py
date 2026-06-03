@@ -29,6 +29,15 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 import gspread
 from google.oauth2.service_account import Credentials
+from zoneinfo import ZoneInfo
+
+_PACIFIC = ZoneInfo("America/Los_Angeles")
+
+
+def _now_pacific() -> str:
+    """Current time as a Pacific-timezone string for display."""
+    from datetime import timezone
+    return datetime.now(tz=timezone.utc).astimezone(_PACIFIC).strftime("%Y-%m-%d %H:%M PT")
 
 
 # ---------------------------------------------------------------------------
@@ -110,84 +119,37 @@ def _get_or_create_tab(spreadsheet: gspread.Spreadsheet, title: str) -> gspread.
 STATUS_HEADERS = [
     "County",
     "Status",
-    "Scrape Time",
+    "Last Scraped",
     "Site Last Updated",
-    "Ballots Cast",
-    "Δ Since Last Update",   # new votes counted since the previous pipeline run
-    "Δ % of Registered",     # delta as a share of registered voters — helps spot big drops
-    "⚠ Spike?",              # flagged when a single interval adds ≥5% of registered voters
-    "Registered Voters",
-    "Turnout %",
     "Contests",
-    "Anomaly Flags",
 ]
 
 
-def _update_status_dashboard(
-    ws: gspread.Worksheet,
-    counties: dict,
-    prev_state: dict,
-) -> dict:
-    """
-    Rewrite the STATUS DASHBOARD tab with one data row per county.
-    Returns the new vote-count state (ballots_cast per county) to be saved
-    after the sheet is updated.
-
-    prev_state — {county_key: {"ballots_cast": int, "timestamp": str}}
-    """
+def _update_status_dashboard(ws: gspread.Worksheet, counties: dict) -> None:
+    """Rewrite the STATUS DASHBOARD tab — one row per county, last-scraped time only."""
     rows = [STATUS_HEADERS]
-    new_state: dict = {}
-
     for county_name, data in sorted(counties.items()):
-        vt = data.get("voter_turnout") or {}
-        anomalies = data.get("anomalies") or []
-
-        current_ballots = vt.get("ballots_cast") or 0
-        registered = vt.get("registered_voters") or 0
-
-        # Compute delta vs. the previous run.
-        prev = prev_state.get(county_name, {})
-        prev_ballots = prev.get("ballots_cast", None)
-
-        if prev_ballots is None:
-            delta_str = "—"
-            delta_pct_str = "—"
-            spike = ""
-        else:
-            delta = current_ballots - prev_ballots
-            delta_str = f"+{delta:,}" if delta >= 0 else f"{delta:,}"
-            if registered > 0:
-                delta_pct = delta / registered * 100
-                delta_pct_str = f"{delta_pct:.2f}%"
-                spike = "⚠ SPIKE" if delta_pct >= _SPIKE_THRESHOLD_PCT else ""
-            else:
-                delta_pct_str = "—"
-                spike = ""
-
-        new_state[county_name] = {
-            "ballots_cast": current_ballots,
-            "timestamp": data.get("scrape_timestamp", ""),
-        }
-
         rows.append([
             county_name.replace("_", " "),
             data.get("scrape_status", "FAIL"),
             data.get("scrape_timestamp", ""),
             data.get("last_updated", ""),
-            current_ballots if current_ballots else "",
-            delta_str,
-            delta_pct_str,
-            spike,
-            registered if registered else "",
-            vt.get("turnout_percentage", ""),
             len(data.get("contests", [])),
-            " | ".join(anomalies) if anomalies else "",
         ])
-
     ws.clear()
     ws.update(rows, value_input_option="USER_ENTERED")
     print(f"[sheets] STATUS DASHBOARD updated: {len(rows) - 1} counties.")
-    return new_state
+
+
+def _build_vote_state(counties: dict) -> dict:
+    """Build the vote-count state dict used by the SCRAPE LOG for delta tracking."""
+    return {
+        county_name: {
+            "ballots_cast": (data.get("voter_turnout") or {}).get("ballots_cast") or 0,
+            "timestamp": data.get("scrape_timestamp", ""),
+        }
+        for county_name, data in counties.items()
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -407,7 +369,7 @@ def _update_statewide_races(ws: gspread.Worksheet, counties: dict) -> None:
     statewide_races.sort(key=lambda x: (-len(x[2]), x[1]))
 
     # Step 3: build the rows list to write in one batch.
-    rows = [["STATEWIDE RACES — last updated: " + datetime.now().strftime("%Y-%m-%d %H:%M")]]
+    rows = [["STATEWIDE RACES — last updated: " + _now_pacific()]]
     rows.append([""])  # blank spacer
 
     for norm, display_title, by_county in statewide_races:
@@ -481,7 +443,7 @@ def update_sheets(master_json_path: Path) -> None:
         master = json.load(f)
 
     counties = master.get("counties") or {}
-    run_timestamp = master.get("pipeline_timestamp") or datetime.now().isoformat()
+    run_timestamp = master.get("pipeline_timestamp") or _now_pacific()
 
     if not counties:
         print("[sheets] WARNING: No county data found in master JSON. Nothing to push.")
@@ -496,10 +458,10 @@ def update_sheets(master_json_path: Path) -> None:
 
     # --- STATUS DASHBOARD tab ---
     ws_status = _get_or_create_tab(spreadsheet, TAB_STATUS)
-    new_state = _update_status_dashboard(ws_status, counties, prev_state)
+    _update_status_dashboard(ws_status, counties)
 
-    # Save updated ballot counts so the next run can compute deltas.
-    _save_vote_state(new_state)
+    # Save updated ballot counts so the next run can compute deltas for SCRAPE LOG.
+    _save_vote_state(_build_vote_state(counties))
 
     # --- One tab per county ---
     for county_name, county_data in sorted(counties.items()):
