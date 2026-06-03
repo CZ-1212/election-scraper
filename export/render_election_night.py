@@ -500,17 +500,8 @@ _SEARCH_BAR = (
 
 _SEARCH_SCRIPT = """<script>
   (function() {
-    // Uncontested dropdown toggle.
-    var _ut = document.getElementById('uncontestedToggle');
-    var _ub = document.getElementById('uncontestedBody');
-    var _uc = document.getElementById('uncontestedChevron');
-    if (_ut && _ub && _uc) {
-      _ut.addEventListener('click', function() {
-        _ub.classList.toggle('open');
-        _uc.classList.toggle('open');
-      });
-    }
-    // Race search filter.
+    // The uncontested-races dropdown uses native <details>/<summary> so it
+    // works without JavaScript — important because some CMSes strip <script>.
     var input = document.getElementById('electionSearch');
     var noResults = document.getElementById('noResults');
     if (!input) return;
