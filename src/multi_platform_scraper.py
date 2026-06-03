@@ -1280,23 +1280,61 @@ class AlamedaScraper(BaseScraper):
 
 class NapaScraper(BaseScraper):
     """Scraper for Napa County elections.
-    Fetches and parses the PDF summary report linked in county_links.csv (test_url / live_url).
-    Update that URL in the Google Sheet when Napa publishes a new election's PDF.
+
+    county_links.csv should point to the election results INDEX page:
+      https://www.napacounty.gov/402/Election-Results
+
+    The scraper auto-discovers the latest PDF from that page so it always
+    picks up the most recent unofficial report without needing a URL update
+    each time Napa posts a new one.  If the URL is already a direct
+    DocumentCenter link it is used as-is (backwards compatible).
     """
+
+    def _discover_latest_pdf_url(self) -> str:
+        """
+        Fetch the Napa elections index page and return the URL of the first
+        (latest) DocumentCenter PDF link found.  Falls back to self.url if
+        no PDF link is found.
+        """
+        from bs4 import BeautifulSoup as _BS
+        from urllib.parse import urljoin as _urljoin
+        headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
+        r = self._fetch_with_retry(self.url, headers=headers, timeout=15, verify=True)
+        soup = _BS(r.text, 'html.parser')
+        base = 'https://www.napacounty.gov'
+        for a in soup.find_all('a', href=True):
+            href = a['href']
+            text = a.get_text(strip=True)
+            if 'DocumentCenter' in href and ('PDF' in text or 'Report' in text or 'Result' in text):
+                full = href if href.startswith('http') else base + href
+                print(f"[{self.county_name}] Latest PDF: {text[:70]}  →  {full}")
+                return full
+        print(f"[{self.county_name}] ⚠ No PDF link found on index page — using self.url directly")
+        return self.url
 
     def scrape(self):
         self.rate_limiter.wait()
         partial_data = None
         try:
             import pdfplumber, io as _io
-            print(f"[{self.county_name}] Fetching Napa County summary PDF...")
+            # Auto-discover latest PDF when the URL is the index page.
+            if 'DocumentCenter' in self.url:
+                pdf_url = self.url
+                print(f"[{self.county_name}] Fetching Napa County PDF directly: {pdf_url}")
+            else:
+                print(f"[{self.county_name}] Discovering latest PDF from index page...")
+                pdf_url = self._discover_latest_pdf_url()
+
             headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
-            r = self._fetch_with_retry(self.url, headers=headers, timeout=20, verify=True)
+            r = self._fetch_with_retry(pdf_url, headers=headers, timeout=20, verify=True)
 
             with pdfplumber.open(_io.BytesIO(r.content)) as pdf:
                 text = '\n'.join(page.extract_text() or '' for page in pdf.pages)
 
             partial_data = self._parse(text)
+            # Store the actual PDF URL in the result for provenance.
+            if partial_data:
+                partial_data['url'] = pdf_url
             return partial_data
         except Exception as e:
             print(f"[{self.county_name}] ✗ Error: {e}")
