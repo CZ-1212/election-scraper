@@ -1655,11 +1655,28 @@ class MontereyCountyScraper(BaseScraper):
             turnout_js = election.get('turnout', {})
 
             if contests_js:
-                c = contests_js[0]
-                data['voter_turnout']['ballots_cast'] = c.get('totalVotes')
-                data['voter_turnout']['registered_voters'] = c.get('registeredToVote')
-                pct = c.get('turnoutPercent', 0)
-                data['voter_turnout']['turnout_percentage'] = round(pct, 2)
+                # Ballots cast = the maximum "Total Votes" value across all contests
+                # (matches the number the county page displays under "Total Votes").
+                # contests[0].totalVotes was stale on June 2 — using max across all
+                # contests stays accurate as the night progresses.
+                max_total = 0
+                for c in contests_js:
+                    tv = c.get('totalVotes') or 0
+                    # Also consider the sum of candidate votes in case totalVotes lags.
+                    summed = sum(int(cand.get('totalVotes') or 0) for cand in c.get('candidates', []))
+                    summed += sum(int(wi.get('totalVotes') or 0) for wi in c.get('writeIns', []))
+                    cand_max = max(tv, summed)
+                    if cand_max > max_total:
+                        max_total = cand_max
+
+                first = contests_js[0]
+                data['voter_turnout']['ballots_cast'] = max_total
+                data['voter_turnout']['registered_voters'] = first.get('registeredToVote')
+                reg = first.get('registeredToVote') or 0
+                if reg > 0:
+                    data['voter_turnout']['turnout_percentage'] = round(max_total / reg * 100, 2)
+                else:
+                    data['voter_turnout']['turnout_percentage'] = round(first.get('turnoutPercent', 0), 2)
 
             # Precincts from reporting object
             precincts = reporting.get('precinctsReported', '')

@@ -11,6 +11,29 @@
     .lnm-results-widget, .lnm-results-widget * { box-sizing: border-box; margin: 0; padding: 0; }
     .lnm-results-widget { font-family: Arial, sans-serif; }
 
+    /* County banner */
+    .lnm-results-widget .lnm-county-banner {
+      background-color: #1a3668;
+      color: white;
+      padding: 14px 18px;
+      border-radius: 5px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    .lnm-results-widget .lnm-county-name {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .lnm-results-widget .lnm-election-title {
+      font-size: 13px;
+      font-weight: 400;
+      color: #accf00;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 4px;
+    }
+
     /* Turnout bar */
     .lnm-results-widget .turnout-bar {
       background-color: #1a3668;
@@ -56,6 +79,83 @@
       text-decoration: none;
     }
     .lnm-results-widget .lnm-provenance a:hover { text-decoration: underline; }
+
+    /* Uncontested races dropdown */
+    .lnm-results-widget .uncontested-wrap {
+      margin-bottom: 16px;
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1px solid #1a3668;
+    }
+    .lnm-results-widget .uncontested-toggle {
+      background-color: #1a3668;
+      color: white;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .lnm-results-widget .uncontested-toggle-label {
+      font-size: 0.92em;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .lnm-results-widget .uncontested-toggle-count {
+      font-size: 0.82em;
+      color: #accf00;
+      margin-left: 8px;
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .lnm-results-widget .uncontested-chevron {
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+    .lnm-results-widget .uncontested-chevron.open { transform: rotate(180deg); }
+    .lnm-results-widget .uncontested-body { display: none; background: white; }
+    .lnm-results-widget .uncontested-body.open { display: block; }
+    .lnm-results-widget .uncontested-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid #f0e68c;
+      gap: 12px;
+      background: #fffde7;
+    }
+    .lnm-results-widget .uncontested-row:last-child { border-bottom: none; }
+    .lnm-results-widget .uncontested-race-name {
+      font-size: 0.88em;
+      font-weight: 700;
+      color: #1a3668;
+      flex: 1;
+    }
+    .lnm-results-widget .uncontested-candidate {
+      font-size: 0.85em;
+      color: #444;
+      flex: 1;
+    }
+    .lnm-results-widget .uncontested-profession {
+      font-size: 0.78em;
+      color: #888;
+      flex: 1;
+      font-style: italic;
+    }
+    .lnm-results-widget .uncontested-badge {
+      font-size: 0.72em;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: #f2f7d9;
+      color: #4a6020;
+      border: 1px solid #c8e050;
+      padding: 2px 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
 
     /* Race box */
     .lnm-results-widget .race-box {
@@ -156,7 +256,7 @@
     /* Candidate table header */
     .lnm-results-widget .candidate-table-head {
       display: grid;
-      grid-template-columns: 180px 1fr 60px 90px;
+      grid-template-columns: 240px 1fr 60px 90px;
       padding: 6px 14px;
       border-top: 1px solid #ddd;
       background: #fafafa;
@@ -175,7 +275,7 @@
       border-top: 1px solid #eee;
       padding: 10px 14px;
       display: grid;
-      grid-template-columns: 180px 1fr 60px 90px;
+      grid-template-columns: 240px 1fr 60px 90px;
       align-items: center;
       gap: 0;
     }
@@ -183,6 +283,9 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      min-width: 0;
+      padding-right: 12px;
+      overflow: hidden;
     }
     .lnm-results-widget .candidate-party {
       width: 30px; height: 30px;
@@ -216,16 +319,25 @@
     .lnm-results-widget .party-r { background: #faeee7; color: #b85c2a; }
     .lnm-results-widget .party-i { background: #f0edf8; color: #7b5ea7; }
     .lnm-results-widget .party-n { background: #e8e8e8; color: #555; }
-    .lnm-results-widget .candidate-name-text { display: flex; flex-direction: column; }
+    .lnm-results-widget .candidate-name-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      flex: 1;
+    }
     .lnm-results-widget .candidate-name {
       font-weight: 700;
       font-size: 0.92em;
       color: #333;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     .lnm-results-widget .candidate-profession {
       font-size: 0.78em;
       color: #666;
       margin-top: 2px;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     .lnm-results-widget .candidate-bar-cell { padding-right: 14px; }
     .lnm-results-widget .candidate-bar-track {
@@ -289,12 +401,34 @@
 
 <div class="lnm-results-widget">
 
+  <div class="lnm-county-banner">
+    <div class="lnm-county-name">Santa Clara County</div>
+    <div class="lnm-election-title">June 2, 2026 Statewide Direct Primary</div>
+  </div>
+
   <div class="search-wrap">
     <input class="search-input" type="text" placeholder="Search for measures, candidates, contests…" id="electionSearch">
   </div>
   <div class="no-results" id="noResults">No results found.</div>
 
-  <div class="lnm-provenance">Source: <a href="https://results.enr.clarityelections.com/CA/Santa_Clara/126487/web.345435/#/summary">Santa Clara Registrar of Voters</a> &middot; Updated: 2026-06-02 22:05:00</div>
+  <div class="turnout-bar">
+    <div class="turnout-stat">
+      <div class="turnout-stat-label">Voter Turnout</div>
+      <div class="turnout-stat-value">19.37%</div>
+    </div>
+    <div class="turnout-stat">
+      <div class="turnout-stat-label">Ballots Cast</div>
+      <div class="turnout-stat-value">208,299</div>
+    </div>
+    <div class="turnout-stat">
+      <div class="turnout-stat-label">Registered Voters</div>
+      <div class="turnout-stat-value">1,075,142</div>
+    </div>
+  </div>
+
+  <div class="lnm-provenance">Source: <a href="https://results.enr.clarityelections.com/CA/Santa_Clara/126487/web.345435/#/summary">Santa Clara Registrar of Voters</a> &middot; Updated: 2026-06-02 23:35:23</div>
+
+<div class="uncontested-wrap" id="uncontestedWrap"><div class="uncontested-toggle" id="uncontestedToggle"><span><span class="uncontested-toggle-label">Uncontested Races</span><span class="uncontested-toggle-count">33 races with no opposition</span></span><svg class="uncontested-chevron" id="uncontestedChevron" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6L8 10L12 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="uncontested-body" id="uncontestedBody"><div class="uncontested-row"><div class="uncontested-race-name">Board of Supervisors, District 4</div><div class="uncontested-candidate">Susan Ellenberg</div><div class="uncontested-profession">County Supervisor</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Assessor</div><div class="uncontested-candidate">Neysa Fligor</div><div class="uncontested-profession">Incumbent</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Sheriff</div><div class="uncontested-candidate">Robert Jonsen</div><div class="uncontested-profession">Incumbent</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">City of San José Council, District 1</div><div class="uncontested-candidate">Rosemary Kamei</div><div class="uncontested-profession">Councilmember, City Of San Jose, District 1</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">City of San José Council, District 3</div><div class="uncontested-candidate">Anthony Tordillos</div><div class="uncontested-profession">Councilmember, City of San José, District 3</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 1</div><div class="uncontested-candidate">Charles Fred Adams</div><div class="uncontested-profession">Judge of Superior Court</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 2</div><div class="uncontested-candidate">David A. Cena</div><div class="uncontested-profession">Superior Court Judge</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 3</div><div class="uncontested-candidate">Cynthia F. Chen</div><div class="uncontested-profession">Superior Court Judge</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 4</div><div class="uncontested-candidate">Frederick Sukjong Chung</div><div class="uncontested-profession">Superior Court Judge</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 5</div><div class="uncontested-candidate">Le Jacqueline Duong</div><div class="uncontested-profession">Judge of the Superior Court</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 6</div><div class="uncontested-candidate">Jeffrey Bard El-Hajj</div><div class="uncontested-profession">Superior Court Judge</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 7</div><div class="uncontested-candidate">Mattia M. Corsiglia</div><div class="uncontested-profession">Deputy District Attorney</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 8</div><div class="uncontested-candidate">Matthew S. Harris</div><div class="uncontested-profession">Superior Court Judge</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 9</div><div class="uncontested-candidate">Robert B. Hawk</div><div class="uncontested-profession">Superior Court Judge</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 10</div><div class="uncontested-candidate">Jon A. Heaberlin</div><div class="uncontested-profession">Superior Court Judge</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 11</div><div class="uncontested-candidate">Audra Soriano Ibarra</div><div class="uncontested-profession">Judge of Superior Court</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 12</div><div class="uncontested-candidate">Nicole Isger</div><div class="uncontested-profession">Superior Court Judge</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 13</div><div class="uncontested-candidate">Erik Steven Johnson</div><div class="uncontested-profession">Judge of the Superior Court</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 14</div><div class="uncontested-candidate">Eunice Lee</div><div class="uncontested-profession">Superior Court Judge</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 15</div><div class="uncontested-candidate">Elizabeth Manassau</div><div class="uncontested-profession">Superior Court Judge</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 16</div><div class="uncontested-candidate">Stephen Manley</div><div class="uncontested-profession">Judge of the Superior Court</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 17</div><div class="uncontested-candidate">Ann Vernice Huntley</div><div class="uncontested-profession">Deputy District Attorney</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 18</div><div class="uncontested-candidate">Vincent Ian Parrett</div><div class="uncontested-profession">Superior Court Judge</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 19</div><div class="uncontested-candidate">Evette D. Pennypacker</div><div class="uncontested-profession">Superior Court Judge</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 20</div><div class="uncontested-candidate">Meghan Piano</div><div class="uncontested-profession">Superior Court Judge</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 21</div><div class="uncontested-candidate">Matthew Pritchard</div><div class="uncontested-profession">Superior Court Judge</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 22</div><div class="uncontested-candidate">Luis Miguel Ramos</div><div class="uncontested-profession">Superior Court Judge</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 23</div><div class="uncontested-candidate">Amber Rosen</div><div class="uncontested-profession">Superior Court Judge</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 24</div><div class="uncontested-candidate">Panteha E. Saban</div><div class="uncontested-profession">Superior Court Judge</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 25</div><div class="uncontested-candidate">Shawna Schwarz</div><div class="uncontested-profession">Superior Court Judge</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 26</div><div class="uncontested-candidate">Stuart J. Scott</div><div class="uncontested-profession">Superior Court Judge</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 27</div><div class="uncontested-candidate">Christopher Van Meir</div><div class="uncontested-profession">Superior Court Judge</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Judge of the Superior Court, Office No. 28</div><div class="uncontested-candidate">Helen Elizabeth Williams</div><div class="uncontested-profession">Incumbent</div><div class="uncontested-badge">Uncontested</div></div></div></div>
 
   <div class="race-box">
     <div class="race-title">Board of Supervisors, District 1</div>
@@ -313,10 +447,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:62.3%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:61.3%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">62.3%</div>
-      <div class="candidate-votes">22,702</div>
+      <div class="candidate-pct pct-n">61.29%</div>
+      <div class="candidate-votes">24,423</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -327,10 +461,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:37.6%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:38.5%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">37.6%</div>
-      <div class="candidate-votes">13,696</div>
+      <div class="candidate-pct pct-n">38.55%</div>
+      <div class="candidate-votes">15,361</div>
     </div>
   </div>
 
@@ -351,10 +485,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:60.6%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:60.0%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">60.6%</div>
-      <div class="candidate-votes">100,829</div>
+      <div class="candidate-pct pct-n">60.04%</div>
+      <div class="candidate-votes">106,762</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -365,10 +499,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:39.3%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:39.8%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">39.3%</div>
-      <div class="candidate-votes">65,380</div>
+      <div class="candidate-pct pct-n">39.82%</div>
+      <div class="candidate-votes">70,808</div>
     </div>
   </div>
 
@@ -389,10 +523,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:44.5%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:44.0%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">44.5%</div>
-      <div class="candidate-votes">2,886</div>
+      <div class="candidate-pct pct-n">44.02%</div>
+      <div class="candidate-votes">3,110</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -403,10 +537,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:20.1%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:20.4%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">20.1%</div>
-      <div class="candidate-votes">1,302</div>
+      <div class="candidate-pct pct-n">20.42%</div>
+      <div class="candidate-votes">1,443</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -417,10 +551,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:19.8%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:19.5%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">19.8%</div>
-      <div class="candidate-votes">1,281</div>
+      <div class="candidate-pct pct-n">19.53%</div>
+      <div class="candidate-votes">1,380</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -431,10 +565,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:15.5%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:15.9%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">15.5%</div>
-      <div class="candidate-votes">1,004</div>
+      <div class="candidate-pct pct-n">15.85%</div>
+      <div class="candidate-votes">1,120</div>
     </div>
   </div>
 
@@ -455,10 +589,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:48.8%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:48.3%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">48.8%</div>
-      <div class="candidate-votes">3,315</div>
+      <div class="candidate-pct pct-n">48.35%</div>
+      <div class="candidate-votes">3,418</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -469,10 +603,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:23.6%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:23.4%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">23.6%</div>
-      <div class="candidate-votes">1,599</div>
+      <div class="candidate-pct pct-n">23.44%</div>
+      <div class="candidate-votes">1,657</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -483,10 +617,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:17.8%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:18.5%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">17.8%</div>
-      <div class="candidate-votes">1,210</div>
+      <div class="candidate-pct pct-n">18.53%</div>
+      <div class="candidate-votes">1,310</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -497,10 +631,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:9.7%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:9.6%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">9.7%</div>
-      <div class="candidate-votes">657</div>
+      <div class="candidate-pct pct-n">9.56%</div>
+      <div class="candidate-votes">676</div>
     </div>
   </div>
 
@@ -521,10 +655,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:31.0%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:30.9%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">31.0%</div>
-      <div class="candidate-votes">3,103</div>
+      <div class="candidate-pct pct-n">30.92%</div>
+      <div class="candidate-votes">3,224</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -535,10 +669,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:21.2%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:21.4%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">21.2%</div>
-      <div class="candidate-votes">2,129</div>
+      <div class="candidate-pct pct-n">21.40%</div>
+      <div class="candidate-votes">2,231</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -551,8 +685,8 @@
       <div class="candidate-bar-cell">
         <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:21.1%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">21.1%</div>
-      <div class="candidate-votes">2,114</div>
+      <div class="candidate-pct pct-n">21.13%</div>
+      <div class="candidate-votes">2,203</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -563,10 +697,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:20.9%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:20.7%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">20.9%</div>
-      <div class="candidate-votes">2,097</div>
+      <div class="candidate-pct pct-n">20.68%</div>
+      <div class="candidate-votes">2,156</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -577,10 +711,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:5.6%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:5.7%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">5.6%</div>
-      <div class="candidate-votes">566</div>
+      <div class="candidate-pct pct-n">5.74%</div>
+      <div class="candidate-votes">599</div>
     </div>
   </div>
 
@@ -589,7 +723,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure A</div>
       <div class="measure-desc">To fund essential city services including police and fire emergency response; address homeless encampments impacting parks, neighborhoods, and waterways; remove trash, illegal dumping, and graffiti; and maintain trails, playgrounds, recreational facilities, and park restrooms, shall an ordinance be adopted increasing the general fund transient occupancy (hotel) tax from 4% to 6%, generating approximately $10 million annually, and paid by hotel/motel guests, until repealed by voters?</div>
-      <div class="measure-votes-counted">87,713 votes counted</div>
+      <div class="measure-votes-counted">94,001 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -602,20 +736,20 @@
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:66.0%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:65.1%"></div></div>
           </div>
-          <div class="pct-cell-measure">65.95%</div>
-          <div class="total-cell">57,849</div>
+          <div class="pct-cell-measure">65.15%</div>
+          <div class="total-cell">61,237</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:34.0%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:34.9%"></div></div>
           </div>
-          <div class="pct-cell-measure">34.05%</div>
-          <div class="total-cell">29,864</div>
+          <div class="pct-cell-measure">34.85%</div>
+          <div class="total-cell">32,764</div>
         </div>
       </div>
     </div>
@@ -626,7 +760,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure B</div>
       <div class="measure-desc">To renew local school funding for advanced programs in science, technology, math, engineering, reading, and writing that can&#x27;t be taken by the State; attract and retain highly qualified teachers; and support at-risk students; shall Palo Alto Unified School District&#x27;s measure be adopted, renewing the expiring school parcel tax at a reduced rate ($800 per parcel) for four years, with senior exemptions, independent citizen oversight, and with all funds (approximately $14.6 million annually) benefiting local students?</div>
-      <div class="measure-votes-counted">9,786 votes counted</div>
+      <div class="measure-votes-counted">10,734 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -639,20 +773,20 @@
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:60.7%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:60.9%"></div></div>
           </div>
-          <div class="pct-cell-measure">60.73%</div>
-          <div class="total-cell">5,943</div>
+          <div class="pct-cell-measure">60.93%</div>
+          <div class="total-cell">6,540</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:39.3%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:39.1%"></div></div>
           </div>
-          <div class="pct-cell-measure">39.27%</div>
-          <div class="total-cell">3,843</div>
+          <div class="pct-cell-measure">39.07%</div>
+          <div class="total-cell">4,194</div>
         </div>
       </div>
     </div>
@@ -663,7 +797,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure C</div>
       <div class="measure-desc">To improve the quality of education; replace leaky roofs; make health, safety and security improvements; replace outdated HVAC systems; and modernize/construct classrooms, restrooms and school facilities; shall Franklin-McKinley School District&#x27;s measure be adopted authorizing $142,000,000 of bonds at legal rates, generating on average $8,000,000 annually while bonds are outstanding at a rate of approximately $30 per $100,000 assessed value, with annual audits, independent citizens&#x27; oversight committee, and no money taken by the State?</div>
-      <div class="measure-votes-counted">6,555 votes counted</div>
+      <div class="measure-votes-counted">6,849 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -679,7 +813,7 @@
             <div class="bar-track-measure"><div class="bar-fill" style="width:57.2%"></div></div>
           </div>
           <div class="pct-cell-measure">57.21%</div>
-          <div class="total-cell">3,750</div>
+          <div class="total-cell">3,918</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
@@ -689,7 +823,7 @@
             <div class="bar-track-measure"><div class="bar-fill" style="width:42.8%"></div></div>
           </div>
           <div class="pct-cell-measure">42.79%</div>
-          <div class="total-cell">2,805</div>
+          <div class="total-cell">2,931</div>
         </div>
       </div>
     </div>
@@ -700,7 +834,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure D</div>
       <div class="measure-desc">To restore and protect natural open spaces and waterways by: managing land and creeks to reduce wildfires, floods, and water pollution; expanding trails; preserving family farms; reducing illegal activity in open spaces; shall Santa Clara Valley Open Space Authority&#x27;s measure levying an annual parcel tax of $0.02 per square foot of building area, generating approximately $17,000,000 annually until ended by voters, with audits, citizen oversight, exemptions for seniors and special low-income owners, and all funds spent locally, be adopted?</div>
-      <div class="measure-votes-counted">119,890 votes counted</div>
+      <div class="measure-votes-counted">129,157 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -713,20 +847,20 @@
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:53.3%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:53.0%"></div></div>
           </div>
-          <div class="pct-cell-measure">53.29%</div>
-          <div class="total-cell">63,894</div>
+          <div class="pct-cell-measure">53.01%</div>
+          <div class="total-cell">68,462</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:46.7%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:47.0%"></div></div>
           </div>
-          <div class="pct-cell-measure">46.71%</div>
-          <div class="total-cell">55,996</div>
+          <div class="pct-cell-measure">46.99%</div>
+          <div class="total-cell">60,695</div>
         </div>
       </div>
     </div>
@@ -736,6 +870,17 @@
 
 <script>
   (function() {
+    // Uncontested dropdown toggle.
+    var _ut = document.getElementById('uncontestedToggle');
+    var _ub = document.getElementById('uncontestedBody');
+    var _uc = document.getElementById('uncontestedChevron');
+    if (_ut && _ub && _uc) {
+      _ut.addEventListener('click', function() {
+        _ub.classList.toggle('open');
+        _uc.classList.toggle('open');
+      });
+    }
+    // Race search filter.
     var input = document.getElementById('electionSearch');
     var noResults = document.getElementById('noResults');
     if (!input) return;

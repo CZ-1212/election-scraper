@@ -11,6 +11,29 @@
     .lnm-results-widget, .lnm-results-widget * { box-sizing: border-box; margin: 0; padding: 0; }
     .lnm-results-widget { font-family: Arial, sans-serif; }
 
+    /* County banner */
+    .lnm-results-widget .lnm-county-banner {
+      background-color: #1a3668;
+      color: white;
+      padding: 14px 18px;
+      border-radius: 5px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    .lnm-results-widget .lnm-county-name {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .lnm-results-widget .lnm-election-title {
+      font-size: 13px;
+      font-weight: 400;
+      color: #accf00;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 4px;
+    }
+
     /* Turnout bar */
     .lnm-results-widget .turnout-bar {
       background-color: #1a3668;
@@ -56,6 +79,83 @@
       text-decoration: none;
     }
     .lnm-results-widget .lnm-provenance a:hover { text-decoration: underline; }
+
+    /* Uncontested races dropdown */
+    .lnm-results-widget .uncontested-wrap {
+      margin-bottom: 16px;
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1px solid #1a3668;
+    }
+    .lnm-results-widget .uncontested-toggle {
+      background-color: #1a3668;
+      color: white;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .lnm-results-widget .uncontested-toggle-label {
+      font-size: 0.92em;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .lnm-results-widget .uncontested-toggle-count {
+      font-size: 0.82em;
+      color: #accf00;
+      margin-left: 8px;
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .lnm-results-widget .uncontested-chevron {
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+    .lnm-results-widget .uncontested-chevron.open { transform: rotate(180deg); }
+    .lnm-results-widget .uncontested-body { display: none; background: white; }
+    .lnm-results-widget .uncontested-body.open { display: block; }
+    .lnm-results-widget .uncontested-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid #f0e68c;
+      gap: 12px;
+      background: #fffde7;
+    }
+    .lnm-results-widget .uncontested-row:last-child { border-bottom: none; }
+    .lnm-results-widget .uncontested-race-name {
+      font-size: 0.88em;
+      font-weight: 700;
+      color: #1a3668;
+      flex: 1;
+    }
+    .lnm-results-widget .uncontested-candidate {
+      font-size: 0.85em;
+      color: #444;
+      flex: 1;
+    }
+    .lnm-results-widget .uncontested-profession {
+      font-size: 0.78em;
+      color: #888;
+      flex: 1;
+      font-style: italic;
+    }
+    .lnm-results-widget .uncontested-badge {
+      font-size: 0.72em;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: #f2f7d9;
+      color: #4a6020;
+      border: 1px solid #c8e050;
+      padding: 2px 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
 
     /* Race box */
     .lnm-results-widget .race-box {
@@ -156,7 +256,7 @@
     /* Candidate table header */
     .lnm-results-widget .candidate-table-head {
       display: grid;
-      grid-template-columns: 180px 1fr 60px 90px;
+      grid-template-columns: 240px 1fr 60px 90px;
       padding: 6px 14px;
       border-top: 1px solid #ddd;
       background: #fafafa;
@@ -175,7 +275,7 @@
       border-top: 1px solid #eee;
       padding: 10px 14px;
       display: grid;
-      grid-template-columns: 180px 1fr 60px 90px;
+      grid-template-columns: 240px 1fr 60px 90px;
       align-items: center;
       gap: 0;
     }
@@ -183,6 +283,9 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      min-width: 0;
+      padding-right: 12px;
+      overflow: hidden;
     }
     .lnm-results-widget .candidate-party {
       width: 30px; height: 30px;
@@ -216,16 +319,25 @@
     .lnm-results-widget .party-r { background: #faeee7; color: #b85c2a; }
     .lnm-results-widget .party-i { background: #f0edf8; color: #7b5ea7; }
     .lnm-results-widget .party-n { background: #e8e8e8; color: #555; }
-    .lnm-results-widget .candidate-name-text { display: flex; flex-direction: column; }
+    .lnm-results-widget .candidate-name-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      flex: 1;
+    }
     .lnm-results-widget .candidate-name {
       font-weight: 700;
       font-size: 0.92em;
       color: #333;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     .lnm-results-widget .candidate-profession {
       font-size: 0.78em;
       color: #666;
       margin-top: 2px;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     .lnm-results-widget .candidate-bar-cell { padding-right: 14px; }
     .lnm-results-widget .candidate-bar-track {
@@ -289,19 +401,41 @@
 
 <div class="lnm-results-widget">
 
+  <div class="lnm-county-banner">
+    <div class="lnm-county-name">Marin County</div>
+    <div class="lnm-election-title">June 2, 2026 Statewide Direct Primary</div>
+  </div>
+
   <div class="search-wrap">
     <input class="search-input" type="text" placeholder="Search for measures, candidates, contests…" id="electionSearch">
   </div>
   <div class="no-results" id="noResults">No results found.</div>
 
-  <div class="lnm-provenance">Source: <a href="https://results.enr.clarityelections.com/CA/Marin/126360/web.345435/#/summary">Marin Registrar of Voters</a> &middot; Updated: 2026-06-02 22:05:00</div>
+  <div class="turnout-bar">
+    <div class="turnout-stat">
+      <div class="turnout-stat-label">Voter Turnout</div>
+      <div class="turnout-stat-value">20.59%</div>
+    </div>
+    <div class="turnout-stat">
+      <div class="turnout-stat-label">Ballots Cast</div>
+      <div class="turnout-stat-value">35,635</div>
+    </div>
+    <div class="turnout-stat">
+      <div class="turnout-stat-label">Registered Voters</div>
+      <div class="turnout-stat-value">173,082</div>
+    </div>
+  </div>
+
+  <div class="lnm-provenance">Source: <a href="https://results.enr.clarityelections.com/CA/Marin/126360/web.345435/#/summary">Marin Registrar of Voters</a> &middot; Updated: 2026-06-02 23:35:23</div>
+
+<div class="uncontested-wrap" id="uncontestedWrap"><div class="uncontested-toggle" id="uncontestedToggle"><span><span class="uncontested-toggle-label">Uncontested Races</span><span class="uncontested-toggle-count">10 races with no opposition</span></span><svg class="uncontested-chevron" id="uncontestedChevron" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6L8 10L12 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="uncontested-body" id="uncontestedBody"><div class="uncontested-row"><div class="uncontested-race-name">Superior Court Judge</div><div class="uncontested-candidate">Kevin Murphy</div><div class="uncontested-profession">Incumbent</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Superior Court Judge</div><div class="uncontested-candidate">Matthew Siroka</div><div class="uncontested-profession">Incumbent</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Superior Court Judge</div><div class="uncontested-candidate">James Schurz</div><div class="uncontested-profession">Incumbent</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Superior Court Judge</div><div class="uncontested-candidate">Mark Talamantes</div><div class="uncontested-profession">Incumbent</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Superior Court Judge</div><div class="uncontested-candidate">Ahtossa Fullerton</div><div class="uncontested-profession">Incumbent</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Assessor-Recorder-County Clerk</div><div class="uncontested-candidate">Shelly Scott</div><div class="uncontested-profession">Assessor Recorder County Clerk</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">County Superintendent of Schools</div><div class="uncontested-candidate">John Carroll</div><div class="uncontested-profession">Marin County Superintendent Of Schools</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Ross Valley Sanitary District Director</div><div class="uncontested-candidate">Michael Boorstein</div><div class="uncontested-profession">Incumbent</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Ross Valley Sanitary District Director</div><div class="uncontested-candidate">Thomas Gaffney</div><div class="uncontested-profession">Incumbent</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Ross Valley Sanitary District Director</div><div class="uncontested-candidate">Pamela Meigs</div><div class="uncontested-profession">Incumbent</div><div class="uncontested-badge">Uncontested</div></div></div></div>
 
   <div class="race-box">
     <div class="race-title">Sonoma-Marin Area Rail Transit District</div>
     <div class="measure-block">
       <div class="measure-name">Measure B</div>
       <div class="measure-desc">Without increasing taxes, continue Sonoma-Marin Area Rail Transit District regional train and bicycle/pedestrian pathway service beyond 2029 to serve residents including seniors, youth, essential workers, and low-income households; relieve traffic congestion; complete planned rail/pathway expansion; increase ridership; preserve community’s historic rail infrastructure investment; maintain clean/safe trains; reduce greenhouse gas emissions, shall the measure extending the ¼ cent, voter-approved, sales tax for 30 years, generating approximately $51,000,000 annually beginning in 2029, be adopted?</div>
-      <div class="measure-votes-counted">30,121 votes counted</div>
+      <div class="measure-votes-counted">34,143 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -314,20 +448,20 @@
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:70.2%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:70.7%"></div></div>
           </div>
-          <div class="pct-cell-measure">70.25%</div>
-          <div class="total-cell">21,160</div>
+          <div class="pct-cell-measure">70.66%</div>
+          <div class="total-cell">24,126</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:29.8%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:29.3%"></div></div>
           </div>
-          <div class="pct-cell-measure">29.75%</div>
-          <div class="total-cell">8,961</div>
+          <div class="pct-cell-measure">29.34%</div>
+          <div class="total-cell">10,017</div>
         </div>
       </div>
     </div>
@@ -338,7 +472,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure C</div>
       <div class="measure-desc">To protect quality education/local funding that cannot be taken by the State, shall Kentfield School District’s measure be adopted, maintaining quality core academics, including math, science, reading/writing; attracting/retaining exceptional teachers; and preventing class size increases by renewing the expiring school parcel tax at the current $1,842 rate, adding $148/parcel, providing $5,900,000 annually for 10 years, with senior exemptions, annual adjustments, independent oversight, and all funds locally controlled?</div>
-      <div class="measure-votes-counted">1,537 votes counted</div>
+      <div class="measure-votes-counted">1,805 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -351,20 +485,20 @@
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:72.2%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:72.7%"></div></div>
           </div>
-          <div class="pct-cell-measure">72.22%</div>
-          <div class="total-cell">1,110</div>
+          <div class="pct-cell-measure">72.74%</div>
+          <div class="total-cell">1,313</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:27.8%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:27.3%"></div></div>
           </div>
-          <div class="pct-cell-measure">27.78%</div>
-          <div class="total-cell">427</div>
+          <div class="pct-cell-measure">27.26%</div>
+          <div class="total-cell">492</div>
         </div>
       </div>
     </div>
@@ -375,7 +509,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure D</div>
       <div class="measure-desc">To maintain safe, modern elementary and middle schools without increasing current tax rates, by upgrading emergency, safety and security systems; repairing deteriorating roofs, HVAC, plumbing/electrical; updating science, technology, engineering, art, music, and math classrooms/labs; and improving water and drainage systems; shall Larkspur-Corte Madera School District’s measure be adopted, authorizing $44,000,000 in bonds at legal rates, levying approximately $24/$100,000 assessed value ($3,400,000 annually), while bonds are outstanding, with independent audits, oversight, and all funds spent locally?</div>
-      <div class="measure-votes-counted">1,613 votes counted</div>
+      <div class="measure-votes-counted">1,895 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -388,20 +522,20 @@
             <span class="response-label">BONDS-YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:61.3%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:61.7%"></div></div>
           </div>
-          <div class="pct-cell-measure">61.31%</div>
-          <div class="total-cell">989</div>
+          <div class="pct-cell-measure">61.69%</div>
+          <div class="total-cell">1,169</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">BONDS-NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:38.7%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:38.3%"></div></div>
           </div>
-          <div class="pct-cell-measure">38.69%</div>
-          <div class="total-cell">624</div>
+          <div class="pct-cell-measure">38.31%</div>
+          <div class="total-cell">726</div>
         </div>
       </div>
     </div>
@@ -412,7 +546,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure E</div>
       <div class="measure-desc">To retain/ attract highly qualified teachers; protect quality academic programs in reading/ writing, science, technology, engineering, and math; and prevent cuts equaling approximately one-quarter of the District’s budget, shall Mill Valley Elementary School District’s measure be adopted reauthorizing the expiring school parcel tax at the current rate of $1,520, and restoring the recently expired $234 per parcel, providing $14,900,000 annually for 8 years, with annual adjustments, independent oversight, senior exemptions and local control?</div>
-      <div class="measure-votes-counted">4,088 votes counted</div>
+      <div class="measure-votes-counted">4,847 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -425,20 +559,20 @@
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:69.3%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:70.4%"></div></div>
           </div>
-          <div class="pct-cell-measure">69.35%</div>
-          <div class="total-cell">2,835</div>
+          <div class="pct-cell-measure">70.37%</div>
+          <div class="total-cell">3,411</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:30.7%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:29.6%"></div></div>
           </div>
-          <div class="pct-cell-measure">30.65%</div>
-          <div class="total-cell">1,253</div>
+          <div class="pct-cell-measure">29.63%</div>
+          <div class="total-cell">1,436</div>
         </div>
       </div>
     </div>
@@ -449,7 +583,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure G</div>
       <div class="measure-desc">Shall the measure to preserve excellent education and quality teaching for Novato Unified School District students, with local funding the State cannot take away, and to maintain quality core academic instruction in math, science, reading and writing; and attract and retain qualified teachers and counselors; by levying $249 per parcel, providing $4,000,000 annually, for 8 years, with independent citizens’ oversight, exemptions for senior citizens, no funds for administrators, with all funds staying local for Novato students be adopted?</div>
-      <div class="measure-votes-counted">8,099 votes counted</div>
+      <div class="measure-votes-counted">8,768 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -462,20 +596,20 @@
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:59.6%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:59.7%"></div></div>
           </div>
-          <div class="pct-cell-measure">59.61%</div>
-          <div class="total-cell">4,828</div>
+          <div class="pct-cell-measure">59.69%</div>
+          <div class="total-cell">5,234</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:40.4%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:40.3%"></div></div>
           </div>
-          <div class="pct-cell-measure">40.39%</div>
-          <div class="total-cell">3,271</div>
+          <div class="pct-cell-measure">40.31%</div>
+          <div class="total-cell">3,534</div>
         </div>
       </div>
     </div>
@@ -486,7 +620,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure I</div>
       <div class="measure-desc">To improve and maintain local play fields and recreation facilities to support children&#x27;s health, fitness, and recreation activities, improve play area safety, add restrooms where needed; and improve access to facilities for children with disabilities, acquire, construct, repair facilities, equipment, shall Sausalito Marin City School District’s measure authorizing $12,500,000 in bonds at legal rates be adopted, levying $8 per $100,000 assessed value, (averaging $860,000 annually while bonds are outstanding), with independent oversight/audits and all money staying local?</div>
-      <div class="measure-votes-counted">1,180 votes counted</div>
+      <div class="measure-votes-counted">1,483 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -499,20 +633,20 @@
             <span class="response-label">BONDS-YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:65.8%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:67.5%"></div></div>
           </div>
-          <div class="pct-cell-measure">65.76%</div>
-          <div class="total-cell">776</div>
+          <div class="pct-cell-measure">67.50%</div>
+          <div class="total-cell">1,001</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">BONDS-NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:34.2%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:32.5%"></div></div>
           </div>
-          <div class="pct-cell-measure">34.24%</div>
-          <div class="total-cell">404</div>
+          <div class="pct-cell-measure">32.50%</div>
+          <div class="total-cell">482</div>
         </div>
       </div>
     </div>
@@ -523,7 +657,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure J</div>
       <div class="measure-desc">Shall the measure to extend the Town’s sales tax by removing its sunset and to increase its rate from ¾% to 1%, generating approximately $1,300,000 annually in local funds until ended by voters and that cannot be taken away by the State, to maintain general Town services, such as public safety and emergency response, improve infrastructure such as repairing and repaving streets, subject to annual independent audits, be adopted?</div>
-      <div class="measure-votes-counted">794 votes counted</div>
+      <div class="measure-votes-counted">1,196 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -536,20 +670,20 @@
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:62.8%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:61.0%"></div></div>
           </div>
-          <div class="pct-cell-measure">62.85%</div>
-          <div class="total-cell">499</div>
+          <div class="pct-cell-measure">60.95%</div>
+          <div class="total-cell">729</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:37.2%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:39.0%"></div></div>
           </div>
-          <div class="pct-cell-measure">37.15%</div>
-          <div class="total-cell">295</div>
+          <div class="pct-cell-measure">39.05%</div>
+          <div class="total-cell">467</div>
         </div>
       </div>
     </div>
@@ -560,7 +694,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure K</div>
       <div class="measure-desc">To continue existing local library funding to maintain safe places for youth after school; book/ digital collections; children/adult programs; library hours and technology access, shall the City of San Rafael measure extending the library services parcel tax at $74.18 per parcel (with multifamily parcels adding $12.54 per unit, to a maximum of $1,259), generating approximately $1,267,000 annually for nine years, with senior exemptions, annual inflation adjustments, resident oversight and public disclosure, be adopted?</div>
-      <div class="measure-votes-counted">5,631 votes counted</div>
+      <div class="measure-votes-counted">5,901 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -573,20 +707,20 @@
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:71.9%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:72.0%"></div></div>
           </div>
-          <div class="pct-cell-measure">71.85%</div>
-          <div class="total-cell">4,046</div>
+          <div class="pct-cell-measure">71.97%</div>
+          <div class="total-cell">4,247</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:28.1%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:28.0%"></div></div>
           </div>
-          <div class="pct-cell-measure">28.15%</div>
-          <div class="total-cell">1,585</div>
+          <div class="pct-cell-measure">28.03%</div>
+          <div class="total-cell">1,654</div>
         </div>
       </div>
     </div>
@@ -597,7 +731,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure L</div>
       <div class="measure-desc">To maintain, protect, and improve Mesa Park and Downtown Park for community recreation; ensure safe, accessible park facilities for all ages; and provide stable local funding, shall the Firehouse Community Park Agency replace the expiring $75 parcel tax with a $150 annual parcel tax for four years beginning 2026–27, raising about $210,000 annually, with annual increases up to 3%, requiring funds remain local for park maintenance and improvements with annual public accountability reports?</div>
-      <div class="measure-votes-counted">226 votes counted</div>
+      <div class="measure-votes-counted">227 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -610,19 +744,19 @@
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:76.5%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:76.7%"></div></div>
           </div>
-          <div class="pct-cell-measure">76.55%</div>
-          <div class="total-cell">173</div>
+          <div class="pct-cell-measure">76.65%</div>
+          <div class="total-cell">174</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:23.5%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:23.3%"></div></div>
           </div>
-          <div class="pct-cell-measure">23.45%</div>
+          <div class="pct-cell-measure">23.35%</div>
           <div class="total-cell">53</div>
         </div>
       </div>
@@ -634,7 +768,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure M</div>
       <div class="measure-desc">To provide critical funding for fire protection services, including firehouse maintenance, emergency preparedness and equipment upgrades, shall Muir Beach CSD Ordinance No. 2026-1, which imposes an annual $386.00 parcel tax for 10 years, with the amount of $61,374 to be raised annually, and with annual CPI adjustment, be approved and shall the Muir Beach CSD appropriations limit be increased by the amount of this voter approved tax?</div>
-      <div class="measure-votes-counted">53 votes counted</div>
+      <div class="measure-votes-counted">56 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -647,19 +781,19 @@
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:84.9%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:85.7%"></div></div>
           </div>
-          <div class="pct-cell-measure">84.91%</div>
-          <div class="total-cell">45</div>
+          <div class="pct-cell-measure">85.71%</div>
+          <div class="total-cell">48</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:15.1%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:14.3%"></div></div>
           </div>
-          <div class="pct-cell-measure">15.09%</div>
+          <div class="pct-cell-measure">14.29%</div>
           <div class="total-cell">8</div>
         </div>
       </div>
@@ -683,10 +817,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:80.1%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:79.9%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">80.1%</div>
-      <div class="candidate-votes">4,202</div>
+      <div class="candidate-pct pct-n">79.93%</div>
+      <div class="candidate-votes">4,317</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -697,10 +831,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:19.8%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:19.9%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">19.8%</div>
-      <div class="candidate-votes">1,040</div>
+      <div class="candidate-pct pct-n">19.90%</div>
+      <div class="candidate-votes">1,075</div>
     </div>
   </div>
 
@@ -721,10 +855,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:20.1%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:20.2%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">20.1%</div>
-      <div class="candidate-votes">1,234</div>
+      <div class="candidate-pct pct-n">20.17%</div>
+      <div class="candidate-votes">1,338</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -734,10 +868,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:8.2%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:8.0%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">8.2%</div>
-      <div class="candidate-votes">505</div>
+      <div class="candidate-pct pct-n">8.04%</div>
+      <div class="candidate-votes">533</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -748,10 +882,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:45.1%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:44.6%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">45.1%</div>
-      <div class="candidate-votes">2,770</div>
+      <div class="candidate-pct pct-n">44.63%</div>
+      <div class="candidate-votes">2,960</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -762,10 +896,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:15.2%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:15.3%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">15.2%</div>
-      <div class="candidate-votes">936</div>
+      <div class="candidate-pct pct-n">15.27%</div>
+      <div class="candidate-votes">1,013</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -776,10 +910,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:11.2%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:11.7%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">11.2%</div>
-      <div class="candidate-votes">688</div>
+      <div class="candidate-pct pct-n">11.66%</div>
+      <div class="candidate-votes">773</div>
     </div>
   </div>
 
@@ -788,7 +922,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure H</div>
       <div class="measure-desc">Shall the measure to continue local funding that preserves excellent education for Ross Valley School District students, including: maintaining core academic programs in science, technology, engineering, math, reading and writing; maintaining manageable class sizes; and attracting/ retaining highly qualified teachers; by renewing the expiring current $742 parcel tax, while adding $540 per parcel, providing $8,600,000 annually for 10 years, with senior exemptions, 3% annual adjustments, independent oversight, no funds for administrators, and all funds staying local, be adopted?</div>
-      <div class="measure-votes-counted">2,910 votes counted</div>
+      <div class="measure-votes-counted">3,791 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -801,20 +935,20 @@
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:69.3%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:69.9%"></div></div>
           </div>
-          <div class="pct-cell-measure">69.31%</div>
-          <div class="total-cell">2,017</div>
+          <div class="pct-cell-measure">69.90%</div>
+          <div class="total-cell">2,650</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:30.7%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:30.1%"></div></div>
           </div>
-          <div class="pct-cell-measure">30.69%</div>
-          <div class="total-cell">893</div>
+          <div class="pct-cell-measure">30.10%</div>
+          <div class="total-cell">1,141</div>
         </div>
       </div>
     </div>
@@ -824,6 +958,17 @@
 
 <script>
   (function() {
+    // Uncontested dropdown toggle.
+    var _ut = document.getElementById('uncontestedToggle');
+    var _ub = document.getElementById('uncontestedBody');
+    var _uc = document.getElementById('uncontestedChevron');
+    if (_ut && _ub && _uc) {
+      _ut.addEventListener('click', function() {
+        _ub.classList.toggle('open');
+        _uc.classList.toggle('open');
+      });
+    }
+    // Race search filter.
     var input = document.getElementById('electionSearch');
     var noResults = document.getElementById('noResults');
     if (!input) return;

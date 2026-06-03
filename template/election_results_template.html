@@ -11,6 +11,29 @@
     .lnm-results-widget, .lnm-results-widget * { box-sizing: border-box; margin: 0; padding: 0; }
     .lnm-results-widget { font-family: Arial, sans-serif; }
 
+    /* County banner */
+    .lnm-results-widget .lnm-county-banner {
+      background-color: #1a3668;
+      color: white;
+      padding: 14px 18px;
+      border-radius: 5px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    .lnm-results-widget .lnm-county-name {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .lnm-results-widget .lnm-election-title {
+      font-size: 13px;
+      font-weight: 400;
+      color: #accf00;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 4px;
+    }
+
     /* Turnout bar */
     .lnm-results-widget .turnout-bar {
       background-color: #1a3668;
@@ -56,6 +79,83 @@
       text-decoration: none;
     }
     .lnm-results-widget .lnm-provenance a:hover { text-decoration: underline; }
+
+    /* Uncontested races dropdown */
+    .lnm-results-widget .uncontested-wrap {
+      margin-bottom: 16px;
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1px solid #1a3668;
+    }
+    .lnm-results-widget .uncontested-toggle {
+      background-color: #1a3668;
+      color: white;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .lnm-results-widget .uncontested-toggle-label {
+      font-size: 0.92em;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .lnm-results-widget .uncontested-toggle-count {
+      font-size: 0.82em;
+      color: #accf00;
+      margin-left: 8px;
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .lnm-results-widget .uncontested-chevron {
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+    .lnm-results-widget .uncontested-chevron.open { transform: rotate(180deg); }
+    .lnm-results-widget .uncontested-body { display: none; background: white; }
+    .lnm-results-widget .uncontested-body.open { display: block; }
+    .lnm-results-widget .uncontested-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid #f0e68c;
+      gap: 12px;
+      background: #fffde7;
+    }
+    .lnm-results-widget .uncontested-row:last-child { border-bottom: none; }
+    .lnm-results-widget .uncontested-race-name {
+      font-size: 0.88em;
+      font-weight: 700;
+      color: #1a3668;
+      flex: 1;
+    }
+    .lnm-results-widget .uncontested-candidate {
+      font-size: 0.85em;
+      color: #444;
+      flex: 1;
+    }
+    .lnm-results-widget .uncontested-profession {
+      font-size: 0.78em;
+      color: #888;
+      flex: 1;
+      font-style: italic;
+    }
+    .lnm-results-widget .uncontested-badge {
+      font-size: 0.72em;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: #f2f7d9;
+      color: #4a6020;
+      border: 1px solid #c8e050;
+      padding: 2px 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
 
     /* Race box */
     .lnm-results-widget .race-box {
@@ -156,7 +256,7 @@
     /* Candidate table header */
     .lnm-results-widget .candidate-table-head {
       display: grid;
-      grid-template-columns: 180px 1fr 60px 90px;
+      grid-template-columns: 240px 1fr 60px 90px;
       padding: 6px 14px;
       border-top: 1px solid #ddd;
       background: #fafafa;
@@ -175,7 +275,7 @@
       border-top: 1px solid #eee;
       padding: 10px 14px;
       display: grid;
-      grid-template-columns: 180px 1fr 60px 90px;
+      grid-template-columns: 240px 1fr 60px 90px;
       align-items: center;
       gap: 0;
     }
@@ -183,6 +283,9 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      min-width: 0;
+      padding-right: 12px;
+      overflow: hidden;
     }
     .lnm-results-widget .candidate-party {
       width: 30px; height: 30px;
@@ -216,16 +319,25 @@
     .lnm-results-widget .party-r { background: #faeee7; color: #b85c2a; }
     .lnm-results-widget .party-i { background: #f0edf8; color: #7b5ea7; }
     .lnm-results-widget .party-n { background: #e8e8e8; color: #555; }
-    .lnm-results-widget .candidate-name-text { display: flex; flex-direction: column; }
+    .lnm-results-widget .candidate-name-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      flex: 1;
+    }
     .lnm-results-widget .candidate-name {
       font-weight: 700;
       font-size: 0.92em;
       color: #333;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     .lnm-results-widget .candidate-profession {
       font-size: 0.78em;
       color: #666;
       margin-top: 2px;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     .lnm-results-widget .candidate-bar-cell { padding-right: 14px; }
     .lnm-results-widget .candidate-bar-track {

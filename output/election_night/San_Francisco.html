@@ -11,6 +11,29 @@
     .lnm-results-widget, .lnm-results-widget * { box-sizing: border-box; margin: 0; padding: 0; }
     .lnm-results-widget { font-family: Arial, sans-serif; }
 
+    /* County banner */
+    .lnm-results-widget .lnm-county-banner {
+      background-color: #1a3668;
+      color: white;
+      padding: 14px 18px;
+      border-radius: 5px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    .lnm-results-widget .lnm-county-name {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .lnm-results-widget .lnm-election-title {
+      font-size: 13px;
+      font-weight: 400;
+      color: #accf00;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 4px;
+    }
+
     /* Turnout bar */
     .lnm-results-widget .turnout-bar {
       background-color: #1a3668;
@@ -56,6 +79,83 @@
       text-decoration: none;
     }
     .lnm-results-widget .lnm-provenance a:hover { text-decoration: underline; }
+
+    /* Uncontested races dropdown */
+    .lnm-results-widget .uncontested-wrap {
+      margin-bottom: 16px;
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1px solid #1a3668;
+    }
+    .lnm-results-widget .uncontested-toggle {
+      background-color: #1a3668;
+      color: white;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .lnm-results-widget .uncontested-toggle-label {
+      font-size: 0.92em;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .lnm-results-widget .uncontested-toggle-count {
+      font-size: 0.82em;
+      color: #accf00;
+      margin-left: 8px;
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .lnm-results-widget .uncontested-chevron {
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+    .lnm-results-widget .uncontested-chevron.open { transform: rotate(180deg); }
+    .lnm-results-widget .uncontested-body { display: none; background: white; }
+    .lnm-results-widget .uncontested-body.open { display: block; }
+    .lnm-results-widget .uncontested-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid #f0e68c;
+      gap: 12px;
+      background: #fffde7;
+    }
+    .lnm-results-widget .uncontested-row:last-child { border-bottom: none; }
+    .lnm-results-widget .uncontested-race-name {
+      font-size: 0.88em;
+      font-weight: 700;
+      color: #1a3668;
+      flex: 1;
+    }
+    .lnm-results-widget .uncontested-candidate {
+      font-size: 0.85em;
+      color: #444;
+      flex: 1;
+    }
+    .lnm-results-widget .uncontested-profession {
+      font-size: 0.78em;
+      color: #888;
+      flex: 1;
+      font-style: italic;
+    }
+    .lnm-results-widget .uncontested-badge {
+      font-size: 0.72em;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: #f2f7d9;
+      color: #4a6020;
+      border: 1px solid #c8e050;
+      padding: 2px 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
 
     /* Race box */
     .lnm-results-widget .race-box {
@@ -156,7 +256,7 @@
     /* Candidate table header */
     .lnm-results-widget .candidate-table-head {
       display: grid;
-      grid-template-columns: 180px 1fr 60px 90px;
+      grid-template-columns: 240px 1fr 60px 90px;
       padding: 6px 14px;
       border-top: 1px solid #ddd;
       background: #fafafa;
@@ -175,7 +275,7 @@
       border-top: 1px solid #eee;
       padding: 10px 14px;
       display: grid;
-      grid-template-columns: 180px 1fr 60px 90px;
+      grid-template-columns: 240px 1fr 60px 90px;
       align-items: center;
       gap: 0;
     }
@@ -183,6 +283,9 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      min-width: 0;
+      padding-right: 12px;
+      overflow: hidden;
     }
     .lnm-results-widget .candidate-party {
       width: 30px; height: 30px;
@@ -216,16 +319,25 @@
     .lnm-results-widget .party-r { background: #faeee7; color: #b85c2a; }
     .lnm-results-widget .party-i { background: #f0edf8; color: #7b5ea7; }
     .lnm-results-widget .party-n { background: #e8e8e8; color: #555; }
-    .lnm-results-widget .candidate-name-text { display: flex; flex-direction: column; }
+    .lnm-results-widget .candidate-name-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      flex: 1;
+    }
     .lnm-results-widget .candidate-name {
       font-weight: 700;
       font-size: 0.92em;
       color: #333;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     .lnm-results-widget .candidate-profession {
       font-size: 0.78em;
       color: #666;
       margin-top: 2px;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     .lnm-results-widget .candidate-bar-cell { padding-right: 14px; }
     .lnm-results-widget .candidate-bar-track {
@@ -289,6 +401,11 @@
 
 <div class="lnm-results-widget">
 
+  <div class="lnm-county-banner">
+    <div class="lnm-county-name">San Francisco County</div>
+    <div class="lnm-election-title">June 2, 2026 Statewide Direct Primary</div>
+  </div>
+
   <div class="search-wrap">
     <input class="search-input" type="text" placeholder="Search for measures, candidates, contests…" id="electionSearch">
   </div>
@@ -296,20 +413,12 @@
 
   <div class="turnout-bar">
     <div class="turnout-stat">
-      <div class="turnout-stat-label">Voter Turnout</div>
-      <div class="turnout-stat-value">20.34%</div>
-    </div>
-    <div class="turnout-stat">
-      <div class="turnout-stat-label">Ballots Cast</div>
-      <div class="turnout-stat-value">216,644</div>
-    </div>
-    <div class="turnout-stat">
       <div class="turnout-stat-label">Registered Voters</div>
-      <div class="turnout-stat-value">533,546</div>
+      <div class="turnout-stat-value">531,781</div>
     </div>
   </div>
 
-  <div class="lnm-provenance">Source: <a href="https://www.sfelections.org/results/20260602w/index.html">San Francisco Registrar of Voters</a> &middot; Updated: 2026-06-02 22:05:00</div>
+  <div class="lnm-provenance">Source: <a href="https://www.sfelections.org/results/20260602w/index.html">San Francisco Registrar of Voters</a> &middot; Updated: 2026-06-02 23:35:23</div>
 
   <div class="race-box">
     <div class="race-title">Board of Supervisors, District 4</div>
@@ -327,49 +436,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:52.1%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:0.0%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">52.1%</div>
-      <div class="candidate-votes">5,296</div>
-    </div>
-    <div class="candidate-row">
-      <div class="candidate-name-cell">
-        <div class="candidate-party party-n" data-party="Non-Partisan">N</div>
-        <div class="candidate-name-text">
-          <div class="candidate-name">NATALIE GEE</div>
-        </div>
-      </div>
-      <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:17.9%"></div></div>
-      </div>
-      <div class="candidate-pct pct-n">17.9%</div>
-      <div class="candidate-votes">1,820</div>
-    </div>
-    <div class="candidate-row">
-      <div class="candidate-name-cell">
-        <div class="candidate-party party-n" data-party="Non-Partisan">N</div>
-        <div class="candidate-name-text">
-          <div class="candidate-name">ALBERT CHOW</div>
-        </div>
-      </div>
-      <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:17.8%"></div></div>
-      </div>
-      <div class="candidate-pct pct-n">17.8%</div>
-      <div class="candidate-votes">1,813</div>
-    </div>
-    <div class="candidate-row">
-      <div class="candidate-name-cell">
-        <div class="candidate-party party-n" data-party="Non-Partisan">N</div>
-        <div class="candidate-name-text">
-          <div class="candidate-name">JEREMY JULIAN GRECO</div>
-        </div>
-      </div>
-      <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:6.2%"></div></div>
-      </div>
-      <div class="candidate-pct pct-n">6.2%</div>
-      <div class="candidate-votes">627</div>
+      <div class="candidate-pct pct-n">0.00%</div>
+      <div class="candidate-votes">0</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -379,10 +449,49 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:5.9%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:0.0%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">5.9%</div>
-      <div class="candidate-votes">603</div>
+      <div class="candidate-pct pct-n">0.00%</div>
+      <div class="candidate-votes">0</div>
+    </div>
+    <div class="candidate-row">
+      <div class="candidate-name-cell">
+        <div class="candidate-party party-n" data-party="Non-Partisan">N</div>
+        <div class="candidate-name-text">
+          <div class="candidate-name">ALBERT CHOW</div>
+        </div>
+      </div>
+      <div class="candidate-bar-cell">
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:0.0%"></div></div>
+      </div>
+      <div class="candidate-pct pct-n">0.00%</div>
+      <div class="candidate-votes">0</div>
+    </div>
+    <div class="candidate-row">
+      <div class="candidate-name-cell">
+        <div class="candidate-party party-n" data-party="Non-Partisan">N</div>
+        <div class="candidate-name-text">
+          <div class="candidate-name">JEREMY JULIAN GRECO</div>
+        </div>
+      </div>
+      <div class="candidate-bar-cell">
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:0.0%"></div></div>
+      </div>
+      <div class="candidate-pct pct-n">0.00%</div>
+      <div class="candidate-votes">0</div>
+    </div>
+    <div class="candidate-row">
+      <div class="candidate-name-cell">
+        <div class="candidate-party party-n" data-party="Non-Partisan">N</div>
+        <div class="candidate-name-text">
+          <div class="candidate-name">NATALIE GEE</div>
+        </div>
+      </div>
+      <div class="candidate-bar-cell">
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:0.0%"></div></div>
+      </div>
+      <div class="candidate-pct pct-n">0.00%</div>
+      <div class="candidate-votes">0</div>
     </div>
   </div>
 
@@ -398,27 +507,27 @@
       <div class="candidate-name-cell">
         <div class="candidate-party party-n" data-party="Non-Partisan">N</div>
         <div class="candidate-name-text">
-          <div class="candidate-name">STEPHEN SHERRILL</div>
+          <div class="candidate-name">LORI BROOKE</div>
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:70.3%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:0.0%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">70.3%</div>
-      <div class="candidate-votes">6,826</div>
+      <div class="candidate-pct pct-n">0.00%</div>
+      <div class="candidate-votes">0</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
         <div class="candidate-party party-n" data-party="Non-Partisan">N</div>
         <div class="candidate-name-text">
-          <div class="candidate-name">LORI BROOKE</div>
+          <div class="candidate-name">STEPHEN SHERRILL</div>
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:29.5%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:0.0%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">29.5%</div>
-      <div class="candidate-votes">2,866</div>
+      <div class="candidate-pct pct-n">0.00%</div>
+      <div class="candidate-votes">0</div>
     </div>
   </div>
 
@@ -434,14 +543,15 @@
       <div class="candidate-name-cell">
         <div class="candidate-party party-n" data-party="Non-Partisan">N</div>
         <div class="candidate-name-text">
-          <div class="candidate-name">PHIL KIM</div>
+          <div class="candidate-name">BRANDEE MARCKMANN</div>
+          <div class="candidate-profession">Mom/Nonprofit Director</div>
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:64.1%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:0.0%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">64.1%</div>
-      <div class="candidate-votes">58,490</div>
+      <div class="candidate-pct pct-n">0.00%</div>
+      <div class="candidate-votes">0</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -452,24 +562,23 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:24.2%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:0.0%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">24.2%</div>
-      <div class="candidate-votes">22,099</div>
+      <div class="candidate-pct pct-n">0.00%</div>
+      <div class="candidate-votes">0</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
         <div class="candidate-party party-n" data-party="Non-Partisan">N</div>
         <div class="candidate-name-text">
-          <div class="candidate-name">BRANDEE MARCKMANN</div>
-          <div class="candidate-profession">Mom/Nonprofit Director</div>
+          <div class="candidate-name">PHIL KIM</div>
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:11.6%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:0.0%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">11.6%</div>
-      <div class="candidate-votes">10,557</div>
+      <div class="candidate-pct pct-n">0.00%</div>
+      <div class="candidate-votes">0</div>
     </div>
   </div>
 
@@ -485,28 +594,28 @@
       <div class="candidate-name-cell">
         <div class="candidate-party party-n" data-party="Non-Partisan">N</div>
         <div class="candidate-name-text">
-          <div class="candidate-name">PHOEBE H. MAFFEI</div>
-        </div>
-      </div>
-      <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:61.6%"></div></div>
-      </div>
-      <div class="candidate-pct pct-n">61.6%</div>
-      <div class="candidate-votes">56,176</div>
-    </div>
-    <div class="candidate-row">
-      <div class="candidate-name-cell">
-        <div class="candidate-party party-n" data-party="Non-Partisan">N</div>
-        <div class="candidate-name-text">
           <div class="candidate-name">ALEXANDRA PRAY</div>
           <div class="candidate-profession">City &amp; County of San Francisco Deputy Public Defender</div>
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:38.4%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:0.0%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">38.4%</div>
-      <div class="candidate-votes">34,980</div>
+      <div class="candidate-pct pct-n">0.00%</div>
+      <div class="candidate-votes">0</div>
+    </div>
+    <div class="candidate-row">
+      <div class="candidate-name-cell">
+        <div class="candidate-party party-n" data-party="Non-Partisan">N</div>
+        <div class="candidate-name-text">
+          <div class="candidate-name">PHOEBE H. MAFFEI</div>
+        </div>
+      </div>
+      <div class="candidate-bar-cell">
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:0.0%"></div></div>
+      </div>
+      <div class="candidate-pct pct-n">0.00%</div>
+      <div class="candidate-votes">0</div>
     </div>
   </div>
 
@@ -515,7 +624,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure A</div>
       <div class="measure-desc">To improve fire, earthquake, and emergency response by retrofitting, improving, expanding, constructing, and/or replacing: deteriorating pipes, tunnels, and related facilities to ensure firefighters can access enough water to fight fires from a major disaster or emergency; unsafe or deteriorating emergency response facilities, including neighborhood fire stations, critical transportation facilities, and public safety facilities; and to pay related costs, shall the City and County of San Francisco&#x27;s issuance of $535,000,000 in general obligation bonds be adopted, with a duration up to 30 years from the time of issuance, an estimated average tax rate of $7.45/$100,000 of assessed property value, and estimated average annual revenues of $35,900,000, subject to independent citizen oversight and regular audits?</div>
-      <div class="measure-votes-counted">100,018 votes counted</div>
+      <div class="measure-votes-counted">0 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -528,20 +637,20 @@
             <span class="response-label">BONDS - YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:76.6%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:0.0%"></div></div>
           </div>
-          <div class="pct-cell-measure">76.56%</div>
-          <div class="total-cell">76,572</div>
+          <div class="pct-cell-measure">0.00%</div>
+          <div class="total-cell">0</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">BONDS - NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:23.4%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:0.0%"></div></div>
           </div>
-          <div class="pct-cell-measure">23.44%</div>
-          <div class="total-cell">23,446</div>
+          <div class="pct-cell-measure">0.00%</div>
+          <div class="total-cell">0</div>
         </div>
       </div>
     </div>
@@ -552,7 +661,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure B</div>
       <div class="measure-desc">Shall the City amend the Charter to set lifetime term limits for the Mayor and members of the Board of Supervisors so that people may not serve more than two four-year terms in those offices?</div>
-      <div class="measure-votes-counted">99,438 votes counted</div>
+      <div class="measure-votes-counted">0 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -565,20 +674,20 @@
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:55.5%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:0.0%"></div></div>
           </div>
-          <div class="pct-cell-measure">55.45%</div>
-          <div class="total-cell">55,142</div>
+          <div class="pct-cell-measure">0.00%</div>
+          <div class="total-cell">0</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:44.5%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:0.0%"></div></div>
           </div>
-          <div class="pct-cell-measure">44.55%</div>
-          <div class="total-cell">44,296</div>
+          <div class="pct-cell-measure">0.00%</div>
+          <div class="total-cell">0</div>
         </div>
       </div>
     </div>
@@ -589,7 +698,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure C</div>
       <div class="measure-desc">Shall the City permanently change the taxes it collects by exempting most businesses with up to $7.5 million in San Francisco gross receipts from both the gross receipts tax and the top executive pay tax on some businesses whose highest-paid managerial employee earns more than 100 times the median compensation paid to their San Francisco employees, and by increasing the rates of the top executive pay tax to either between 0.021% and 0.129% of their San Francisco gross receipts or between 0.086% and 0.514% of their San Francisco payroll expense, for an estimated annual revenue decrease of $30-$40 million?</div>
-      <div class="measure-votes-counted">97,745 votes counted</div>
+      <div class="measure-votes-counted">0 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -599,23 +708,23 @@
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
-            <span class="response-label">NO</span>
-          </div>
-          <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:64.0%"></div></div>
-          </div>
-          <div class="pct-cell-measure">64.02%</div>
-          <div class="total-cell">62,579</div>
-        </div>
-        <div class="measure-result-row">
-          <div class="response-cell">
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:36.0%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:0.0%"></div></div>
           </div>
-          <div class="pct-cell-measure">35.98%</div>
-          <div class="total-cell">35,166</div>
+          <div class="pct-cell-measure">0.00%</div>
+          <div class="total-cell">0</div>
+        </div>
+        <div class="measure-result-row">
+          <div class="response-cell">
+            <span class="response-label">NO</span>
+          </div>
+          <div class="bar-cell-measure">
+            <div class="bar-track-measure"><div class="bar-fill" style="width:0.0%"></div></div>
+          </div>
+          <div class="pct-cell-measure">0.00%</div>
+          <div class="total-cell">0</div>
         </div>
       </div>
     </div>
@@ -626,7 +735,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure D</div>
       <div class="measure-desc">Shall the City permanently change the top executive pay tax it collects from some large businesses when their highest-paid managerial employee earns more than 100 times the median compensation paid to their San Francisco employees, by changing the tax to be calculated using the compensation of all employees, not just those based in San Francisco, and shall the City increase the top executive pay tax rates for these businesses to either between 0.183% and 1.121% of their gross receipts or between 0.75% and 4.47% of their payroll expense in San Francisco, for an estimated annual revenue increase of $250-$300 million?</div>
-      <div class="measure-votes-counted">100,221 votes counted</div>
+      <div class="measure-votes-counted">0 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -636,23 +745,23 @@
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
-            <span class="response-label">NO</span>
-          </div>
-          <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:56.4%"></div></div>
-          </div>
-          <div class="pct-cell-measure">56.38%</div>
-          <div class="total-cell">56,506</div>
-        </div>
-        <div class="measure-result-row">
-          <div class="response-cell">
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:43.6%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:0.0%"></div></div>
           </div>
-          <div class="pct-cell-measure">43.62%</div>
-          <div class="total-cell">43,715</div>
+          <div class="pct-cell-measure">0.00%</div>
+          <div class="total-cell">0</div>
+        </div>
+        <div class="measure-result-row">
+          <div class="response-cell">
+            <span class="response-label">NO</span>
+          </div>
+          <div class="bar-cell-measure">
+            <div class="bar-track-measure"><div class="bar-fill" style="width:0.0%"></div></div>
+          </div>
+          <div class="pct-cell-measure">0.00%</div>
+          <div class="total-cell">0</div>
         </div>
       </div>
     </div>
@@ -662,6 +771,17 @@
 
 <script>
   (function() {
+    // Uncontested dropdown toggle.
+    var _ut = document.getElementById('uncontestedToggle');
+    var _ub = document.getElementById('uncontestedBody');
+    var _uc = document.getElementById('uncontestedChevron');
+    if (_ut && _ub && _uc) {
+      _ut.addEventListener('click', function() {
+        _ub.classList.toggle('open');
+        _uc.classList.toggle('open');
+      });
+    }
+    // Race search filter.
     var input = document.getElementById('electionSearch');
     var noResults = document.getElementById('noResults');
     if (!input) return;

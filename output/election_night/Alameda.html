@@ -11,6 +11,29 @@
     .lnm-results-widget, .lnm-results-widget * { box-sizing: border-box; margin: 0; padding: 0; }
     .lnm-results-widget { font-family: Arial, sans-serif; }
 
+    /* County banner */
+    .lnm-results-widget .lnm-county-banner {
+      background-color: #1a3668;
+      color: white;
+      padding: 14px 18px;
+      border-radius: 5px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    .lnm-results-widget .lnm-county-name {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .lnm-results-widget .lnm-election-title {
+      font-size: 13px;
+      font-weight: 400;
+      color: #accf00;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 4px;
+    }
+
     /* Turnout bar */
     .lnm-results-widget .turnout-bar {
       background-color: #1a3668;
@@ -56,6 +79,83 @@
       text-decoration: none;
     }
     .lnm-results-widget .lnm-provenance a:hover { text-decoration: underline; }
+
+    /* Uncontested races dropdown */
+    .lnm-results-widget .uncontested-wrap {
+      margin-bottom: 16px;
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1px solid #1a3668;
+    }
+    .lnm-results-widget .uncontested-toggle {
+      background-color: #1a3668;
+      color: white;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .lnm-results-widget .uncontested-toggle-label {
+      font-size: 0.92em;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .lnm-results-widget .uncontested-toggle-count {
+      font-size: 0.82em;
+      color: #accf00;
+      margin-left: 8px;
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .lnm-results-widget .uncontested-chevron {
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+    .lnm-results-widget .uncontested-chevron.open { transform: rotate(180deg); }
+    .lnm-results-widget .uncontested-body { display: none; background: white; }
+    .lnm-results-widget .uncontested-body.open { display: block; }
+    .lnm-results-widget .uncontested-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid #f0e68c;
+      gap: 12px;
+      background: #fffde7;
+    }
+    .lnm-results-widget .uncontested-row:last-child { border-bottom: none; }
+    .lnm-results-widget .uncontested-race-name {
+      font-size: 0.88em;
+      font-weight: 700;
+      color: #1a3668;
+      flex: 1;
+    }
+    .lnm-results-widget .uncontested-candidate {
+      font-size: 0.85em;
+      color: #444;
+      flex: 1;
+    }
+    .lnm-results-widget .uncontested-profession {
+      font-size: 0.78em;
+      color: #888;
+      flex: 1;
+      font-style: italic;
+    }
+    .lnm-results-widget .uncontested-badge {
+      font-size: 0.72em;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: #f2f7d9;
+      color: #4a6020;
+      border: 1px solid #c8e050;
+      padding: 2px 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
 
     /* Race box */
     .lnm-results-widget .race-box {
@@ -156,7 +256,7 @@
     /* Candidate table header */
     .lnm-results-widget .candidate-table-head {
       display: grid;
-      grid-template-columns: 180px 1fr 60px 90px;
+      grid-template-columns: 240px 1fr 60px 90px;
       padding: 6px 14px;
       border-top: 1px solid #ddd;
       background: #fafafa;
@@ -175,7 +275,7 @@
       border-top: 1px solid #eee;
       padding: 10px 14px;
       display: grid;
-      grid-template-columns: 180px 1fr 60px 90px;
+      grid-template-columns: 240px 1fr 60px 90px;
       align-items: center;
       gap: 0;
     }
@@ -183,6 +283,9 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      min-width: 0;
+      padding-right: 12px;
+      overflow: hidden;
     }
     .lnm-results-widget .candidate-party {
       width: 30px; height: 30px;
@@ -216,16 +319,25 @@
     .lnm-results-widget .party-r { background: #faeee7; color: #b85c2a; }
     .lnm-results-widget .party-i { background: #f0edf8; color: #7b5ea7; }
     .lnm-results-widget .party-n { background: #e8e8e8; color: #555; }
-    .lnm-results-widget .candidate-name-text { display: flex; flex-direction: column; }
+    .lnm-results-widget .candidate-name-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      flex: 1;
+    }
     .lnm-results-widget .candidate-name {
       font-weight: 700;
       font-size: 0.92em;
       color: #333;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     .lnm-results-widget .candidate-profession {
       font-size: 0.78em;
       color: #666;
       margin-top: 2px;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     .lnm-results-widget .candidate-bar-cell { padding-right: 14px; }
     .lnm-results-widget .candidate-bar-track {
@@ -289,6 +401,11 @@
 
 <div class="lnm-results-widget">
 
+  <div class="lnm-county-banner">
+    <div class="lnm-county-name">Alameda County</div>
+    <div class="lnm-election-title">June 2, 2026 Statewide Direct Primary</div>
+  </div>
+
   <div class="search-wrap">
     <input class="search-input" type="text" placeholder="Search for measures, candidates, contests…" id="electionSearch">
   </div>
@@ -297,11 +414,11 @@
   <div class="turnout-bar">
     <div class="turnout-stat">
       <div class="turnout-stat-label">Voter Turnout</div>
-      <div class="turnout-stat-value">16.11%</div>
+      <div class="turnout-stat-value">17.28%</div>
     </div>
     <div class="turnout-stat">
       <div class="turnout-stat-label">Ballots Cast</div>
-      <div class="turnout-stat-value">156,466</div>
+      <div class="turnout-stat-value">167,794</div>
     </div>
     <div class="turnout-stat">
       <div class="turnout-stat-label">Registered Voters</div>
@@ -309,14 +426,16 @@
     </div>
   </div>
 
-  <div class="lnm-provenance">Source: <a href="https://alamedacountyca.gov/rovresults/259/">Alameda Registrar of Voters</a> &middot; Updated: 2026-06-02 22:05:00</div>
+  <div class="lnm-provenance">Source: <a href="https://alamedacountyca.gov/rovresults/259/">Alameda Registrar of Voters</a> &middot; Updated: 2026-06-02 23:35:23</div>
+
+<div class="uncontested-wrap" id="uncontestedWrap"><div class="uncontested-toggle" id="uncontestedToggle"><span><span class="uncontested-toggle-label">Uncontested Races</span><span class="uncontested-toggle-count">2 races with no opposition</span></span><svg class="uncontested-chevron" id="uncontestedChevron" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6L8 10L12 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="uncontested-body" id="uncontestedBody"><div class="uncontested-row"><div class="uncontested-race-name">County Superintendent Of Schools</div><div class="uncontested-candidate">Alysse Castro</div><div class="uncontested-profession">Alameda County Superintendent of Schools</div><div class="uncontested-badge">Uncontested</div></div><div class="uncontested-row"><div class="uncontested-race-name">Supervisor, 3rd District</div><div class="uncontested-candidate">Lena Tam</div><div class="uncontested-profession">Alameda County Supervisor</div><div class="uncontested-badge">Uncontested</div></div></div></div>
 
   <div class="race-box">
     <div class="race-title">Peralta Community College District</div>
     <div class="measure-block">
       <div class="measure-name">Measure A</div>
       <div class="measure-desc">To continue funding for community colleges in Alameda, Berkeley, and Oakland at existing tax rates, support affordable education to prepare students for jobs/ careers and university transfer; attract/ retain high quality faculty; shall Peralta Community College District&#x27;s measure be adopted, reauthorizing the existing $48 per parcel annually for 9 years, providing $8,000,000 annually, with oversight, funds that cannot be taken by the state or used for administrator salaries, all benefitting local colleges?</div>
-      <div class="measure-votes-counted">62,861 votes counted</div>
+      <div class="measure-votes-counted">67,253 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -329,20 +448,20 @@
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:83.2%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:83.5%"></div></div>
           </div>
-          <div class="pct-cell-measure">83.23%</div>
-          <div class="total-cell">52,319</div>
+          <div class="pct-cell-measure">83.50%</div>
+          <div class="total-cell">56,154</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:16.8%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:16.5%"></div></div>
           </div>
-          <div class="pct-cell-measure">16.77%</div>
-          <div class="total-cell">10,542</div>
+          <div class="pct-cell-measure">16.50%</div>
+          <div class="total-cell">11,099</div>
         </div>
       </div>
     </div>
@@ -353,7 +472,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure B</div>
       <div class="measure-desc">Shall the measure to improve local classrooms/ school facilities: protect student safety/ security; repair/ replace aging roofs, heating, cooling, electrical/ plumbing systems; and update classrooms/ labs for science, technology, engineering, math, core academics, career/job training, by authorizing $212,000,000 in bonds at legal rates, levying $52.30 per $100,000 of assessed value, raising approximately $14,000,000 annually while bonds are outstanding, with independent oversight and all funds staying local, be adopted?</div>
-      <div class="measure-votes-counted">6,238 votes counted</div>
+      <div class="measure-votes-counted">6,623 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -366,20 +485,20 @@
             <span class="response-label">BONDS NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:52.9%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:53.0%"></div></div>
           </div>
-          <div class="pct-cell-measure">52.89%</div>
-          <div class="total-cell">3,299</div>
+          <div class="pct-cell-measure">52.95%</div>
+          <div class="total-cell">3,507</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">BONDS YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:47.1%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:47.0%"></div></div>
           </div>
-          <div class="pct-cell-measure">47.11%</div>
-          <div class="total-cell">2,939</div>
+          <div class="pct-cell-measure">47.05%</div>
+          <div class="total-cell">3,116</div>
         </div>
       </div>
     </div>
@@ -390,7 +509,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure G</div>
       <div class="measure-desc">Shall the measure to support student learning/ protect local schools from deep budget cuts by sustaining strong reading, writing, math/ science programs; attracting/ retaining qualified teachers/ staff; and supporting al students, including those with special needs, by levying a $98 parcel tax for twelve years, providing approximately $4,000,000 annually that cannot be taken by the state/ federal government, with senior exemptions, annual inflation adjustments, and independent oversight, be adopted?</div>
-      <div class="measure-votes-counted">11,762 votes counted</div>
+      <div class="measure-votes-counted">12,800 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -403,20 +522,20 @@
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:59.0%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:59.4%"></div></div>
           </div>
-          <div class="pct-cell-measure">59.03%</div>
-          <div class="total-cell">6,943</div>
+          <div class="pct-cell-measure">59.37%</div>
+          <div class="total-cell">7,599</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:41.0%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:40.6%"></div></div>
           </div>
-          <div class="pct-cell-measure">40.97%</div>
-          <div class="total-cell">4,819</div>
+          <div class="pct-cell-measure">40.63%</div>
+          <div class="total-cell">5,201</div>
         </div>
       </div>
     </div>
@@ -427,7 +546,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure H</div>
       <div class="measure-desc">To maintain the high quality of Piedmont schools, continue funding programs in math, science, technology, engineering, English, music and arts, attract and retain qualified teachers, update instructional materials and technology, and maintain manageable class sizes, shall Piedmont Unified School District&#x27;s measure be adopted, renewing the expiring school parcel tax at the then-current rate ($3,174 per parcel) until ended by voters, with independent citizen oversight, annual inflation adjustments, and all funds (approximately $12 million annually) benefiting local students?</div>
-      <div class="measure-votes-counted">2,192 votes counted</div>
+      <div class="measure-votes-counted">2,317 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -440,20 +559,20 @@
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:80.2%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:79.8%"></div></div>
           </div>
-          <div class="pct-cell-measure">80.25%</div>
-          <div class="total-cell">1,759</div>
+          <div class="pct-cell-measure">79.76%</div>
+          <div class="total-cell">1,848</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:19.8%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:20.2%"></div></div>
           </div>
-          <div class="pct-cell-measure">19.75%</div>
-          <div class="total-cell">433</div>
+          <div class="pct-cell-measure">20.24%</div>
+          <div class="total-cell">469</div>
         </div>
       </div>
     </div>
@@ -464,7 +583,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure C</div>
       <div class="measure-desc">Shall the measure amending Oakland&#x27;s Business Tax Ordinance to provide one-year business tax exemptions for (1) certain small businesses with annual gross receipts of $1,000,000 or less, including retail sales, grocers, business and personal services, recreation and entertainment, and manufacturing, and (2) businesses that establish a new commercial location in the City; and authorizing the City Council to extend the exemptions on an annual basis for up to three additional years, be adopted?</div>
-      <div class="measure-votes-counted">35,540 votes counted</div>
+      <div class="measure-votes-counted">38,159 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -477,20 +596,20 @@
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:76.4%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:76.5%"></div></div>
           </div>
-          <div class="pct-cell-measure">76.43%</div>
-          <div class="total-cell">27,163</div>
+          <div class="pct-cell-measure">76.51%</div>
+          <div class="total-cell">29,196</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:23.6%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:23.5%"></div></div>
           </div>
-          <div class="pct-cell-measure">23.57%</div>
-          <div class="total-cell">8,377</div>
+          <div class="pct-cell-measure">23.49%</div>
+          <div class="total-cell">8,963</div>
         </div>
       </div>
     </div>
@@ -501,7 +620,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure D</div>
       <div class="measure-desc">Shall the measure amending the City Charter to, among other things, expand the eligibility for service on the Board of the Police and Fire Retirement System and reduce the frequency of the Board&#x27;s mandatory meetings from monthly to no less than quarterly be adopted?</div>
-      <div class="measure-votes-counted">34,024 votes counted</div>
+      <div class="measure-votes-counted">36,500 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -514,20 +633,20 @@
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:72.8%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:72.0%"></div></div>
           </div>
-          <div class="pct-cell-measure">72.78%</div>
-          <div class="total-cell">24,762</div>
+          <div class="pct-cell-measure">72.03%</div>
+          <div class="total-cell">26,292</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:27.2%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:28.0%"></div></div>
           </div>
-          <div class="pct-cell-measure">27.22%</div>
-          <div class="total-cell">9,262</div>
+          <div class="pct-cell-measure">27.97%</div>
+          <div class="total-cell">10,208</div>
         </div>
       </div>
     </div>
@@ -538,7 +657,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure E</div>
       <div class="measure-desc">Shall the measure to: prevent increased 911 response times; maintain fire stations, fire protection services, police patrols and investigations, and gun-violence and crime prevention services; address homelessness; and remove illegal dumping and trash by imposing a parcel tax of $192 annually for single-family parcels, and other parcels as specified, exempting certain low-income and senior households and others, raising approximately $34,000,000 annually for nine years, with oversight, audits and public disclosure, be adopted?</div>
-      <div class="measure-votes-counted">35,971 votes counted</div>
+      <div class="measure-votes-counted">38,646 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -551,20 +670,20 @@
             <span class="response-label">NO</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:54.6%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:54.1%"></div></div>
           </div>
-          <div class="pct-cell-measure">54.62%</div>
-          <div class="total-cell">19,648</div>
+          <div class="pct-cell-measure">54.09%</div>
+          <div class="total-cell">20,905</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
             <span class="response-label">YES</span>
           </div>
           <div class="bar-cell-measure">
-            <div class="bar-track-measure"><div class="bar-fill" style="width:45.4%"></div></div>
+            <div class="bar-track-measure"><div class="bar-fill" style="width:45.9%"></div></div>
           </div>
-          <div class="pct-cell-measure">45.38%</div>
-          <div class="total-cell">16,323</div>
+          <div class="pct-cell-measure">45.91%</div>
+          <div class="total-cell">17,741</div>
         </div>
       </div>
     </div>
@@ -575,7 +694,7 @@
     <div class="measure-block">
       <div class="measure-name">Measure F</div>
       <div class="measure-desc">Shall Section 225(a) of the San Leandro City Charter be amended to the following: The Mayor shall be elected by the registered voters of the City at large. All Council Members, except the Mayor, shall be elected by the registered voters of the City by district. In conformance with the California Voting Rights Act, one Council Member shall be nominated and elected from each Council Member district only by the registered voters of that district.</div>
-      <div class="measure-votes-counted">6,465 votes counted</div>
+      <div class="measure-votes-counted">6,820 votes counted</div>
       <div class="measure-table">
         <div class="measure-table-head" style="grid-template-columns: 100px 1fr 60px 90px;">
           <span>Response</span>
@@ -590,8 +709,8 @@
           <div class="bar-cell-measure">
             <div class="bar-track-measure"><div class="bar-fill" style="width:87.6%"></div></div>
           </div>
-          <div class="pct-cell-measure">87.56%</div>
-          <div class="total-cell">5,661</div>
+          <div class="pct-cell-measure">87.57%</div>
+          <div class="total-cell">5,972</div>
         </div>
         <div class="measure-result-row">
           <div class="response-cell">
@@ -600,8 +719,8 @@
           <div class="bar-cell-measure">
             <div class="bar-track-measure"><div class="bar-fill" style="width:12.4%"></div></div>
           </div>
-          <div class="pct-cell-measure">12.44%</div>
-          <div class="total-cell">804</div>
+          <div class="pct-cell-measure">12.43%</div>
+          <div class="total-cell">848</div>
         </div>
       </div>
     </div>
@@ -624,10 +743,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:53.2%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:52.6%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">53.2%</div>
-      <div class="candidate-votes">69,413</div>
+      <div class="candidate-pct pct-n">52.60%</div>
+      <div class="candidate-votes">73,602</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -638,10 +757,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:46.8%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:47.4%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">46.8%</div>
-      <div class="candidate-votes">61,096</div>
+      <div class="candidate-pct pct-n">47.40%</div>
+      <div class="candidate-votes">66,327</div>
     </div>
   </div>
 
@@ -662,10 +781,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:51.2%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:50.9%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">51.2%</div>
-      <div class="candidate-votes">64,092</div>
+      <div class="candidate-pct pct-n">50.92%</div>
+      <div class="candidate-votes">68,276</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -676,10 +795,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:48.8%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:49.1%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">48.8%</div>
-      <div class="candidate-votes">61,168</div>
+      <div class="candidate-pct pct-n">49.08%</div>
+      <div class="candidate-votes">65,797</div>
     </div>
   </div>
 
@@ -699,10 +818,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:59.0%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:58.6%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">59.0%</div>
-      <div class="candidate-votes">9,947</div>
+      <div class="candidate-pct pct-n">58.56%</div>
+      <div class="candidate-votes">10,538</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -712,10 +831,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:17.6%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:17.7%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">17.6%</div>
-      <div class="candidate-votes">2,960</div>
+      <div class="candidate-pct pct-n">17.66%</div>
+      <div class="candidate-votes">3,178</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -725,10 +844,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:15.5%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:15.7%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">15.5%</div>
-      <div class="candidate-votes">2,615</div>
+      <div class="candidate-pct pct-n">15.68%</div>
+      <div class="candidate-votes">2,822</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -738,10 +857,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:7.9%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:8.1%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">7.9%</div>
-      <div class="candidate-votes">1,328</div>
+      <div class="candidate-pct pct-n">8.10%</div>
+      <div class="candidate-votes">1,458</div>
     </div>
   </div>
 
@@ -761,10 +880,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:78.8%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:77.7%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">78.8%</div>
-      <div class="candidate-votes">16,208</div>
+      <div class="candidate-pct pct-n">77.69%</div>
+      <div class="candidate-votes">17,317</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -774,10 +893,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:21.2%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:22.3%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">21.2%</div>
-      <div class="candidate-votes">4,369</div>
+      <div class="candidate-pct pct-n">22.31%</div>
+      <div class="candidate-votes">4,974</div>
     </div>
   </div>
 
@@ -798,10 +917,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:66.9%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:66.2%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">66.9%</div>
-      <div class="candidate-votes">16,114</div>
+      <div class="candidate-pct pct-n">66.25%</div>
+      <div class="candidate-votes">17,127</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -812,10 +931,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:18.2%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:18.6%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">18.2%</div>
-      <div class="candidate-votes">4,383</div>
+      <div class="candidate-pct pct-n">18.58%</div>
+      <div class="candidate-votes">4,804</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -826,16 +945,60 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:14.8%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:15.2%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">14.8%</div>
-      <div class="candidate-votes">3,575</div>
+      <div class="candidate-pct pct-n">15.16%</div>
+      <div class="candidate-votes">3,920</div>
     </div>
   </div>
 
   <div class="race-box">
     <div class="race-title">District Attorney</div>
-    <div class="contest-unavailable">Results not yet available.</div>
+    <div class="candidate-table-head">
+      <span>Candidate</span>
+      <span>% Votes</span>
+      <span class="right">Pct</span>
+      <span class="right">Votes</span>
+    </div>
+    <div class="candidate-row">
+      <div class="candidate-name-cell">
+        <div class="candidate-party party-n" data-party="Non-Partisan">N</div>
+        <div class="candidate-name-text">
+          <div class="candidate-name">Ursula Jones Dickson</div>
+        </div>
+      </div>
+      <div class="candidate-bar-cell">
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:64.0%"></div></div>
+      </div>
+      <div class="candidate-pct pct-n">64.03%</div>
+      <div class="candidate-votes">93,652</div>
+    </div>
+    <div class="candidate-row">
+      <div class="candidate-name-cell">
+        <div class="candidate-party party-n" data-party="Non-Partisan">N</div>
+        <div class="candidate-name-text">
+          <div class="candidate-name">Pamela Price</div>
+        </div>
+      </div>
+      <div class="candidate-bar-cell">
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:24.2%"></div></div>
+      </div>
+      <div class="candidate-pct pct-n">24.18%</div>
+      <div class="candidate-votes">35,363</div>
+    </div>
+    <div class="candidate-row">
+      <div class="candidate-name-cell">
+        <div class="candidate-party party-n" data-party="Non-Partisan">N</div>
+        <div class="candidate-name-text">
+          <div class="candidate-name">Gopal Krishan</div>
+        </div>
+      </div>
+      <div class="candidate-bar-cell">
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:11.8%"></div></div>
+      </div>
+      <div class="candidate-pct pct-n">11.79%</div>
+      <div class="candidate-votes">17,250</div>
+    </div>
   </div>
 
   <div class="race-box">
@@ -854,10 +1017,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:26.7%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:26.5%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">26.7%</div>
-      <div class="candidate-votes">12,721</div>
+      <div class="candidate-pct pct-n">26.47%</div>
+      <div class="candidate-votes">13,641</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -867,10 +1030,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:24.9%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:24.4%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">24.9%</div>
-      <div class="candidate-votes">11,855</div>
+      <div class="candidate-pct pct-n">24.42%</div>
+      <div class="candidate-votes">12,586</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -880,10 +1043,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:17.4%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:17.2%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">17.4%</div>
-      <div class="candidate-votes">8,325</div>
+      <div class="candidate-pct pct-n">17.18%</div>
+      <div class="candidate-votes">8,854</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -893,10 +1056,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:11.4%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:11.6%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">11.4%</div>
-      <div class="candidate-votes">5,440</div>
+      <div class="candidate-pct pct-n">11.60%</div>
+      <div class="candidate-votes">5,978</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -906,10 +1069,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:7.0%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:7.1%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">7.0%</div>
-      <div class="candidate-votes">3,322</div>
+      <div class="candidate-pct pct-n">7.10%</div>
+      <div class="candidate-votes">3,658</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -919,10 +1082,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:5.2%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:5.3%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">5.2%</div>
-      <div class="candidate-votes">2,490</div>
+      <div class="candidate-pct pct-n">5.34%</div>
+      <div class="candidate-votes">2,752</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -932,10 +1095,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:4.1%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:4.5%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">4.1%</div>
-      <div class="candidate-votes">1,974</div>
+      <div class="candidate-pct pct-n">4.49%</div>
+      <div class="candidate-votes">2,316</div>
     </div>
     <div class="candidate-row">
       <div class="candidate-name-cell">
@@ -945,10 +1108,10 @@
         </div>
       </div>
       <div class="candidate-bar-cell">
-        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:3.3%"></div></div>
+        <div class="candidate-bar-track"><div class="candidate-bar-fill bar-n" style="width:3.4%"></div></div>
       </div>
-      <div class="candidate-pct pct-n">3.3%</div>
-      <div class="candidate-votes">1,587</div>
+      <div class="candidate-pct pct-n">3.39%</div>
+      <div class="candidate-votes">1,747</div>
     </div>
   </div>
 
@@ -956,6 +1119,17 @@
 
 <script>
   (function() {
+    // Uncontested dropdown toggle.
+    var _ut = document.getElementById('uncontestedToggle');
+    var _ub = document.getElementById('uncontestedBody');
+    var _uc = document.getElementById('uncontestedChevron');
+    if (_ut && _ub && _uc) {
+      _ut.addEventListener('click', function() {
+        _ub.classList.toggle('open');
+        _uc.classList.toggle('open');
+      });
+    }
+    // Race search filter.
     var input = document.getElementById('electionSearch');
     var noResults = document.getElementById('noResults');
     if (!input) return;
