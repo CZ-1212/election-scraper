@@ -435,16 +435,22 @@ class ClarityScraper:
         """
         Fetch ALL contests directly from the Clarity JSON API.
 
-        Clarity exposes a versioned summary.json that contains every contest —
-        statewide, county, local, and measures — with choices, votes, and
-        percentages. This is faster than Selenium and gets races that the
-        summary page doesn't show without scrolling into collapsed sections.
+        Clarity exposes two versioned JSON endpoints with the same contests
+        but different fields populated:
+
+          /{version}/json/en/summary.json — has CATKEY/SUBCAT grouping but
+              BCxContest and regvoters are static placeholder zeros.
+          /{version}/json/sum.json        — has live BC (ballots cast) and
+              TV (total registered voters) updated as the election runs.
+
+        We use sum.json so the right-side "Voter Turnout" panel that Clarity
+        renders (Ballots Cast / Registered Voters / %) actually populates.
+        sum.json includes the full CH/V/PCT contest data too.
 
         Steps:
-          1. GET /current_ver.txt → version number (e.g. "372713")
-          2. GET /{version}/json/en/summary.json → full contest list
-          3. Parse into the selenium_data-compatible format so normalize.py
-             can read it without any changes.
+          1. GET /current_ver.txt → version number
+          2. GET /{version}/json/sum.json → all contests + ballot counts
+          3. Parse into the selenium_data-compatible format.
 
         Returns a dict matching the selenium_data structure, or None if the
         API is unavailable (fall through to Selenium scraping).
@@ -469,13 +475,22 @@ class ClarityScraper:
                 return None
             print(f"  Clarity JSON API version: {version}")
 
-            # Step 2 — download the versioned summary that has every contest.
-            summary_url = f"{election_base}/{version}/json/en/summary.json"
-            r = self.session.get(summary_url, headers=headers, timeout=15, verify=True)
-            if r.status_code != 200:
-                return None
-            contests_raw = r.json()
-            print(f"  JSON API returned {len(contests_raw)} contest entries")
+            # Step 2 — download sum.json (preferred: has live BC/TV) with
+            # summary.json as a fallback in case the layout reverts.
+            sum_url = f"{election_base}/{version}/json/sum.json"
+            r = self.session.get(sum_url, headers=headers, timeout=15, verify=True)
+            if r.status_code == 200:
+                payload = r.json()
+                contests_raw = payload.get("Contests", payload) if isinstance(payload, dict) else payload
+                source_file = "sum.json"
+            else:
+                summary_url = f"{election_base}/{version}/json/en/summary.json"
+                r = self.session.get(summary_url, headers=headers, timeout=15, verify=True)
+                if r.status_code != 200:
+                    return None
+                contests_raw = r.json()
+                source_file = "summary.json (fallback)"
+            print(f"  JSON API returned {len(contests_raw)} contest entries from {source_file}")
 
             # Step 3 — parse into the selenium_data structure.
             contests = []
@@ -489,8 +504,12 @@ class ClarityScraper:
                 pct_arr   = item.get("PCT") or []
                 total_pr  = item.get("TP") or 0   # total precincts
                 rep_pr    = item.get("PR") or 0    # precincts reporting
-                bc        = item.get("BCxContest") or 0  # ballots cast for this contest
-                reg       = item.get("regvoters")  or 0
+
+                # BC (ballots cast) and TV (total registered voters) live at the
+                # contest level in sum.json. summary.json uses BCxContest/regvoters
+                # but those are stale zeros — prefer BC/TV when present.
+                bc  = item.get("BC")  or item.get("BCxContest") or 0
+                reg = item.get("TV")  or item.get("regvoters")  or 0
 
                 if not title or not choices:
                     continue
@@ -516,8 +535,8 @@ class ClarityScraper:
                     "choices":            parsed_choices,
                 })
 
-                # Use the highest ballots-cast and registered-voters values
-                # across all contests as the county-level turnout figure.
+                # County-level turnout = max ballots cast / max registered voters
+                # across all contests (matches what Clarity's own widget displays).
                 if bc > total_ballots:
                     total_ballots = bc
                 if reg > registered_voters:
