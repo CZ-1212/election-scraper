@@ -16,8 +16,11 @@ WordPress) never has to care which platform a county used.
 import csv
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
+
+_PACIFIC = ZoneInfo("America/Los_Angeles")
 
 # Path to the static local_races roster CSV — candidate parties, professions,
 # and measure descriptions that don't change between scrape runs.
@@ -479,6 +482,31 @@ def _scrape_status(county_data: dict, anomalies: list[str]) -> str:
     return "OK"
 
 
+def _finalize_county(data: dict, county: str) -> dict:
+    """
+    Enrich a county's contests and attach anomalies + scrape_status.
+
+    Shared by every code path (individual JSON, all_counties.csv gap-fill, and
+    the no-JSON fallback) so a county is finalized identically no matter which
+    source it came from.
+    """
+    data["contests"] = _enrich_contests(data.get("contests") or [], county)
+    anomalies = _detect_anomalies(data)
+    data["anomalies"] = anomalies
+    data["scrape_status"] = _scrape_status(data, anomalies)
+    return data
+
+
+def _latest_all_counties_csv(input_dir: Path) -> Path | None:
+    """Return the newest all_counties*.csv in input_dir, or None if there isn't one."""
+    candidates = sorted(
+        input_dir.glob("all_counties*.csv"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    return candidates[0] if candidates else None
+
+
 # ---------------------------------------------------------------------------
 # MAIN NORMALIZE FUNCTION
 # ---------------------------------------------------------------------------
@@ -602,7 +630,7 @@ def normalize(input_dir: Path, output_path: Path) -> dict:
 
     print(f"[normalize] Scanning {input_dir} for county data...")
 
-    # Collect individual county JSON files first (fastest, most precise).
+    # Collect individual county JSON files — keep only the newest file per county.
     county_files: dict[str, Path] = {}
 
     for filepath in sorted(input_dir.glob("*.json")):
@@ -619,105 +647,99 @@ def normalize(input_dir: Path, output_path: Path) -> dict:
         if county not in county_files:
             county_files[county] = filepath
         else:
-            existing = county_files[county]
-            if filepath.stat().st_mtime > existing.stat().st_mtime:
-                county_files[county] = filepath
+            if filepath.stat().st_mtime > county_files[county].stat().st_mtime:
+                county_files[county] = filepath  # always keep the newest
 
-    # Prefer all_counties.csv over individual JSON files when it is NEWER than
-    # the most recent JSON file — src/run_all.py saves this file after each full
-    # 13-county scrape, so it always reflects the latest run.
-    csv_candidates = sorted(
-        input_dir.glob("all_counties*.csv"),
-        key=lambda p: p.stat().st_mtime, reverse=True
-    )
-    if csv_candidates:
-        newest_csv_mtime = csv_candidates[0].stat().st_mtime
-        newest_json_mtime = max(
-            (p.stat().st_mtime for p in county_files.values()), default=0
-        )
-        if newest_csv_mtime > newest_json_mtime:
-            print(f"[normalize] all_counties.csv is newer than JSON files — "
-                  f"using {csv_candidates[0].name}")
-            county_files = {}  # discard stale JSON files, fall through to CSV path
+    # If there are no individual JSON files at all, the all_counties.csv is the
+    # only source of fresh data — bail out early if it's also missing.
+    all_csv = _latest_all_counties_csv(input_dir)
+    if not county_files and all_csv is None:
+        raise ValueError(f"No county JSON files or all_counties.csv found in {input_dir}")
 
-    if not county_files:
-        csv_candidates = sorted(input_dir.glob("all_counties*.csv"),
-                                key=lambda p: p.stat().st_mtime, reverse=True)
-        if csv_candidates:
-            all_csv = csv_candidates[0]
-            print(f"[normalize] No county JSON files found — reading from {all_csv.name}")
-            parsed = _parse_all_counties_csv(all_csv)
-            if not parsed:
-                raise ValueError(f"all_counties.csv at {all_csv} contained no county data.")
-            # Enrich contests, attach anomalies and status, then write master JSON.
-            master_counties = {}
-            for county, data in parsed.items():
-                data["contests"] = _enrich_contests(data.get("contests") or [], county)
-                anomalies = _detect_anomalies(data)
-                data["anomalies"] = anomalies
-                data["scrape_status"] = _scrape_status(data, anomalies)
-                master_counties[county] = data
-            master = {
-                "pipeline_timestamp": datetime.now().isoformat(),
-                "county_count": len(master_counties),
-                "counties": master_counties,
-            }
-            with open(output_path, "w", encoding="utf-8") as f:
-                json.dump(master, f, indent=2, ensure_ascii=False)
-            ok_count = sum(1 for d in master_counties.values() if d.get("scrape_status") == "OK")
-            warn_count = sum(1 for d in master_counties.values() if d.get("scrape_status") == "WARN")
-            fail_count = sum(1 for d in master_counties.values() if d.get("scrape_status") == "FAIL")
-            print(f"[normalize] Master JSON written to: {output_path}")
-            print(f"[normalize] Summary: {ok_count} OK / {warn_count} WARN / {fail_count} FAIL")
-            return master
-        else:
-            raise ValueError(f"No county JSON files or all_counties.csv found in {input_dir}")
+    if county_files:
+        print(f"[normalize] Found files for {len(county_files)} counties: {', '.join(sorted(county_files.keys()))}")
 
-    print(f"[normalize] Found files for {len(county_files)} counties: {', '.join(sorted(county_files.keys()))}")
+    # Parse the all_counties.csv (the complete all-13-county snapshot that
+    # src/run_all.py writes each scrape) up front so we can compare its freshness
+    # against any individual JSON files county-by-county.
+    csv_parsed: dict[str, dict] = {}
+    csv_mtime = 0.0
+    if all_csv is not None:
+        csv_mtime = all_csv.stat().st_mtime
+        try:
+            csv_parsed = _parse_all_counties_csv(all_csv)
+            print(f"[normalize] Read {len(csv_parsed)} counties from {all_csv.name}")
+        except Exception as e:
+            print(f"[normalize] Warning: could not parse {all_csv.name}: {e}")
+            csv_parsed = {}
 
-    # Normalize each county's data.
+    # Decide, per county, which source is freshest.  Both the individual JSON
+    # files and the all_counties.csv come from scrapers, but either one can be a
+    # stale leftover from an earlier run, so we pick by modification time rather
+    # than blanket-preferring one format.  This keeps the complete data (the CSV
+    # carries every contest) instead of letting a thin/old JSON override it.
+    all_county_names = set(county_files) | set(csv_parsed)
     master_counties: dict = {}
 
-    for county, filepath in sorted(county_files.items()):
-        print(f"[normalize] Processing {county} from {filepath.name}...")
+    for county in sorted(all_county_names):
+        json_path = county_files.get(county)
+        json_mtime = json_path.stat().st_mtime if json_path else -1.0
+        has_csv = county in csv_parsed
 
-        try:
-            with open(filepath, encoding="utf-8") as f:
-                raw = json.load(f)
-        except Exception as e:
-            print(f"[normalize] ERROR reading {filepath}: {e}")
-            master_counties[county] = {
-                "county": county,
-                "scrape_failed": True,
-                "error": str(e),
-                "scrape_status": "FAIL",
-                "anomalies": [f"READ_ERROR: {e}"],
-            }
-            continue
+        use_json = json_path is not None and (not has_csv or json_mtime >= csv_mtime)
 
-        # Pick the right normalizer based on JSON structure.
-        if _is_clarity_format(raw):
-            county_data = _normalize_clarity(raw, county)
-        else:
-            county_data = _normalize_non_clarity(raw, county)
+        if use_json:
+            try:
+                with open(json_path, encoding="utf-8") as f:
+                    raw = json.load(f)
+            except Exception as e:
+                print(f"[normalize] ERROR reading {json_path}: {e}")
+                use_json = False
+            else:
+                county_data = (
+                    _normalize_clarity(raw, county) if _is_clarity_format(raw)
+                    else _normalize_non_clarity(raw, county)
+                )
+                print(f"[normalize] {county}: using JSON {json_path.name}")
 
-        # Enrich contests with party, profession, and measure descriptions.
-        county_data["contests"] = _enrich_contests(county_data.get("contests") or [], county)
+        if not use_json:
+            # Fall back to the CSV snapshot for this county.
+            county_data = dict(csv_parsed[county])
+            print(f"[normalize] {county}: using {all_csv.name}")
 
-        # Detect anomalies and attach status.
-        anomalies = _detect_anomalies(county_data)
-        county_data["anomalies"] = anomalies
-        county_data["scrape_status"] = _scrape_status(county_data, anomalies)
-
-        if anomalies:
-            for flag in anomalies:
-                print(f"[normalize] ANOMALY [{county}]: {flag}")
-
+        county_data = _finalize_county(county_data, county)
+        for flag in county_data["anomalies"]:
+            print(f"[normalize] ANOMALY [{county}]: {flag}")
         master_counties[county] = county_data
+
+    # Carry forward any county that had no JSON file this run by pulling its
+    # last known data from the existing master JSON.  This keeps all 13 counties
+    # on the dashboard even when a single scraper fails or a county hasn't posted
+    # results yet.  Carried-forward counties are flagged with scrape_status=STALE
+    # so editors can see at a glance that the data isn't fresh.
+    if output_path.exists():
+        try:
+            with open(output_path, encoding="utf-8") as f:
+                prev_master = json.load(f)
+            prev_counties = prev_master.get("counties", {})
+            carried = []
+            for county in KNOWN_COUNTIES:
+                if county not in master_counties and county in prev_counties:
+                    stale = dict(prev_counties[county])
+                    stale["scrape_status"] = "STALE"
+                    stale.setdefault("anomalies", [])
+                    if "STALE: no new data this run" not in stale["anomalies"]:
+                        stale["anomalies"] = ["STALE: no new data this run"] + stale["anomalies"]
+                    master_counties[county] = stale
+                    carried.append(county)
+            if carried:
+                print(f"[normalize] Carried forward (no new scrape data): {', '.join(carried)}")
+        except Exception as e:
+            print(f"[normalize] Warning: could not load previous master JSON for carry-forward: {e}")
 
     # Build the master structure.
     master = {
-        "pipeline_timestamp": datetime.now().isoformat(),
+        "pipeline_timestamp": datetime.now(tz=_PACIFIC).isoformat(),
         "county_count": len(master_counties),
         "counties": master_counties,
     }
@@ -729,10 +751,11 @@ def normalize(input_dir: Path, output_path: Path) -> dict:
     print(f"[normalize] Master JSON written to: {output_path}")
 
     # Print a quick summary to the terminal.
-    ok_count = sum(1 for d in master_counties.values() if d.get("scrape_status") == "OK")
-    warn_count = sum(1 for d in master_counties.values() if d.get("scrape_status") == "WARN")
-    fail_count = sum(1 for d in master_counties.values() if d.get("scrape_status") == "FAIL")
-    print(f"[normalize] Summary: {ok_count} OK / {warn_count} WARN / {fail_count} FAIL")
+    ok_count    = sum(1 for d in master_counties.values() if d.get("scrape_status") == "OK")
+    warn_count  = sum(1 for d in master_counties.values() if d.get("scrape_status") == "WARN")
+    fail_count  = sum(1 for d in master_counties.values() if d.get("scrape_status") == "FAIL")
+    stale_count = sum(1 for d in master_counties.values() if d.get("scrape_status") == "STALE")
+    print(f"[normalize] Summary: {ok_count} OK / {warn_count} WARN / {fail_count} FAIL / {stale_count} STALE")
 
     return master
 
