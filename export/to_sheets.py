@@ -405,11 +405,26 @@ def _update_statewide_races(ws: gspread.Worksheet, counties: dict) -> None:
                     "display_name": _display_candidate_name(raw_name),
                 }
 
-    # ── Step 2: filter to races in 3+ counties ──────────────────────────────
+    # ── Step 2: filter to the 8 true California statewide offices ───────────
+    # Only these races are the same contest across every county.  Anything
+    # else that happens to share a name (e.g. "County Superintendent of
+    # Schools", "Auditor-Controller", "Supervisor 3rd District") is a
+    # county-level race and must be excluded even if it appears in 3+ counties.
+    _STATEWIDE_OFFICES = {
+        "governor",
+        "lieutenant governor",
+        "secretary of state",
+        "controller",
+        "treasurer",
+        "attorney general",
+        "insurance commissioner",
+        "superintendent of public instruction",
+    }
+
     statewide_races = [
         (norm, canonical_title[norm], race_data[norm])
         for norm in race_data
-        if len(race_data[norm]) >= 3
+        if norm in _STATEWIDE_OFFICES
     ]
     statewide_races.sort(key=lambda x: (-len(x[2]), x[1]))
 
@@ -543,10 +558,15 @@ def _update_party_breakdown(ws: gspread.Worksheet, counties: dict) -> None:
                     "party": choice.get("party", "") or "",
                 }
 
+    _STATEWIDE_OFFICES = {
+        "governor", "lieutenant governor", "secretary of state",
+        "controller", "treasurer", "attorney general",
+        "insurance commissioner", "superintendent of public instruction",
+    }
     statewide = [
         (norm, canonical_title[norm], race_data[norm])
         for norm in race_data
-        if len(race_data[norm]) >= 3
+        if norm in _STATEWIDE_OFFICES
     ]
     statewide.sort(key=lambda x: (-len(x[2]), x[1]))
 
