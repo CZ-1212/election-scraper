@@ -799,6 +799,18 @@ def _update_party_breakdown(ws: gspread.Worksheet, counties: dict, sos_data: dic
         fmt_pct(bay_other, bay_total),
     ])
 
+    # Clear leftover % number format before writing — same issue as STATEWIDE RACES:
+    # ws.clear() removes content but not formatting, so old %-formatted cells
+    # would display 64 as 6400%.
+    ws.spreadsheet.batch_update({"requests": [{
+        "repeatCell": {
+            "range": {"sheetId": ws.id},
+            "cell": {"userEnteredFormat": {
+                "numberFormat": {"type": "NUMBER", "pattern": ""},
+            }},
+            "fields": "userEnteredFormat.numberFormat",
+        }
+    }]})
     ws.clear()
     ws.update(rows, "A1", value_input_option="USER_ENTERED")
     print(f"[sheets] PARTY BREAKDOWN tab updated: {len(sorted_counties)} counties.")
