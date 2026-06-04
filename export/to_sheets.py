@@ -544,8 +544,20 @@ def _update_statewide_races(ws: gspread.Worksheet, counties: dict, sos_data: dic
     ]
     current_row = 3   # 0-indexed
 
-    format_requests = []
     sheet_id = ws.id
+
+    # Reset all cell backgrounds to white first — ws.clear() removes content
+    # but NOT formatting, so coloured rows from a previous run would persist.
+    format_requests = [{
+        "repeatCell": {
+            "range": {"sheetId": sheet_id},
+            "cell": {"userEnteredFormat": {
+                "backgroundColor": {"red": 1.0, "green": 1.0, "blue": 1.0},
+                "textFormat": {"bold": False},
+            }},
+            "fields": "userEnteredFormat.backgroundColor,userEnteredFormat.textFormat.bold",
+        }
+    }]
 
     for norm, display_title, by_county in statewide_races:
         reporting_counties = sorted(by_county.keys())
@@ -586,9 +598,28 @@ def _update_statewide_races(ws: gspread.Worksheet, counties: dict, sos_data: dic
         rows.append([f"▸ {display_title}  ({len(reporting_counties)} of 13 counties)"])
         current_row += 1
 
+        header_row_idx = current_row
         rows.append(["Candidate", "Party", "Bay Area %", "CA %", "BA% − CA%"]
                     + county_headers)
         current_row += 1
+
+        # Bold the header row; keep background white (no party colour).
+        format_requests.append({
+            "repeatCell": {
+                "range": {
+                    "sheetId":          sheet_id,
+                    "startRowIndex":    header_row_idx,
+                    "endRowIndex":      header_row_idx + 1,
+                    "startColumnIndex": 0,
+                    "endColumnIndex":   5 + len(reporting_counties),
+                },
+                "cell": {"userEnteredFormat": {
+                    "backgroundColor": {"red": 1.0, "green": 1.0, "blue": 1.0},
+                    "textFormat": {"bold": True},
+                }},
+                "fields": "userEnteredFormat.backgroundColor,userEnteredFormat.textFormat.bold",
+            }
+        })
 
         for norm_name in top3:
             info    = all_candidates[norm_name]

@@ -92,6 +92,7 @@ _PARTY_PREFIXES = {
     "LIB": "Libertarian",
     "GRN": "Green",
     "PFR": "Peace and Freedom",
+    "PF":  "Peace and Freedom",   # Napa PDF uses PF, SoS uses P&F
     "AI":  "American Independent",
     "IND": "Independent",
 }
