@@ -20,19 +20,19 @@
     "timestamp": ""
   },
   "Napa": {
-    "ballots_cast": 16156,
+    "ballots_cast": 16503,
     "timestamp": ""
   },
   "San_Francisco": {
-    "ballots_cast": 249769,
+    "ballots_cast": 280234,
     "timestamp": ""
   },
   "San_Joaquin": {
-    "ballots_cast": 74248,
+    "ballots_cast": 0,
     "timestamp": ""
   },
   "San_Mateo": {
-    "ballots_cast": 80325,
+    "ballots_cast": 0,
     "timestamp": ""
   },
   "Santa_Clara": {
@@ -40,7 +40,7 @@
     "timestamp": ""
   },
   "Santa_Cruz": {
-    "ballots_cast": 42766,
+    "ballots_cast": 48076,
     "timestamp": ""
   },
   "Solano": {
