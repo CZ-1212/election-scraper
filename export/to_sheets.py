@@ -640,26 +640,28 @@ def _update_statewide_races(ws: gspread.Worksheet, counties: dict, sos_data: dic
 
             if sos_c:
                 ca_pct = round(float(sos_c["pct"]), 1)
-                # No % sign — USER_ENTERED mode divides-by-100 any value ending
-                # in %, turning "+10.1%" into 0.101.  Plain signed number is safe.
                 diff   = round(bay_pct - ca_pct, 1)
                 if not party:
                     party = sos_c.get("party", "")
             else:
                 ca_pct, diff = "—", "—"
 
+            # Write all percentages as plain whole integers (no % sign).
+            # USER_ENTERED mode multiplies any %-suffixed string by 0.01,
+            # turning "62.9%" into 0.629.  Plain numbers avoid that entirely.
+            # Column headers already carry the % context.
             per_county_pcts = []
             for c in reporting_counties:
                 cv   = by_county[c].get(norm_name, {}).get("votes", 0)
                 ctot = county_totals[c]
                 per_county_pcts.append(
-                    f"{cv / ctot * 100:.1f}%" if ctot > 0 and cv else ""
+                    round(cv / ctot * 100) if ctot > 0 and cv else ""
                 )
 
             rows.append([
                 info["display_name"], party,
-                f"{bay_pct:.1f}%",
-                f"{ca_pct:.1f}%" if ca_pct != "—" else "—",
+                round(bay_pct),
+                round(ca_pct) if ca_pct != "—" else "—",
                 diff,
             ] + per_county_pcts)
 
@@ -680,14 +682,14 @@ def _update_statewide_races(ws: gspread.Worksheet, counties: dict, sos_data: dic
 
         if rest:
             others_v   = sum(bay_totals[n] for n in rest)
-            others_pct = round(others_v / bay_grand * 100, 1) if bay_grand > 0 else 0.0
+            others_pct = round(others_v / bay_grand * 100) if bay_grand > 0 else 0
             others_per = []
             for c in reporting_counties:
                 ov   = sum(by_county[c].get(n, {}).get("votes", 0) for n in rest)
                 ctot = county_totals[c]
-                others_per.append(f"{ov / ctot * 100:.1f}%" if ctot > 0 and ov else "")
+                others_per.append(round(ov / ctot * 100) if ctot > 0 and ov else "")
             rows.append([f"All Others ({len(rest)} candidates)", "",
-                         f"{others_pct:.1f}%", "", ""] + others_per)
+                         others_pct, "", ""] + others_per)
             current_row += 1
 
         rows.append([""])
@@ -763,7 +765,7 @@ def _update_party_breakdown(ws: gspread.Worksheet, counties: dict, sos_data: dic
     bay_total = bay_dem + bay_rep + bay_other
 
     def fmt_pct(n, total):
-        return f"{n / total * 100:.1f}%" if total > 0 else "—"
+        return round(n / total * 100) if total > 0 else "—"
 
     rows = [
         ["PARTY BREAKDOWN — Bay Area counties, all 8 statewide races combined"],
