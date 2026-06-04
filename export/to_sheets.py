@@ -635,7 +635,9 @@ def _update_statewide_races(ws: gspread.Worksheet, counties: dict, sos_data: dic
 
             if sos_c:
                 ca_pct = round(float(sos_c["pct"]), 1)
-                diff   = f"{bay_pct - ca_pct:+.1f}%"
+                # No % sign — USER_ENTERED mode divides-by-100 any value ending
+                # in %, turning "+10.1%" into 0.101.  Plain signed number is safe.
+                diff   = round(bay_pct - ca_pct, 1)
                 if not party:
                     party = sos_c.get("party", "")
             else:
