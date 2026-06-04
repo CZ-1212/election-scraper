@@ -22,6 +22,8 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
+import requests as _requests
+
 # Load environment variables from .env before anything else.
 # python-dotenv reads KEY=VALUE pairs from .env and puts them in os.environ.
 from dotenv import load_dotenv
@@ -38,6 +40,96 @@ def _now_pacific() -> str:
     """Current time as a Pacific-timezone string for display."""
     from datetime import timezone
     return datetime.now(tz=timezone.utc).astimezone(_PACIFIC).strftime("%Y-%m-%d %H:%M PT")
+
+
+# ---------------------------------------------------------------------------
+# CALIFORNIA SOS API — statewide results for the 8 statewide offices
+# Base: https://api.sos.ca.gov/returns/<race-slug>
+# No auth required. Returns JSON: {raceTitle, Reporting, ReportingTime, candidates:[]}
+# ---------------------------------------------------------------------------
+
+_SOS_ENDPOINTS = {
+    "governor":                             "https://api.sos.ca.gov/returns/governor",
+    "lieutenant governor":                  "https://api.sos.ca.gov/returns/lieutenant-governor",
+    "secretary of state":                   "https://api.sos.ca.gov/returns/secretary-of-state",
+    "controller":                           "https://api.sos.ca.gov/returns/controller",
+    "treasurer":                            "https://api.sos.ca.gov/returns/treasurer",
+    "attorney general":                     "https://api.sos.ca.gov/returns/attorney-general",
+    "insurance commissioner":               "https://api.sos.ca.gov/returns/insurance-commissioner",
+    "superintendent of public instruction": "https://api.sos.ca.gov/returns/superintendent-of-public-instruction",
+}
+
+
+def _fetch_sos_statewide() -> dict:
+    """
+    Pull live statewide results from the CA SoS Election Night API for all
+    8 statewide offices.  Returns a dict keyed by the same normalized race
+    name used in _STATEWIDE_OFFICES:
+
+      {
+        "governor": {
+          "reporting": "100% (19,788 of 19,788) precincts reporting",
+          "updated":   "June 4, 2026, 10:23 a.m.",
+          "candidates": {
+            "xavier becerra": {"name": "Xavier Becerra", "party": "Dem",
+                               "votes": 1322704, "pct": 25.6},
+            ...
+          }
+        },
+        ...
+      }
+
+    If a race cannot be fetched (network error, API down), that key is
+    present but empty so callers can handle it gracefully.
+    """
+    results = {}
+    headers = {"User-Agent": "Mozilla/5.0 BayCityNews-ElectionPipeline/1.0"}
+
+    for race_key, url in _SOS_ENDPOINTS.items():
+        results[race_key] = {}
+        try:
+            resp = _requests.get(url, headers=headers, timeout=15)
+            resp.raise_for_status()
+            data = resp.json()
+            # Named endpoint → object; query endpoint → array. Handle both.
+            if isinstance(data, list):
+                data = data[0] if data else {}
+            if not data:
+                continue
+
+            candidates = {}
+            for c in data.get("candidates") or []:
+                raw_name = (c.get("Name") or "").strip()
+                if not raw_name:
+                    continue
+                norm_name = re.sub(r"\s+", " ", raw_name.lower())
+                votes_str = re.sub(r"[,\s]", "", str(c.get("Votes") or "0"))
+                try:
+                    votes = int(votes_str)
+                except ValueError:
+                    votes = 0
+                try:
+                    pct = float(c.get("Percent") or 0)
+                except ValueError:
+                    pct = 0.0
+                candidates[norm_name] = {
+                    "name":  raw_name,
+                    "party": c.get("Party") or "",
+                    "votes": votes,
+                    "pct":   pct,
+                }
+
+            results[race_key] = {
+                "reporting":  data.get("Reporting", ""),
+                "updated":    data.get("ReportingTime", ""),
+                "candidates": candidates,
+            }
+            print(f"[sos_api]  {race_key:40s} {data.get('Reporting','')}")
+
+        except Exception as exc:
+            print(f"[sos_api]  WARNING — could not fetch {race_key}: {exc}")
+
+    return results
 
 
 # ---------------------------------------------------------------------------
@@ -428,8 +520,19 @@ def _update_statewide_races(ws: gspread.Worksheet, counties: dict) -> None:
     ]
     statewide_races.sort(key=lambda x: (-len(x[2]), x[1]))
 
-    # ── Step 3: build rows + collect formatting instructions ─────────────────
-    rows = [["STATEWIDE RACES — last updated: " + _now_pacific()]]
+    # ── Step 3: fetch CA SoS statewide numbers for comparison ───────────────
+    print("[sheets] Fetching CA SoS statewide results for comparison...")
+    sos_data = _fetch_sos_statewide()
+
+    # ── Step 4: build rows + collect formatting instructions ─────────────────
+    sos_updated = next(
+        (v.get("updated") for v in sos_data.values() if v.get("updated")), ""
+    )
+    rows = [[
+        f"STATEWIDE RACES — Bay Area results vs. California statewide  |  "
+        f"Bay Area last scraped: {_now_pacific()}  |  "
+        f"CA SoS last updated: {sos_updated}"
+    ]]
     rows.append([""])
     current_row = 2   # 0-indexed; rows 0-1 are the header block above
 
@@ -439,8 +542,11 @@ def _update_statewide_races(ws: gspread.Worksheet, counties: dict) -> None:
     for norm, display_title, by_county in statewide_races:
         reporting_counties = sorted(by_county.keys())
         county_headers = [c.replace("_", " ") for c in reporting_counties]
+        sos_race = sos_data.get(norm, {})
+        sos_cands = sos_race.get("candidates", {})
+        sos_reporting = sos_race.get("reporting", "CA data unavailable")
 
-        # Aggregate candidates (case-insensitive de-dup).
+        # Aggregate Bay Area candidates (case-insensitive de-dup).
         all_candidates: dict = {}   # norm_name → {display_name, party}
         for county in reporting_counties:
             for norm_name, info in by_county[county].items():
@@ -452,38 +558,72 @@ def _update_statewide_races(ws: gspread.Worksheet, counties: dict) -> None:
                 elif not all_candidates[norm_name]["party"] and info["party"]:
                     all_candidates[norm_name]["party"] = info["party"]
 
-        totals = {
+        # Fill in party from SoS data when our scraper didn't capture it.
+        for norm_name, info in all_candidates.items():
+            if not info["party"] and norm_name in sos_cands:
+                info["party"] = sos_cands[norm_name].get("party", "")
+
+        bay_totals = {
             n: sum(by_county[c].get(n, {}).get("votes", 0) for c in reporting_counties)
             for n in all_candidates
         }
-        grand_total = sum(totals.values())
-        ranked = sorted(all_candidates.keys(), key=lambda n: -totals[n])
+        bay_grand = sum(bay_totals.values())
+        ranked = sorted(all_candidates.keys(), key=lambda n: -bay_totals[n])
 
         top3 = ranked[:3]
         rest = ranked[3:]
 
-        # Title row
-        rows.append([f"▸ {display_title}  ({len(reporting_counties)} of 13 counties)"])
+        # Title row — includes SoS reporting status
+        rows.append([
+            f"▸ {display_title}  "
+            f"({len(reporting_counties)} of 13 Bay Area counties)  |  "
+            f"CA: {sos_reporting}"
+        ])
         current_row += 1
 
         # Header row
-        rows.append(["Candidate", "Party", "Total Votes", "Total %"] + county_headers)
+        rows.append([
+            "Candidate", "Party",
+            "Bay Area Votes", "Bay Area %",
+            "CA Statewide Votes", "CA Statewide %", "Bay Area vs. CA",
+        ] + county_headers)
         current_row += 1
 
         # Top-3 candidate rows
         for norm_name in top3:
-            info      = all_candidates[norm_name]
-            party     = info["party"]
-            total_v   = totals[norm_name]
-            total_pct = round(total_v / grand_total * 100, 2) if grand_total > 0 else 0.0
+            info    = all_candidates[norm_name]
+            party   = info["party"]
+            bay_v   = bay_totals[norm_name]
+            bay_pct = round(bay_v / bay_grand * 100, 2) if bay_grand > 0 else 0.0
+
+            # SoS match — try exact norm_name, then fuzzy (last name match).
+            sos_c = sos_cands.get(norm_name)
+            if sos_c is None:
+                last = norm_name.split()[-1]
+                sos_c = next((v for k, v in sos_cands.items()
+                              if k.split()[-1] == last), None)
+
+            if sos_c:
+                ca_v   = sos_c["votes"]
+                ca_pct = sos_c["pct"]
+                diff   = f"{bay_pct - ca_pct:+.1f}pp"
+                # Prefer SoS party abbreviation expansion
+                if not party:
+                    party = sos_c.get("party", "")
+            else:
+                ca_v, ca_pct, diff = "—", "—", "—"
+
             per_county = [
                 by_county[c].get(norm_name, {}).get("votes", "")
                 for c in reporting_counties
             ]
-            rows.append([info["display_name"], party, total_v,
-                         f"{total_pct:.2f}%"] + per_county)
+            rows.append([
+                info["display_name"], party,
+                bay_v, f"{bay_pct:.2f}%",
+                ca_v,  f"{ca_pct:.1f}%" if ca_pct != "—" else "—",
+                diff,
+            ] + per_county)
 
-            # Queue background colour for this entire row.
             color = _party_color(party)
             format_requests.append({
                 "repeatCell": {
@@ -492,7 +632,7 @@ def _update_statewide_races(ws: gspread.Worksheet, counties: dict) -> None:
                         "startRowIndex":    current_row,
                         "endRowIndex":      current_row + 1,
                         "startColumnIndex": 0,
-                        "endColumnIndex":   4 + len(reporting_counties),
+                        "endColumnIndex":   7 + len(reporting_counties),
                     },
                     "cell":   {"userEnteredFormat": {"backgroundColor": color}},
                     "fields": "userEnteredFormat.backgroundColor",
@@ -502,14 +642,17 @@ def _update_statewide_races(ws: gspread.Worksheet, counties: dict) -> None:
 
         # "All Others" summary row
         if rest:
-            others_v   = sum(totals[n] for n in rest)
-            others_pct = round(others_v / grand_total * 100, 2) if grand_total > 0 else 0.0
+            others_v   = sum(bay_totals[n] for n in rest)
+            others_pct = round(others_v / bay_grand * 100, 2) if bay_grand > 0 else 0.0
             others_per = [
                 sum(by_county[c].get(n, {}).get("votes", 0) for n in rest) or ""
                 for c in reporting_counties
             ]
-            rows.append([f"All Others ({len(rest)} candidates)", "",
-                         others_v, f"{others_pct:.2f}%"] + others_per)
+            rows.append([
+                f"All Others ({len(rest)} candidates)", "",
+                others_v, f"{others_pct:.2f}%",
+                "", "", "",
+            ] + others_per)
             current_row += 1
 
         rows.append([""])   # blank spacer between races
