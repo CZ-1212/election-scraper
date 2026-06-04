@@ -316,27 +316,67 @@ def _ensure_publish_checklist(ws: gspread.Worksheet) -> None:
 # MAIN ENTRY POINT
 # ---------------------------------------------------------------------------
 
+def _party_color(party: str) -> dict:
+    """Return a Sheets RGB backgroundColor dict for a party affiliation."""
+    p = (party or "").lower()
+    if "democrat" in p:
+        return {"red": 0.78, "green": 0.88, "blue": 1.0}    # light blue
+    if "republican" in p:
+        return {"red": 1.0,  "green": 0.80, "blue": 0.80}   # light red
+    return {"red": 0.93, "green": 0.93, "blue": 0.93}        # light gray
+
+
+def _norm_race_title(s: str) -> str:
+    """
+    Normalize a race title for cross-county grouping.
+    Strips case, '(Vote for N)' suffix, and a leading 'State ' prefix
+    that some counties prepend (e.g. 'State Treasurer' vs 'Treasurer',
+    'State Superintendent…' vs 'Superintendent…').
+    Does NOT strip 'State' from 'State Board of Equalization'.
+    """
+    s = re.sub(r'\s+', ' ', s.strip().lower())
+    s = re.sub(r'\s*\(vote\s+for\s+\d+\)\s*$', '', s).strip()
+    # Strip leading "state " only when it's followed by a known word that
+    # some counties omit the prefix on.
+    s = re.sub(r'^state (treasurer|superintendent|controller|senator)\b', r'\1', s)
+    return s
+
+
+def _norm_candidate_name(name: str) -> str:
+    """Lowercase key used to de-duplicate the same candidate across counties."""
+    return re.sub(r'\s+', ' ', name.strip().lower())
+
+
+def _display_candidate_name(name: str) -> str:
+    """Title-case a candidate name if it is all-uppercase; leave mixed case alone."""
+    if not name or name != name.upper():
+        return name
+    return name.title()
+
+
 def _update_statewide_races(ws: gspread.Worksheet, counties: dict) -> None:
     """
-    Build a cross-county view of every race that appears in 3 or more counties.
+    Cross-county view of every race appearing in 3+ counties.
 
-    Layout:
-      Row 1: Race title (bold-ish in Sheets since it spans the row)
-      Row 2: Headers — Candidate | Party | Total Votes | Total % | [County1] | [County2] ...
-      Rows 3+: One row per candidate with their total and per-county votes
-      Blank row between races
+    Layout per race:
+      ▸ RACE TITLE  (N counties reporting)
+      Candidate | Party | Total Votes | Total % | County … County
+      [top 3 candidates, one row each, coloured by party]
+      All Others (N candidates) | | votes | %  | …
+      [blank row]
 
-    This lets editors instantly see how a race is going across the whole
-    Bay Area without having to flip through 13 individual county tabs.
+    Fixes applied vs. old version:
+      - Race titles normalised with _norm_race_title() so 'GOVERNOR',
+        'Governor', and 'Governor (Vote for 1)' all collapse to 'governor'.
+      - Candidate names de-duplicated case-insensitively so 'XAVIER BECERRA'
+        and 'Xavier Becerra' count as one person.
+      - Only top-3 candidates shown; the rest are summed into 'All Others'.
+      - Party colours applied via Sheets batchUpdate (blue/red/gray).
     """
-    # Step 1: collect all counties reporting each race.
-    # Normalize race titles so "GOVERNOR" and "Governor" match.
-    def _norm(s):
-        return re.sub(r'\s+', ' ', s.strip().lower())
-
-    # race_data[normalized_title] = {county: {candidate_name: {votes, pct, party}}}
+    # ── Step 1: collect race data, normalising titles and candidate names ───
+    # race_data[norm_title][county][norm_name] = {votes, pct, party, display_name}
     race_data: dict = defaultdict(lambda: defaultdict(dict))
-    canonical_title: dict = {}  # normalized → first seen display title
+    canonical_title: dict = {}   # norm_title → first seen display title
 
     sorted_counties = sorted(counties.keys())
 
@@ -346,85 +386,214 @@ def _update_statewide_races(ws: gspread.Worksheet, counties: dict) -> None:
             title = contest.get("title", "").strip()
             if not title:
                 continue
-            norm = _norm(title)
+            norm = _norm_race_title(title)
             if norm not in canonical_title:
-                canonical_title[norm] = title
+                # Prefer Title-Case display title over ALL-CAPS.
+                existing = canonical_title.get(norm, "")
+                if not existing or title == title.title():
+                    canonical_title[norm] = title.title() if title == title.upper() else title
             for choice in contest.get("choices") or []:
-                name = choice.get("name", "").strip()
-                if not name:
+                raw_name = choice.get("name", "").strip()
+                if not raw_name:
                     continue
-                race_data[norm][county][name] = {
-                    "votes": choice.get("votes", 0) or 0,
-                    "pct":   choice.get("pct",   0.0) or 0.0,
-                    "party": choice.get("party", "") or "",
+                norm_name = _norm_candidate_name(raw_name)
+                existing = race_data[norm][county].get(norm_name, {})
+                race_data[norm][county][norm_name] = {
+                    "votes":        choice.get("votes", 0) or 0,
+                    "pct":          choice.get("pct", 0.0) or 0.0,
+                    "party":        choice.get("party", "") or existing.get("party", ""),
+                    "display_name": _display_candidate_name(raw_name),
                 }
 
-    # Step 2: keep only races in 3+ counties (statewide / regional).
+    # ── Step 2: filter to races in 3+ counties ──────────────────────────────
     statewide_races = [
         (norm, canonical_title[norm], race_data[norm])
         for norm in race_data
         if len(race_data[norm]) >= 3
     ]
-    # Sort by number of reporting counties descending, then alphabetically.
     statewide_races.sort(key=lambda x: (-len(x[2]), x[1]))
 
-    # Step 3: build the rows list to write in one batch.
+    # ── Step 3: build rows + collect formatting instructions ─────────────────
     rows = [["STATEWIDE RACES — last updated: " + _now_pacific()]]
-    rows.append([""])  # blank spacer
+    rows.append([""])
+    current_row = 2   # 0-indexed; rows 0-1 are the header block above
+
+    format_requests = []
+    sheet_id = ws.id
 
     for norm, display_title, by_county in statewide_races:
         reporting_counties = sorted(by_county.keys())
+        county_headers = [c.replace("_", " ") for c in reporting_counties]
 
-        # Collect every unique candidate name across all counties.
-        all_candidates: dict = {}  # name → party (take first non-empty)
+        # Aggregate candidates (case-insensitive de-dup).
+        all_candidates: dict = {}   # norm_name → {display_name, party}
         for county in reporting_counties:
-            for name, info in by_county[county].items():
-                if name not in all_candidates:
-                    all_candidates[name] = info.get("party", "")
-                elif not all_candidates[name] and info.get("party"):
-                    all_candidates[name] = info["party"]
+            for norm_name, info in by_county[county].items():
+                if norm_name not in all_candidates:
+                    all_candidates[norm_name] = {
+                        "display_name": info["display_name"],
+                        "party":        info["party"],
+                    }
+                elif not all_candidates[norm_name]["party"] and info["party"]:
+                    all_candidates[norm_name]["party"] = info["party"]
 
-        # Compute total votes per candidate across all reporting counties.
-        totals: dict = {}
-        for name in all_candidates:
-            totals[name] = sum(
-                by_county[county].get(name, {}).get("votes", 0)
-                for county in reporting_counties
-            )
-
+        totals = {
+            n: sum(by_county[c].get(n, {}).get("votes", 0) for c in reporting_counties)
+            for n in all_candidates
+        }
         grand_total = sum(totals.values())
-
-        # Sort candidates by total votes descending.
         ranked = sorted(all_candidates.keys(), key=lambda n: -totals[n])
 
-        # Header row for this race.
-        rows.append([f"▸ {display_title}  ({len(reporting_counties)} counties reporting)"])
-        header = ["Candidate", "Party", "Total Votes", "Total %"] + reporting_counties
-        rows.append(header)
+        top3 = ranked[:3]
+        rest = ranked[3:]
 
-        for name in ranked:
-            total_v = totals[name]
+        # Title row
+        rows.append([f"▸ {display_title}  ({len(reporting_counties)} of 13 counties)"])
+        current_row += 1
+
+        # Header row
+        rows.append(["Candidate", "Party", "Total Votes", "Total %"] + county_headers)
+        current_row += 1
+
+        # Top-3 candidate rows
+        for norm_name in top3:
+            info      = all_candidates[norm_name]
+            party     = info["party"]
+            total_v   = totals[norm_name]
             total_pct = round(total_v / grand_total * 100, 2) if grand_total > 0 else 0.0
             per_county = [
-                by_county[county].get(name, {}).get("votes", "")
-                for county in reporting_counties
+                by_county[c].get(norm_name, {}).get("votes", "")
+                for c in reporting_counties
             ]
-            rows.append([
-                name,
-                all_candidates[name],
-                total_v,
-                f"{total_pct:.2f}%",
-            ] + per_county)
+            rows.append([info["display_name"], party, total_v,
+                         f"{total_pct:.2f}%"] + per_county)
 
-        rows.append([""])  # blank row between races
+            # Queue background colour for this entire row.
+            color = _party_color(party)
+            format_requests.append({
+                "repeatCell": {
+                    "range": {
+                        "sheetId":          sheet_id,
+                        "startRowIndex":    current_row,
+                        "endRowIndex":      current_row + 1,
+                        "startColumnIndex": 0,
+                        "endColumnIndex":   4 + len(reporting_counties),
+                    },
+                    "cell":   {"userEnteredFormat": {"backgroundColor": color}},
+                    "fields": "userEnteredFormat.backgroundColor",
+                }
+            })
+            current_row += 1
 
+        # "All Others" summary row
+        if rest:
+            others_v   = sum(totals[n] for n in rest)
+            others_pct = round(others_v / grand_total * 100, 2) if grand_total > 0 else 0.0
+            others_per = [
+                sum(by_county[c].get(n, {}).get("votes", 0) for n in rest) or ""
+                for c in reporting_counties
+            ]
+            rows.append([f"All Others ({len(rest)} candidates)", "",
+                         others_v, f"{others_pct:.2f}%"] + others_per)
+            current_row += 1
+
+        rows.append([""])   # blank spacer between races
+        current_row += 1
+
+    # ── Step 4: write all rows in one shot ───────────────────────────────────
     ws.clear()
-    # Write in chunks — Sheets API has a 10MB limit per request
     chunk = 500
-    for i in range(0, len(rows), chunk):
-        ws.append_rows(rows[i:i+chunk], value_input_option="USER_ENTERED")
+    if rows:
+        ws.update(rows[:chunk], "A1", value_input_option="USER_ENTERED")
+        for i in range(chunk, len(rows), chunk):
+            ws.append_rows(rows[i:i + chunk], value_input_option="USER_ENTERED")
+
+    # ── Step 5: apply party colours in a single batch API call ───────────────
+    if format_requests:
+        ws.spreadsheet.batch_update({"requests": format_requests})
 
     print(f"[sheets] STATEWIDE RACES tab updated: {len(statewide_races)} races.")
+
+
+def _update_party_breakdown(ws: gspread.Worksheet, counties: dict) -> None:
+    """
+    New tab: PARTY BREAKDOWN
+    For each statewide race, shows Democrat / Republican / Other vote totals
+    and percentages broken down by county — one block per race.
+    """
+    sorted_counties = sorted(counties.keys())
+
+    # Re-use the same race grouping logic.
+    race_data: dict = defaultdict(lambda: defaultdict(dict))
+    canonical_title: dict = {}
+
+    for county in sorted_counties:
+        for contest in (counties[county].get("contests") or []):
+            title = contest.get("title", "").strip()
+            if not title:
+                continue
+            norm = _norm_race_title(title)
+            if norm not in canonical_title:
+                canonical_title[norm] = title.title() if title == title.upper() else title
+            for choice in contest.get("choices") or []:
+                raw_name = choice.get("name", "").strip()
+                norm_name = _norm_candidate_name(raw_name)
+                race_data[norm][county][norm_name] = {
+                    "votes": choice.get("votes", 0) or 0,
+                    "party": choice.get("party", "") or "",
+                }
+
+    statewide = [
+        (norm, canonical_title[norm], race_data[norm])
+        for norm in race_data
+        if len(race_data[norm]) >= 3
+    ]
+    statewide.sort(key=lambda x: (-len(x[2]), x[1]))
+
+    rows = [["PARTY BREAKDOWN BY COUNTY — last updated: " + _now_pacific()]]
+    rows.append(["How each county's votes split by party for every statewide race."])
+    rows.append([""])
+
+    for norm, display_title, by_county in statewide:
+        reporting_counties = sorted(by_county.keys())
+
+        rows.append([f"▸ {display_title}"])
+        rows.append(["County", "Dem Votes", "Rep Votes", "Other Votes",
+                     "Dem %", "Rep %", "Other %"])
+
+        for county in reporting_counties:
+            dem = rep = other = 0
+            for norm_name, info in by_county[county].items():
+                v = info["votes"]
+                p = (info["party"] or "").lower()
+                if "democrat" in p:
+                    dem += v
+                elif "republican" in p:
+                    rep += v
+                else:
+                    other += v
+            total = dem + rep + other
+            if total == 0:
+                continue
+
+            def pct(n):
+                return f"{n / total * 100:.1f}%" if total > 0 else "—"
+
+            rows.append([
+                county.replace("_", " "),
+                dem, rep, other,
+                pct(dem), pct(rep), pct(other),
+            ])
+
+        rows.append([""])   # spacer
+
+    ws.clear()
+    if rows:
+        ws.update("A1", rows[:500], value_input_option="USER_ENTERED")
+        for i in range(500, len(rows), 500):
+            ws.append_rows(rows[i:i + 500], value_input_option="USER_ENTERED")
+
+    print(f"[sheets] PARTY BREAKDOWN tab updated: {len(statewide)} races.")
 
 
 def update_sheets(master_json_path: Path) -> None:
@@ -473,6 +642,10 @@ def update_sheets(master_json_path: Path) -> None:
     # --- STATEWIDE RACES tab ---
     ws_statewide = _get_or_create_tab(spreadsheet, "STATEWIDE RACES")
     _update_statewide_races(ws_statewide, counties)
+
+    # --- PARTY BREAKDOWN tab ---
+    ws_party = _get_or_create_tab(spreadsheet, "PARTY BREAKDOWN")
+    _update_party_breakdown(ws_party, counties)
 
     # --- SCRAPE LOG tab (append only) ---
     ws_log = _get_or_create_tab(spreadsheet, TAB_LOG)
