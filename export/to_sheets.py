@@ -452,7 +452,7 @@ def _display_candidate_name(name: str) -> str:
     return name.title()
 
 
-def _update_statewide_races(ws: gspread.Worksheet, counties: dict) -> None:
+def _update_statewide_races(ws: gspread.Worksheet, counties: dict, sos_data: dict) -> None:
     """
     Cross-county view of every race appearing in 3+ counties.
 
@@ -526,34 +526,35 @@ def _update_statewide_races(ws: gspread.Worksheet, counties: dict) -> None:
     ]
     statewide_races.sort(key=lambda x: (-len(x[2]), x[1]))
 
-    # ── Step 3: fetch CA SoS statewide numbers for comparison ───────────────
-    print("[sheets] Fetching CA SoS statewide results for comparison...")
-    sos_data = _fetch_sos_statewide()
-
-    # ── Step 4: build rows + collect formatting instructions ─────────────────
+    # ── Step 3: build rows + collect formatting instructions ─────────────────
+    # sos_data is passed in from update_sheets() so we only hit the API once.
     sos_updated = next(
         (v.get("updated") for v in sos_data.values() if v.get("updated")), ""
     )
-    rows = [[
-        f"STATEWIDE RACES — Bay Area results vs. California statewide  |  "
-        f"Bay Area last scraped: {_now_pacific()}  |  "
-        f"CA SoS last updated: {sos_updated}"
-    ]]
-    rows.append([""])
-    current_row = 2   # 0-indexed; rows 0-1 are the header block above
+
+    rows = [
+        [f"STATEWIDE RACES — Bay Area vs. California  |  "
+         f"Bay Area last scraped: {_now_pacific()}  |  "
+         f"CA SoS data as of: {sos_updated}"],
+        ["⚠ NOTE: Percentages will shift as mail-in and provisional ballots "
+         "are counted over the coming days and weeks. "
+         "'Precincts reporting' reflects check-in status only — it does not mean "
+         "all ballots are counted. Raw vote totals are on the STATEWIDE RAW VOTES tab."],
+        [""],
+    ]
+    current_row = 3   # 0-indexed
 
     format_requests = []
     sheet_id = ws.id
 
     for norm, display_title, by_county in statewide_races:
         reporting_counties = sorted(by_county.keys())
-        county_headers = [c.replace("_", " ") for c in reporting_counties]
-        sos_race = sos_data.get(norm, {})
+        county_headers = [c.replace("_", " ") + " %" for c in reporting_counties]
+        sos_race  = sos_data.get(norm, {})
         sos_cands = sos_race.get("candidates", {})
-        sos_reporting = sos_race.get("reporting", "CA data unavailable")
 
         # Aggregate Bay Area candidates (case-insensitive de-dup).
-        all_candidates: dict = {}   # norm_name → {display_name, party}
+        all_candidates: dict = {}
         for county in reporting_counties:
             for norm_name, info in by_county[county].items():
                 if norm_name not in all_candidates:
@@ -564,7 +565,7 @@ def _update_statewide_races(ws: gspread.Worksheet, counties: dict) -> None:
                 elif not all_candidates[norm_name]["party"] and info["party"]:
                     all_candidates[norm_name]["party"] = info["party"]
 
-        # Fill in party from SoS data when our scraper didn't capture it.
+        # Back-fill party from SoS when county scraper didn't capture it.
         for norm_name, info in all_candidates.items():
             if not info["party"] and norm_name in sos_cands:
                 info["party"] = sos_cands[norm_name].get("party", "")
@@ -573,64 +574,57 @@ def _update_statewide_races(ws: gspread.Worksheet, counties: dict) -> None:
             n: sum(by_county[c].get(n, {}).get("votes", 0) for c in reporting_counties)
             for n in all_candidates
         }
+        # Per-county totals (denominator for county %).
+        county_totals = {
+            c: sum(by_county[c].get(n, {}).get("votes", 0) for n in all_candidates)
+            for c in reporting_counties
+        }
         bay_grand = sum(bay_totals.values())
-        ranked = sorted(all_candidates.keys(), key=lambda n: -bay_totals[n])
+        ranked    = sorted(all_candidates.keys(), key=lambda n: -bay_totals[n])
+        top3, rest = ranked[:3], ranked[3:]
 
-        top3 = ranked[:3]
-        rest = ranked[3:]
-
-        # Title row — includes SoS reporting status
-        rows.append([
-            f"▸ {display_title}  "
-            f"({len(reporting_counties)} of 13 Bay Area counties)  |  "
-            f"CA: {sos_reporting}"
-        ])
+        rows.append([f"▸ {display_title}  ({len(reporting_counties)} of 13 counties)"])
         current_row += 1
 
-        # Header row
-        rows.append([
-            "Candidate", "Party",
-            "Bay Area Votes", "Bay Area %",
-            "CA Statewide Votes", "CA Statewide %", "Bay Area vs. CA",
-        ] + county_headers)
+        rows.append(["Candidate", "Party", "Bay Area %", "CA %", "BA% − CA%"]
+                    + county_headers)
         current_row += 1
 
-        # Top-3 candidate rows
         for norm_name in top3:
             info    = all_candidates[norm_name]
             party   = info["party"]
             bay_v   = bay_totals[norm_name]
-            bay_pct = round(bay_v / bay_grand * 100, 2) if bay_grand > 0 else 0.0
+            bay_pct = round(bay_v / bay_grand * 100, 1) if bay_grand > 0 else 0.0
 
-            # SoS match — try exact norm_name, then fuzzy (last name match).
             sos_c = sos_cands.get(norm_name)
             if sos_c is None:
-                last = norm_name.split()[-1]
+                last  = norm_name.split()[-1]
                 sos_c = next((v for k, v in sos_cands.items()
                               if k.split()[-1] == last), None)
 
             if sos_c:
-                ca_v   = sos_c["votes"]
-                ca_pct = sos_c["pct"]
-                diff   = f"{bay_pct - ca_pct:+.1f}pp"
-                # Prefer SoS party abbreviation expansion
+                ca_pct = round(float(sos_c["pct"]), 1)
+                diff   = f"{bay_pct - ca_pct:+.1f}%"
                 if not party:
                     party = sos_c.get("party", "")
             else:
-                ca_v, ca_pct, diff = "—", "—", "—"
+                ca_pct, diff = "—", "—"
 
-            per_county = [
-                by_county[c].get(norm_name, {}).get("votes", "")
-                for c in reporting_counties
-            ]
+            per_county_pcts = []
+            for c in reporting_counties:
+                cv   = by_county[c].get(norm_name, {}).get("votes", 0)
+                ctot = county_totals[c]
+                per_county_pcts.append(
+                    f"{cv / ctot * 100:.1f}%" if ctot > 0 and cv else ""
+                )
+
             rows.append([
                 info["display_name"], party,
-                bay_v, f"{bay_pct:.2f}%",
-                ca_v,  f"{ca_pct:.1f}%" if ca_pct != "—" else "—",
+                f"{bay_pct:.1f}%",
+                f"{ca_pct:.1f}%" if ca_pct != "—" else "—",
                 diff,
-            ] + per_county)
+            ] + per_county_pcts)
 
-            color = _party_color(party)
             format_requests.append({
                 "repeatCell": {
                     "range": {
@@ -638,30 +632,27 @@ def _update_statewide_races(ws: gspread.Worksheet, counties: dict) -> None:
                         "startRowIndex":    current_row,
                         "endRowIndex":      current_row + 1,
                         "startColumnIndex": 0,
-                        "endColumnIndex":   7 + len(reporting_counties),
+                        "endColumnIndex":   5 + len(reporting_counties),
                     },
-                    "cell":   {"userEnteredFormat": {"backgroundColor": color}},
+                    "cell":   {"userEnteredFormat": {"backgroundColor": _party_color(party)}},
                     "fields": "userEnteredFormat.backgroundColor",
                 }
             })
             current_row += 1
 
-        # "All Others" summary row
         if rest:
             others_v   = sum(bay_totals[n] for n in rest)
-            others_pct = round(others_v / bay_grand * 100, 2) if bay_grand > 0 else 0.0
-            others_per = [
-                sum(by_county[c].get(n, {}).get("votes", 0) for n in rest) or ""
-                for c in reporting_counties
-            ]
-            rows.append([
-                f"All Others ({len(rest)} candidates)", "",
-                others_v, f"{others_pct:.2f}%",
-                "", "", "",
-            ] + others_per)
+            others_pct = round(others_v / bay_grand * 100, 1) if bay_grand > 0 else 0.0
+            others_per = []
+            for c in reporting_counties:
+                ov   = sum(by_county[c].get(n, {}).get("votes", 0) for n in rest)
+                ctot = county_totals[c]
+                others_per.append(f"{ov / ctot * 100:.1f}%" if ctot > 0 and ov else "")
+            rows.append([f"All Others ({len(rest)} candidates)", "",
+                         f"{others_pct:.1f}%", "", ""] + others_per)
             current_row += 1
 
-        rows.append([""])   # blank spacer between races
+        rows.append([""])
         current_row += 1
 
     # ── Step 4: write all rows in one shot ───────────────────────────────────
@@ -679,17 +670,115 @@ def _update_statewide_races(ws: gspread.Worksheet, counties: dict) -> None:
     print(f"[sheets] STATEWIDE RACES tab updated: {len(statewide_races)} races.")
 
 
-def _update_party_breakdown(ws: gspread.Worksheet, counties: dict) -> None:
+def _update_party_breakdown(ws: gspread.Worksheet, counties: dict, sos_data: dict) -> None:
     """
-    New tab: PARTY BREAKDOWN
-    For each statewide race, shows Democrat / Republican / Other vote totals
-    and percentages broken down by county — one block per race.
-    """
-    sorted_counties = sorted(counties.keys())
+    PARTY BREAKDOWN tab — simplified.
 
-    # Re-use the same race grouping logic.
-    race_data: dict = defaultdict(lambda: defaultdict(dict))
+    One row per Bay Area county showing Democrat / Republican / Other vote
+    totals and percentages aggregated across all 8 statewide races.
+    Uses SoS party data for classification since county scrapers vary in
+    how much party info they embed in candidate names.
+    """
+    _STATEWIDE_OFFICES = {
+        "governor", "lieutenant governor", "secretary of state",
+        "controller", "treasurer", "attorney general",
+        "insurance commissioner", "superintendent of public instruction",
+    }
+
+    # Build a norm_candidate_name → party lookup from SoS data.
+    party_lookup: dict = {}
+    for race_info in sos_data.values():
+        for norm_name, cand in race_info.get("candidates", {}).items():
+            if cand.get("party") and norm_name not in party_lookup:
+                party_lookup[norm_name] = cand["party"]
+
+    def _classify(raw_name: str, inline_party: str) -> str:
+        p = (inline_party or party_lookup.get(_norm_candidate_name(raw_name), "")).lower()
+        if "dem" in p or "democrat" in p:
+            return "dem"
+        if "rep" in p or "republican" in p:
+            return "rep"
+        return "other"
+
+    sorted_counties = sorted(counties.keys())
+    county_totals: dict = {}   # county → {dem, rep, other}
+
+    for county in sorted_counties:
+        dem = rep = other = 0
+        for contest in (counties[county].get("contests") or []):
+            if _norm_race_title(contest.get("title", "")) not in _STATEWIDE_OFFICES:
+                continue
+            for choice in (contest.get("choices") or []):
+                v      = choice.get("votes") or 0
+                bucket = _classify(choice.get("name", ""), choice.get("party", ""))
+                if bucket == "dem":
+                    dem += v
+                elif bucket == "rep":
+                    rep += v
+                else:
+                    other += v
+        county_totals[county] = {"dem": dem, "rep": rep, "other": other}
+
+    bay_dem   = sum(v["dem"]   for v in county_totals.values())
+    bay_rep   = sum(v["rep"]   for v in county_totals.values())
+    bay_other = sum(v["other"] for v in county_totals.values())
+    bay_total = bay_dem + bay_rep + bay_other
+
+    def fmt_pct(n, total):
+        return f"{n / total * 100:.1f}%" if total > 0 else "—"
+
+    rows = [
+        ["PARTY BREAKDOWN — Bay Area counties, all 8 statewide races combined"],
+        [f"Last updated: {_now_pacific()}"],
+        ["Aggregated across: Governor · Lt. Governor · Secretary of State · "
+         "Controller · Treasurer · Attorney General · "
+         "Insurance Commissioner · Superintendent of Public Instruction"],
+        [""],
+        ["County", "Dem Votes", "Rep Votes", "Other Votes", "Dem %", "Rep %", "Other %"],
+    ]
+
+    for county in sorted_counties:
+        t = county_totals[county]
+        total = t["dem"] + t["rep"] + t["other"]
+        if total == 0:
+            continue
+        rows.append([
+            county.replace("_", " "),
+            t["dem"], t["rep"], t["other"],
+            fmt_pct(t["dem"], total),
+            fmt_pct(t["rep"], total),
+            fmt_pct(t["other"], total),
+        ])
+
+    rows.append([""])
+    rows.append([
+        "BAY AREA TOTAL",
+        bay_dem, bay_rep, bay_other,
+        fmt_pct(bay_dem, bay_total),
+        fmt_pct(bay_rep, bay_total),
+        fmt_pct(bay_other, bay_total),
+    ])
+
+    ws.clear()
+    ws.update(rows, "A1", value_input_option="USER_ENTERED")
+    print(f"[sheets] PARTY BREAKDOWN tab updated: {len(sorted_counties)} counties.")
+
+
+def _update_statewide_raw_votes(ws: gspread.Worksheet, counties: dict) -> None:
+    """
+    STATEWIDE RAW VOTES tab — raw vote counts per county for each statewide race.
+    Companion to STATEWIDE RACES (which shows percentages).
+    Top-3 + All Others layout, same races.
+    """
+    _STATEWIDE_OFFICES = {
+        "governor", "lieutenant governor", "secretary of state",
+        "controller", "treasurer", "attorney general",
+        "insurance commissioner", "superintendent of public instruction",
+    }
+
+    race_data: dict  = defaultdict(lambda: defaultdict(dict))
     canonical_title: dict = {}
+    sorted_counties  = sorted(counties.keys())
 
     for county in sorted_counties:
         for contest in (counties[county].get("contests") or []):
@@ -697,21 +786,20 @@ def _update_party_breakdown(ws: gspread.Worksheet, counties: dict) -> None:
             if not title:
                 continue
             norm = _norm_race_title(title)
+            if norm not in _STATEWIDE_OFFICES:
+                continue
             if norm not in canonical_title:
                 canonical_title[norm] = title.title() if title == title.upper() else title
             for choice in contest.get("choices") or []:
-                raw_name = choice.get("name", "").strip()
+                raw_name  = choice.get("name", "").strip()
                 norm_name = _norm_candidate_name(raw_name)
+                existing  = race_data[norm][county].get(norm_name, {})
                 race_data[norm][county][norm_name] = {
-                    "votes": choice.get("votes", 0) or 0,
-                    "party": choice.get("party", "") or "",
+                    "votes":        choice.get("votes", 0) or 0,
+                    "display_name": _display_candidate_name(raw_name),
+                    "party":        choice.get("party", "") or existing.get("party", ""),
                 }
 
-    _STATEWIDE_OFFICES = {
-        "governor", "lieutenant governor", "secretary of state",
-        "controller", "treasurer", "attorney general",
-        "insurance commissioner", "superintendent of public instruction",
-    }
     statewide = [
         (norm, canonical_title[norm], race_data[norm])
         for norm in race_data
@@ -719,50 +807,58 @@ def _update_party_breakdown(ws: gspread.Worksheet, counties: dict) -> None:
     ]
     statewide.sort(key=lambda x: (-len(x[2]), x[1]))
 
-    rows = [["PARTY BREAKDOWN BY COUNTY — last updated: " + _now_pacific()]]
-    rows.append(["How each county's votes split by party for every statewide race."])
-    rows.append([""])
+    rows = [
+        [f"STATEWIDE RAW VOTES — Bay Area counties  |  Last scraped: {_now_pacific()}"],
+        ["Raw vote counts. Percentages and CA comparison are on the STATEWIDE RACES tab."],
+        [""],
+    ]
 
     for norm, display_title, by_county in statewide:
         reporting_counties = sorted(by_county.keys())
+        county_headers     = [c.replace("_", " ") for c in reporting_counties]
 
-        rows.append([f"▸ {display_title}"])
-        rows.append(["County", "Dem Votes", "Rep Votes", "Other Votes",
-                     "Dem %", "Rep %", "Other %"])
-
+        all_candidates: dict = {}
         for county in reporting_counties:
-            dem = rep = other = 0
             for norm_name, info in by_county[county].items():
-                v = info["votes"]
-                p = (info["party"] or "").lower()
-                if "democrat" in p:
-                    dem += v
-                elif "republican" in p:
-                    rep += v
-                else:
-                    other += v
-            total = dem + rep + other
-            if total == 0:
-                continue
+                if norm_name not in all_candidates:
+                    all_candidates[norm_name] = {
+                        "display_name": info["display_name"],
+                        "party":        info["party"],
+                    }
 
-            def pct(n):
-                return f"{n / total * 100:.1f}%" if total > 0 else "—"
+        bay_totals = {
+            n: sum(by_county[c].get(n, {}).get("votes", 0) for c in reporting_counties)
+            for n in all_candidates
+        }
+        ranked = sorted(all_candidates.keys(), key=lambda n: -bay_totals[n])
+        top3, rest = ranked[:3], ranked[3:]
 
-            rows.append([
-                county.replace("_", " "),
-                dem, rep, other,
-                pct(dem), pct(rep), pct(other),
-            ])
+        rows.append([f"▸ {display_title}  ({len(reporting_counties)} counties)"])
+        rows.append(["Candidate", "Party", "Bay Area Total"] + county_headers)
 
-        rows.append([""])   # spacer
+        for norm_name in top3:
+            info = all_candidates[norm_name]
+            per  = [by_county[c].get(norm_name, {}).get("votes", "") for c in reporting_counties]
+            rows.append([info["display_name"], info["party"], bay_totals[norm_name]] + per)
+
+        if rest:
+            others_v   = sum(bay_totals[n] for n in rest)
+            others_per = [
+                sum(by_county[c].get(n, {}).get("votes", 0) for n in rest) or ""
+                for c in reporting_counties
+            ]
+            rows.append([f"All Others ({len(rest)} candidates)", "", others_v] + others_per)
+
+        rows.append([""])
 
     ws.clear()
+    chunk = 500
     if rows:
-        ws.update("A1", rows[:500], value_input_option="USER_ENTERED")
-        for i in range(500, len(rows), 500):
-            ws.append_rows(rows[i:i + 500], value_input_option="USER_ENTERED")
+        ws.update(rows[:chunk], "A1", value_input_option="USER_ENTERED")
+        for i in range(chunk, len(rows), chunk):
+            ws.append_rows(rows[i:i + chunk], value_input_option="USER_ENTERED")
 
-    print(f"[sheets] PARTY BREAKDOWN tab updated: {len(statewide)} races.")
+    print(f"[sheets] STATEWIDE RAW VOTES tab updated: {len(statewide)} races.")
 
 
 def _update_glossary(ws: gspread.Worksheet) -> None:
@@ -900,13 +996,22 @@ def update_sheets(master_json_path: Path) -> None:
         _update_county_tab(ws_county, county_data)
         print(f"[sheets] Updated tab: '{tab_name}'")
 
-    # --- STATEWIDE RACES tab ---
-    ws_statewide = _get_or_create_tab(spreadsheet, "STATEWIDE RACES")
-    _update_statewide_races(ws_statewide, counties)
+    # Fetch CA SoS statewide results once — shared by STATEWIDE RACES,
+    # PARTY BREAKDOWN, and RAW VOTES tabs so we only hit the API once.
+    print("[sheets] Fetching CA SoS statewide results...")
+    sos_data = _fetch_sos_statewide()
 
-    # --- PARTY BREAKDOWN tab ---
+    # --- STATEWIDE RACES tab (percentages + CA comparison) ---
+    ws_statewide = _get_or_create_tab(spreadsheet, "STATEWIDE RACES")
+    _update_statewide_races(ws_statewide, counties, sos_data)
+
+    # --- STATEWIDE RAW VOTES tab (raw counts per county) ---
+    ws_raw = _get_or_create_tab(spreadsheet, "STATEWIDE RAW VOTES")
+    _update_statewide_raw_votes(ws_raw, counties)
+
+    # --- PARTY BREAKDOWN tab (per county, aggregated across all 8 races) ---
     ws_party = _get_or_create_tab(spreadsheet, "PARTY BREAKDOWN")
-    _update_party_breakdown(ws_party, counties)
+    _update_party_breakdown(ws_party, counties, sos_data)
 
     # --- SCRAPE LOG tab (append only) ---
     ws_log = _get_or_create_tab(spreadsheet, TAB_LOG)
