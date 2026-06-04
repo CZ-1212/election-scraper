@@ -1,8 +1,4 @@
 {
-  "Alameda": {
-    "ballots_cast": 167794,
-    "timestamp": ""
-  },
   "Contra_Costa": {
     "ballots_cast": 174683,
     "timestamp": ""
@@ -36,7 +32,7 @@
     "timestamp": ""
   },
   "Santa_Clara": {
-    "ballots_cast": 208299,
+    "ballots_cast": 229418,
     "timestamp": ""
   },
   "Santa_Cruz": {
@@ -49,6 +45,10 @@
   },
   "Sonoma": {
     "ballots_cast": 75877,
+    "timestamp": ""
+  },
+  "Alameda": {
+    "ballots_cast": 167794,
     "timestamp": ""
   }
 }
