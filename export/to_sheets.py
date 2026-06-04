@@ -102,7 +102,7 @@ def _fetch_sos_statewide() -> dict:
                 raw_name = (c.get("Name") or "").strip()
                 if not raw_name:
                     continue
-                norm_name = re.sub(r"\s+", " ", raw_name.lower())
+                norm_name = _norm_candidate_name(raw_name)
                 votes_str = re.sub(r"[,\s]", "", str(c.get("Votes") or "0"))
                 try:
                     votes = int(votes_str)
@@ -435,8 +435,14 @@ def _norm_race_title(s: str) -> str:
 
 
 def _norm_candidate_name(name: str) -> str:
-    """Lowercase key used to de-duplicate the same candidate across counties."""
-    return re.sub(r'\s+', ' ', name.strip().lower())
+    """
+    Lowercase key for de-duplicating the same candidate across counties.
+    Strips periods from middle initials so 'Shirley N. Weber' and
+    'Shirley N Weber' (different county formatting) collapse to one entry.
+    """
+    s = re.sub(r'\s+', ' ', name.strip().lower())
+    s = re.sub(r'\b([a-z])\.\s*', r'\1 ', s).strip()  # "N." → "N"
+    return re.sub(r'\s+', ' ', s)
 
 
 def _display_candidate_name(name: str) -> str:
@@ -759,6 +765,98 @@ def _update_party_breakdown(ws: gspread.Worksheet, counties: dict) -> None:
     print(f"[sheets] PARTY BREAKDOWN tab updated: {len(statewide)} races.")
 
 
+def _update_glossary(ws: gspread.Worksheet) -> None:
+    """
+    Write (or overwrite) a GLOSSARY & SOURCES tab with column definitions,
+    data sources, API references, and pipeline documentation.
+    This tab is always fully rewritten so it stays current with the code.
+    """
+    rows = [
+        # ── Header ──────────────────────────────────────────────────────────
+        ["BAY CITY NEWS — ELECTION RESULTS PIPELINE: GLOSSARY & SOURCES"],
+        ["June 2, 2026 California Statewide Direct Primary"],
+        [f"Last updated: {_now_pacific()}"],
+        [""],
+
+        # ── Tab guide ───────────────────────────────────────────────────────
+        ["SHEET TABS — WHAT EACH ONE SHOWS"],
+        ["Tab", "Contents", "Updates"],
+        ["STATUS DASHBOARD",   "One row per county: scrape status, last scraped time, last site update, contest count.",  "Every pipeline run"],
+        ["[County Name] ×13",  "Full contest and choice breakdown for that county (votes and % per candidate/measure).", "Every pipeline run"],
+        ["STATEWIDE RACES",    "8 state offices. Bay Area totals vs. CA statewide (SoS API). Party colours: blue=Dem, red=Rep, gray=Other. Top 3 + All Others per race.", "Every pipeline run"],
+        ["PARTY BREAKDOWN",    "For each statewide race: how each county's votes split Democrat / Republican / Other.",   "Every pipeline run"],
+        ["SCRAPE LOG",         "Append-only history of every pipeline run — ballots cast, delta since last run, spike flag.", "Every pipeline run (appended)"],
+        ["PUBLISH CHECKLIST",  "Editor instructions for reviewing data before publishing to WordPress.",                   "Written once, never overwritten"],
+        ["GLOSSARY & SOURCES", "This tab. Column definitions, sources, API references.",                                  "Every pipeline run"],
+        [""],
+
+        # ── Column definitions ───────────────────────────────────────────────
+        ["COLUMN DEFINITIONS"],
+        ["Column", "Definition"],
+        ["Status",           "OK = scrape succeeded with data. WARN = succeeded but zero ballots or anomaly detected. FAIL = scrape could not reach the county website."],
+        ["Last Scraped",     "Timestamp when the pipeline last successfully pulled data from this county's website (Pacific Time)."],
+        ["Site Last Updated","Timestamp the county's own website shows for when their results file was last updated."],
+        ["Contests",         "Number of races parsed from this county's results page."],
+        ["Bay Area Votes",   "Sum of votes for this candidate across all 13 Bay Area counties in our pipeline."],
+        ["Bay Area %",       "Bay Area votes for this candidate ÷ total Bay Area votes in this race × 100."],
+        ["CA Statewide Votes","Total votes statewide per the CA Secretary of State API (all 58 counties)."],
+        ["CA Statewide %",   "Statewide percentage per the CA SoS API."],
+        ["Bay Area vs. CA",  "Bay Area % minus CA Statewide %. Positive = Bay Area voted more for this candidate than the state average. Negative = less."],
+        ["Δ Since Last",     "Change in ballots cast since the previous pipeline run (SCRAPE LOG only)."],
+        ["⚠ Spike?",         "Flagged if a single 15-min cycle added more than 5% of registered voters — likely a large batch drop from the registrar."],
+        [""],
+
+        # ── Data sources ─────────────────────────────────────────────────────
+        ["DATA SOURCES — 13 BAY AREA COUNTIES"],
+        ["County",          "Platform",          "Live Results URL",                                                                                          "Source Label"],
+        ["Alameda",         "Custom HTML",        "https://alamedacountyca.gov/rovresults/259/",                                                              "Alameda County Registrar of Voters"],
+        ["Contra Costa",    "Clarity Elections",  "https://results.enr.clarityelections.com/CA/Contra_Costa/126374/web.345435/#/summary",                    "Contra Costa County Elections Division"],
+        ["Marin",           "Clarity Elections",  "https://results.enr.clarityelections.com/CA/Marin/126360/web.345435/#/summary",                           "Marin County Elections"],
+        ["Mendocino",       "Custom HTML",        "https://www.mendocinocounty.gov/government/assessor-county-clerk-recorder-elections/current-election-results", "Mendocino County Elections"],
+        ["Monterey",        "Custom HTML",        "https://www.countyofmonterey.gov/government/departments-a-h/elections/election-results",                  "Monterey County Elections Department"],
+        ["Napa",            "PDF (auto-discover)","https://www.napacounty.gov/402/Election-Results",                                                         "Napa County Elections — scraper auto-finds latest PDF"],
+        ["San Francisco",   "Custom XML/PDF",     "https://www.sfelections.org/results/20260602w/index.html",                                                "San Francisco Department of Elections"],
+        ["San Joaquin",     "LiveVoterTurnout",   "https://www.livevoterturnout.com/ENR/sanjoaquincaenr/21/en/Index_21.html",                                "San Joaquin County Registrar of Voters"],
+        ["San Mateo",       "LiveVoterTurnout",   "https://www.livevoterturnout.com/ENR/sanmateocaenr/19/en/t7vnu_Index_19.html",                            "San Mateo County Elections"],
+        ["Santa Clara",     "Clarity Elections",  "https://results.enr.clarityelections.com/CA/Santa_Clara/126487/web.345435/#/summary",                    "Santa Clara County Registrar of Voters"],
+        ["Santa Cruz",      "Custom HTML",        "https://www2.santacruzcountyca.gov/ElectionSites/ElectionResults/Results",                               "Santa Cruz County Elections Department"],
+        ["Solano",          "Custom HTML",        "https://content.solanocounty.gov/sites/default/files/2026-04/HTML_Cumulative_Results-2026_Statewide_Direct_Primary_-_TW-4-20-2026_16-38-04_PM.html", "Solano County Elections Division"],
+        ["Sonoma",          "Clarity Elections",  "https://results.enr.clarityelections.com/CA/Sonoma/126199/web.345435/#/summary",                         "Sonoma County Registrar of Voters"],
+        [""],
+
+        # ── Statewide API ────────────────────────────────────────────────────
+        ["CA SECRETARY OF STATE API — STATEWIDE RESULTS"],
+        ["Race",                            "API Endpoint"],
+        ["Governor",                        "https://api.sos.ca.gov/returns/governor"],
+        ["Lieutenant Governor",             "https://api.sos.ca.gov/returns/lieutenant-governor"],
+        ["Secretary of State",              "https://api.sos.ca.gov/returns/secretary-of-state"],
+        ["Controller",                      "https://api.sos.ca.gov/returns/controller"],
+        ["Treasurer",                       "https://api.sos.ca.gov/returns/treasurer"],
+        ["Attorney General",                "https://api.sos.ca.gov/returns/attorney-general"],
+        ["Insurance Commissioner",          "https://api.sos.ca.gov/returns/insurance-commissioner"],
+        ["Superintendent of Public Instruction", "https://api.sos.ca.gov/returns/superintendent-of-public-instruction"],
+        ["",                                "No authentication required. Returns JSON. Documented at https://www.sos.ca.gov/media/"],
+        [""],
+
+        # ── Pipeline notes ───────────────────────────────────────────────────
+        ["PIPELINE NOTES"],
+        ["Item",            "Detail"],
+        ["Update frequency","Automatic every 15 minutes via GitHub Actions on election night."],
+        ["Manual publish",  "Run: python export/to_wordpress.py --push-rendered  — requires typed YES confirmation."],
+        ["Test push",       "Run: python export/to_wordpress.py --push-rendered --test-page 183978 --counties Marin"],
+        ["Name casing",     "All-uppercase candidate names are normalized to Title Case during the normalize step. Counties that already post proper casing are untouched."],
+        ["Party matching",  "Party affiliation comes from county data where available; back-filled from CA SoS API where county scraper did not capture it."],
+        ["Napa PDF",        "Napa posts a new PDF every few hours on election night. The scraper auto-discovers the latest one from napacounty.gov/402/Election-Results."],
+        ["Statewide threshold", "A race must appear in all 13 counties to qualify for the STATEWIDE RACES tab. County-level races with shared names (e.g. Auditor-Controller) are excluded by an explicit whitelist."],
+        ["GitHub repo",     "https://github.com/alariosjx/election-scraper"],
+        ["Contact",         "andres@baycitynews.com"],
+    ]
+
+    ws.clear()
+    ws.update(rows, value_input_option="USER_ENTERED")
+    print(f"[sheets] GLOSSARY & SOURCES tab updated ({len(rows)} rows).")
+
+
 def update_sheets(master_json_path: Path) -> None:
     """
     Read the master JSON and push all data to the Google Sheet.
@@ -817,6 +915,10 @@ def update_sheets(master_json_path: Path) -> None:
     # --- PUBLISH CHECKLIST tab (write once, never overwrite) ---
     ws_checklist = _get_or_create_tab(spreadsheet, TAB_CHECKLIST)
     _ensure_publish_checklist(ws_checklist)
+
+    # --- GLOSSARY & SOURCES tab (always rewritten) ---
+    ws_glossary = _get_or_create_tab(spreadsheet, "GLOSSARY & SOURCES")
+    _update_glossary(ws_glossary)
 
     print(f"[sheets] All tabs updated successfully.")
 
