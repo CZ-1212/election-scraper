@@ -1,4 +1,8 @@
 {
+  "Alameda": {
+    "ballots_cast": 167794,
+    "timestamp": ""
+  },
   "Contra_Costa": {
     "ballots_cast": 174683,
     "timestamp": ""
@@ -40,15 +44,11 @@
     "timestamp": ""
   },
   "Solano": {
-    "ballots_cast": 61780,
+    "ballots_cast": 71362,
     "timestamp": ""
   },
   "Sonoma": {
     "ballots_cast": 75877,
-    "timestamp": ""
-  },
-  "Alameda": {
-    "ballots_cast": 167794,
     "timestamp": ""
   }
 }
