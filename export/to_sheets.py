@@ -546,16 +546,21 @@ def _update_statewide_races(ws: gspread.Worksheet, counties: dict, sos_data: dic
 
     sheet_id = ws.id
 
-    # Reset all cell backgrounds to white first — ws.clear() removes content
-    # but NOT formatting, so coloured rows from a previous run would persist.
+    # Reset all cell formatting — ws.clear() removes content but NOT formatting,
+    # so leftover number formats from a prior run persist. A %-formatted cell
+    # displays a plain float as n×100: -10.5 becomes -1050%.
+    # Reset to NUMBER (no pattern) clears % and other special formats.
     format_requests = [{
         "repeatCell": {
             "range": {"sheetId": sheet_id},
             "cell": {"userEnteredFormat": {
                 "backgroundColor": {"red": 1.0, "green": 1.0, "blue": 1.0},
                 "textFormat": {"bold": False},
+                "numberFormat": {"type": "NUMBER", "pattern": ""},
             }},
-            "fields": "userEnteredFormat.backgroundColor,userEnteredFormat.textFormat.bold",
+            "fields": "userEnteredFormat.backgroundColor,"
+                      "userEnteredFormat.textFormat.bold,"
+                      "userEnteredFormat.numberFormat",
         }
     }]
 
