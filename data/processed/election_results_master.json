@@ -1,12 +1,12 @@
 {
-  "pipeline_timestamp": "2026-06-05T11:25:09.924776-07:00",
+  "pipeline_timestamp": "2026-06-05T13:29:18.872416-07:00",
   "county_count": 13,
   "counties": {
     "Alameda": {
       "county": "Alameda",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-05 11:25:09",
+      "last_updated": "2026-06-05 13:29:18",
       "voter_turnout": {
         "ballots_cast": 167794,
         "registered_voters": 971138,
@@ -1832,7 +1832,7 @@
       "county": "Contra_Costa",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-05 11:25:09",
+      "last_updated": "2026-06-05 13:29:18",
       "voter_turnout": {
         "ballots_cast": 174683,
         "registered_voters": 731497,
@@ -3182,7 +3182,7 @@
       "county": "Marin",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-05 11:25:09",
+      "last_updated": "2026-06-05 13:29:18",
       "voter_turnout": {
         "ballots_cast": 44159,
         "registered_voters": 173082,
@@ -4614,7 +4614,7 @@
       "county": "Mendocino",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-05 11:25:09",
+      "last_updated": "2026-06-05 13:29:18",
       "voter_turnout": {
         "ballots_cast": 9177,
         "registered_voters": 54207,
@@ -5863,7 +5863,7 @@
       "county": "Monterey",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-05 11:25:09",
+      "last_updated": "2026-06-05 13:29:18",
       "voter_turnout": {
         "ballots_cast": 50970,
         "registered_voters": 218662,
@@ -7226,7 +7226,7 @@
       "county": "Napa",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-05 11:25:09",
+      "last_updated": "2026-06-05 13:29:18",
       "voter_turnout": {
         "ballots_cast": 16503,
         "registered_voters": 85941,
@@ -8270,7 +8270,7 @@
       "county": "San_Francisco",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-05 11:25:09",
+      "last_updated": "2026-06-05 13:29:18",
       "voter_turnout": {
         "ballots_cast": 280234,
         "registered_voters": 533546,
@@ -9831,7 +9831,7 @@
       "county": "San_Joaquin",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-05 11:25:09",
+      "last_updated": "2026-06-05 13:29:18",
       "voter_turnout": {
         "ballots_cast": 74248,
         "registered_voters": 410058,
@@ -11328,7 +11328,7 @@
       "county": "San_Mateo",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-05 11:25:09",
+      "last_updated": "2026-06-05 13:29:18",
       "voter_turnout": {
         "ballots_cast": 91075,
         "registered_voters": 447306,
@@ -12704,7 +12704,7 @@
       "county": "Santa_Clara",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-05 11:25:09",
+      "last_updated": "2026-06-05 13:29:18",
       "voter_turnout": {
         "ballots_cast": 257317,
         "registered_voters": 1075142,
@@ -14227,385 +14227,6 @@
           "is_measure": false,
           "measure_description": "",
           "measure_jurisdiction": ""
-        },
-        {
-          "title": "Judge of the Superior Court, Office No. 7",
-          "precincts_reporting": "",
-          "choices": [
-            {
-              "name": "Mattia M. Corsiglia",
-              "votes": 165661,
-              "pct": 99.64,
-              "party": "",
-              "profession": ""
-            },
-            {
-              "name": "Write-in",
-              "votes": 606,
-              "pct": 0.36,
-              "party": "",
-              "profession": ""
-            }
-          ],
-          "is_measure": false,
-          "measure_description": "",
-          "measure_jurisdiction": ""
-        },
-        {
-          "title": "Judge of the Superior Court, Office No. 17",
-          "precincts_reporting": "",
-          "choices": [
-            {
-              "name": "Ann Vernice Huntley",
-              "votes": 165500,
-              "pct": 99.6,
-              "party": "",
-              "profession": ""
-            },
-            {
-              "name": "Write-in",
-              "votes": 659,
-              "pct": 0.4,
-              "party": "",
-              "profession": ""
-            }
-          ],
-          "is_measure": false,
-          "measure_description": "",
-          "measure_jurisdiction": ""
-        },
-        {
-          "title": "Board of Supervisors, District 1",
-          "precincts_reporting": "",
-          "choices": [
-            {
-              "name": "Sylvia Arenas",
-              "votes": 30815,
-              "pct": 62.42,
-              "party": "",
-              "profession": "Santa Clara County Supervisor"
-            },
-            {
-              "name": "Rebecca Munson",
-              "votes": 18487,
-              "pct": 37.45,
-              "party": "",
-              "profession": "Educator/Board Member"
-            },
-            {
-              "name": "Write-in",
-              "votes": 66,
-              "pct": 0.13,
-              "party": "",
-              "profession": ""
-            }
-          ],
-          "is_measure": false,
-          "measure_description": "",
-          "measure_jurisdiction": ""
-        },
-        {
-          "title": "Board of Supervisors, District 4",
-          "precincts_reporting": "",
-          "choices": [
-            {
-              "name": "Susan Ellenberg",
-              "votes": 35386,
-              "pct": 99.53,
-              "party": "",
-              "profession": ""
-            },
-            {
-              "name": "Write-in",
-              "votes": 166,
-              "pct": 0.47,
-              "party": "",
-              "profession": ""
-            }
-          ],
-          "is_measure": false,
-          "measure_description": "",
-          "measure_jurisdiction": ""
-        },
-        {
-          "title": "Assessor",
-          "precincts_reporting": "",
-          "choices": [
-            {
-              "name": "Neysa Fligor",
-              "votes": 174304,
-              "pct": 99.6,
-              "party": "",
-              "profession": ""
-            },
-            {
-              "name": "Write-in",
-              "votes": 698,
-              "pct": 0.4,
-              "party": "",
-              "profession": ""
-            }
-          ],
-          "is_measure": false,
-          "measure_description": "",
-          "measure_jurisdiction": ""
-        },
-        {
-          "title": "District Attorney",
-          "precincts_reporting": "",
-          "choices": [
-            {
-              "name": "Jeff Rosen",
-              "votes": 131873,
-              "pct": 60.08,
-              "party": "",
-              "profession": "Santa Clara County District Attorney"
-            },
-            {
-              "name": "Daniel Chung",
-              "votes": 87368,
-              "pct": 39.8,
-              "party": "",
-              "profession": "Deputy District Attorney"
-            },
-            {
-              "name": "Write-in",
-              "votes": 259,
-              "pct": 0.12,
-              "party": "",
-              "profession": ""
-            }
-          ],
-          "is_measure": false,
-          "measure_description": "",
-          "measure_jurisdiction": ""
-        },
-        {
-          "title": "Sheriff",
-          "precincts_reporting": "",
-          "choices": [
-            {
-              "name": "Robert Jonsen",
-              "votes": 170207,
-              "pct": 99.66,
-              "party": "",
-              "profession": ""
-            },
-            {
-              "name": "Write-in",
-              "votes": 581,
-              "pct": 0.34,
-              "party": "",
-              "profession": ""
-            }
-          ],
-          "is_measure": false,
-          "measure_description": "",
-          "measure_jurisdiction": ""
-        },
-        {
-          "title": "City of San José Council, District 1",
-          "precincts_reporting": "",
-          "choices": [
-            {
-              "name": "Rosemary Kamei",
-              "votes": 7192,
-              "pct": 99.52,
-              "party": "",
-              "profession": ""
-            },
-            {
-              "name": "Write-in",
-              "votes": 35,
-              "pct": 0.48,
-              "party": "",
-              "profession": ""
-            }
-          ],
-          "is_measure": false,
-          "measure_description": "",
-          "measure_jurisdiction": ""
-        },
-        {
-          "title": "City of San José Council, District 3",
-          "precincts_reporting": "",
-          "choices": [
-            {
-              "name": "Anthony Tordillos",
-              "votes": 6517,
-              "pct": 99.48,
-              "party": "",
-              "profession": ""
-            },
-            {
-              "name": "Write-in",
-              "votes": 34,
-              "pct": 0.52,
-              "party": "",
-              "profession": ""
-            }
-          ],
-          "is_measure": false,
-          "measure_description": "",
-          "measure_jurisdiction": ""
-        },
-        {
-          "title": "City of San José Council, District 5",
-          "precincts_reporting": "",
-          "choices": [
-            {
-              "name": "Peter Ortiz",
-              "votes": 3515,
-              "pct": 44.41,
-              "party": "",
-              "profession": "Councilmember, City Of San Jose, District 5"
-            },
-            {
-              "name": "Nora Campos",
-              "votes": 1598,
-              "pct": 20.19,
-              "party": "",
-              "profession": "Businesswoman/Policy Analyst"
-            },
-            {
-              "name": "Vy Dang",
-              "votes": 1530,
-              "pct": 19.33,
-              "party": "",
-              "profession": "Small Business Owner"
-            },
-            {
-              "name": "Karen Martínez",
-              "votes": 1260,
-              "pct": 15.92,
-              "party": "",
-              "profession": "Governing Board Member"
-            },
-            {
-              "name": "Write-in",
-              "votes": 12,
-              "pct": 0.15,
-              "party": "",
-              "profession": ""
-            }
-          ],
-          "is_measure": false,
-          "measure_description": "",
-          "measure_jurisdiction": ""
-        },
-        {
-          "title": "City of San José Council, District 7",
-          "precincts_reporting": "",
-          "choices": [
-            {
-              "name": "Bien Doan",
-              "votes": 3778,
-              "pct": 48.47,
-              "party": "",
-              "profession": "Council Member, City of San Jose, District 7"
-            },
-            {
-              "name": "Van Le",
-              "votes": 1812,
-              "pct": 23.25,
-              "party": "",
-              "profession": "Trustee East Side Union High School District"
-            },
-            {
-              "name": "Rafael García",
-              "votes": 1452,
-              "pct": 18.63,
-              "party": "",
-              "profession": "Union Electrician"
-            },
-            {
-              "name": "HG Hanh-Giao Nguyen",
-              "votes": 743,
-              "pct": 9.53,
-              "party": "",
-              "profession": "Public Affairs Director"
-            },
-            {
-              "name": "Write-in",
-              "votes": 9,
-              "pct": 0.12,
-              "party": "",
-              "profession": ""
-            }
-          ],
-          "is_measure": false,
-          "measure_description": "",
-          "measure_jurisdiction": ""
-        },
-        {
-          "title": "City of San José Council, District 9",
-          "precincts_reporting": "",
-          "choices": [
-            {
-              "name": "Genny Altwer",
-              "votes": 4251,
-              "pct": 32.65,
-              "party": "",
-              "profession": "Business Owner/Mother"
-            },
-            {
-              "name": "Gordon Chester",
-              "votes": 2775,
-              "pct": 21.32,
-              "party": "",
-              "profession": "City of San Jose Infrastructure Engineer"
-            },
-            {
-              "name": "Scott Hughes",
-              "votes": 2664,
-              "pct": 20.46,
-              "party": "",
-              "profession": "Chief of Staff"
-            },
-            {
-              "name": "Mike Hennessy",
-              "votes": 2588,
-              "pct": 19.88,
-              "party": "",
-              "profession": "Business Owner/Instructor"
-            },
-            {
-              "name": "Rick Ator",
-              "votes": 727,
-              "pct": 5.58,
-              "party": "",
-              "profession": "Product Manager"
-            },
-            {
-              "name": "Write-in",
-              "votes": 14,
-              "pct": 0.11,
-              "party": "",
-              "profession": ""
-            }
-          ],
-          "is_measure": false,
-          "measure_description": "",
-          "measure_jurisdiction": ""
-        },
-        {
-          "title": "Measure A - City of San Jose, Transient Occupancy Tax Increase - Majority vote required",
-          "precincts_reporting": "",
-          "choices": [
-            {
-              "name": "Yes",
-              "votes": 76563,
-              "pct": 66.15
-            },
-            {
-              "name": "No",
-              "votes": 39179,
-              "pct": 33.85
-            }
-          ],
-          "is_measure": true,
-          "measure_description": "To fund essential city services including police and fire emergency response; address homeless encampments impacting parks, neighborhoods, and waterways; remove trash, illegal dumping, and graffiti; and maintain trails, playgrounds, recreational facilities, and park restrooms, shall an ordinance be adopted increasing the general fund transient occupancy (hotel) tax from 4% to 6%, generating approximately $10 million annually, and paid by hotel/motel guests, until repealed by voters?",
-          "measure_jurisdiction": "City of San Jose"
         }
       ],
       "anomalies": [],
@@ -14615,7 +14236,7 @@
       "county": "Santa_Cruz",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-05 11:25:09",
+      "last_updated": "2026-06-05 13:29:18",
       "voter_turnout": {
         "ballots_cast": 48076,
         "registered_voters": 173398,
@@ -16120,7 +15741,7 @@
       "county": "Solano",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-05 11:25:09",
+      "last_updated": "2026-06-05 13:29:18",
       "voter_turnout": {
         "ballots_cast": 89979,
         "registered_voters": 275572,
@@ -17296,7 +16917,7 @@
       "county": "Sonoma",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-05 11:25:09",
+      "last_updated": "2026-06-05 13:29:18",
       "voter_turnout": {
         "ballots_cast": 89152,
         "registered_voters": 320651,
