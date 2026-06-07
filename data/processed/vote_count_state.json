@@ -1,8 +1,4 @@
 {
-  "Alameda": {
-    "ballots_cast": 244535,
-    "timestamp": ""
-  },
   "Contra_Costa": {
     "ballots_cast": 267760,
     "timestamp": ""
@@ -28,11 +24,11 @@
     "timestamp": ""
   },
   "San_Joaquin": {
-    "ballots_cast": 107292,
+    "ballots_cast": 0,
     "timestamp": ""
   },
   "San_Mateo": {
-    "ballots_cast": 100514,
+    "ballots_cast": 0,
     "timestamp": ""
   },
   "Santa_Clara": {
@@ -49,6 +45,10 @@
   },
   "Sonoma": {
     "ballots_cast": 89152,
+    "timestamp": ""
+  },
+  "Alameda": {
+    "ballots_cast": 244535,
     "timestamp": ""
   }
 }
