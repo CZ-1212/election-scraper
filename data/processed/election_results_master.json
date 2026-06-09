@@ -1,12 +1,12 @@
 {
-  "pipeline_timestamp": "2026-06-09T12:21:14.524046-07:00",
+  "pipeline_timestamp": "2026-06-09T14:21:51.473073-07:00",
   "county_count": 13,
   "counties": {
     "Alameda": {
       "county": "Alameda",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-09 12:21:14",
+      "last_updated": "2026-06-09 14:21:51",
       "voter_turnout": {
         "ballots_cast": 394910,
         "registered_voters": 971138,
@@ -1832,7 +1832,7 @@
       "county": "Contra_Costa",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-09 12:21:14",
+      "last_updated": "2026-06-09 14:21:51",
       "voter_turnout": {
         "ballots_cast": 267760,
         "registered_voters": 731497,
@@ -3182,7 +3182,7 @@
       "county": "Marin",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-09 12:21:14",
+      "last_updated": "2026-06-09 14:21:51",
       "voter_turnout": {
         "ballots_cast": 59615,
         "registered_voters": 173082,
@@ -4614,7 +4614,7 @@
       "county": "Mendocino",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-09 12:21:14",
+      "last_updated": "2026-06-09 14:21:51",
       "voter_turnout": {
         "ballots_cast": 9177,
         "registered_voters": 54207,
@@ -5863,7 +5863,7 @@
       "county": "Monterey",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-09 12:21:14",
+      "last_updated": "2026-06-09 14:21:51",
       "voter_turnout": {
         "ballots_cast": 66330,
         "registered_voters": 218662,
@@ -7226,7 +7226,7 @@
       "county": "Napa",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-09 12:21:14",
+      "last_updated": "2026-06-09 14:21:51",
       "voter_turnout": {
         "ballots_cast": 23351,
         "registered_voters": 85941,
@@ -8270,7 +8270,7 @@
       "county": "San_Francisco",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-09 12:21:14",
+      "last_updated": "2026-06-09 14:21:51",
       "voter_turnout": {
         "ballots_cast": 445615,
         "registered_voters": 533546,
@@ -9831,7 +9831,7 @@
       "county": "San_Joaquin",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-09 12:21:14",
+      "last_updated": "2026-06-09 14:21:51",
       "voter_turnout": {
         "ballots_cast": 135763,
         "registered_voters": 410058,
@@ -11398,7 +11398,7 @@
       "county": "San_Mateo",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-09 12:21:14",
+      "last_updated": "2026-06-09 14:21:51",
       "voter_turnout": {
         "ballots_cast": 129084,
         "registered_voters": 447306,
@@ -12774,7 +12774,7 @@
       "county": "Santa_Clara",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-09 12:21:14",
+      "last_updated": "2026-06-09 14:21:51",
       "voter_turnout": {
         "ballots_cast": 415321,
         "registered_voters": 1075142,
@@ -14306,7 +14306,7 @@
       "county": "Santa_Cruz",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-09 12:21:14",
+      "last_updated": "2026-06-09 14:21:51",
       "voter_turnout": {
         "ballots_cast": 68908,
         "registered_voters": 173398,
@@ -15811,7 +15811,7 @@
       "county": "Solano",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-09 12:21:14",
+      "last_updated": "2026-06-09 14:21:51",
       "voter_turnout": {
         "ballots_cast": 108652,
         "registered_voters": 275572,
@@ -16987,11 +16987,11 @@
       "county": "Sonoma",
       "platform": "custom",
       "scrape_timestamp": "",
-      "last_updated": "2026-06-09 12:21:14",
+      "last_updated": "2026-06-09 14:21:51",
       "voter_turnout": {
-        "ballots_cast": 89152,
+        "ballots_cast": 129439,
         "registered_voters": 320651,
-        "turnout_percentage": 27.8
+        "turnout_percentage": 40.4
       },
       "contests": [
         {
@@ -17000,252 +17000,252 @@
           "choices": [
             {
               "name": "Margaret Trowe",
-              "votes": 43,
+              "votes": 60,
               "pct": 0.05,
               "party": "No Party Preference",
               "profession": ""
             },
             {
               "name": "Tony K. Thurmond",
-              "votes": 636,
-              "pct": 0.73,
+              "votes": 872,
+              "pct": 0.69,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Thunder Parley",
-              "votes": 22,
-              "pct": 0.03,
+              "votes": 31,
+              "pct": 0.02,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Katie Porter",
-              "votes": 6934,
-              "pct": 7.92,
+              "votes": 9357,
+              "pct": 7.35,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Tom Woodard",
-              "votes": 91,
+              "votes": 123,
               "pct": 0.1,
               "party": "Libertarian",
               "profession": ""
             },
             {
               "name": "Leo Samuel Zacky",
-              "votes": 150,
-              "pct": 0.17,
+              "votes": 185,
+              "pct": 0.15,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Erin ''Zez'' Zezulak",
-              "votes": 83,
-              "pct": 0.09,
+              "votes": 123,
+              "pct": 0.1,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "David Zickefoose",
-              "votes": 31,
-              "pct": 0.04,
+              "votes": 34,
+              "pct": 0.03,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Amanda Martin",
-              "votes": 32,
+              "votes": 46,
               "pct": 0.04,
               "party": "No Party Preference",
               "profession": ""
             },
             {
               "name": "Matt Mahan",
-              "votes": 3731,
-              "pct": 4.26,
+              "votes": 4683,
+              "pct": 3.68,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Brent Maupin",
-              "votes": 16,
+              "votes": 25,
               "pct": 0.02,
               "party": "No Party Preference",
               "profession": ""
             },
             {
               "name": "Daniel Mercuri",
-              "votes": 40,
-              "pct": 0.05,
+              "votes": 56,
+              "pct": 0.04,
               "party": "No Party Preference",
               "profession": ""
             },
             {
               "name": "Betty T. Yee",
-              "votes": 555,
-              "pct": 0.63,
+              "votes": 722,
+              "pct": 0.57,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Nancy D. Young",
-              "votes": 40,
-              "pct": 0.05,
+              "votes": 50,
+              "pct": 0.04,
               "party": "No Party Preference",
               "profession": ""
             },
             {
               "name": "Alicia Olivia Lapp",
-              "votes": 60,
-              "pct": 0.07,
+              "votes": 72,
+              "pct": 0.06,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Matthew Chase Levy",
-              "votes": 150,
-              "pct": 0.17,
+              "votes": 182,
+              "pct": 0.14,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Duane Terrence Loynes Jr.",
-              "votes": 11,
+              "votes": 18,
               "pct": 0.01,
               "party": "No Party Preference",
               "profession": ""
             },
             {
               "name": "Randeep S. Dhillon",
-              "votes": 145,
-              "pct": 0.17,
+              "votes": 182,
+              "pct": 0.14,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Livingforgod Andcountry Demott",
-              "votes": 18,
+              "votes": 25,
               "pct": 0.02,
               "party": "No Party Preference",
               "profession": ""
             },
             {
               "name": "Patricia De Luca Basualdo",
-              "votes": 22,
-              "pct": 0.03,
+              "votes": 30,
+              "pct": 0.02,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Louis A. De Barraicua",
-              "votes": 92,
+              "votes": 134,
               "pct": 0.11,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Raji Rab",
-              "votes": 29,
+              "votes": 35,
               "pct": 0.03,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Satish Rao",
-              "votes": 19,
+              "votes": 24,
               "pct": 0.02,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Ramsey Robinson",
-              "votes": 272,
-              "pct": 0.31,
+              "votes": 466,
+              "pct": 0.37,
               "party": "Peace and Freedom",
               "profession": ""
             },
             {
               "name": "Lewis Herms",
-              "votes": 21,
-              "pct": 0.02,
+              "votes": 33,
+              "pct": 0.03,
               "party": "No Party Preference",
               "profession": ""
             },
             {
               "name": "Rafael M. Hernandez",
-              "votes": 25,
-              "pct": 0.03,
+              "votes": 29,
+              "pct": 0.02,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Jon Henderson",
-              "votes": 60,
+              "votes": 94,
               "pct": 0.07,
               "party": "No Party Preference",
               "profession": ""
             },
             {
               "name": "Steve Hilton",
-              "votes": 15973,
-              "pct": 18.23,
+              "votes": 21626,
+              "pct": 16.99,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Naomi Bar-Lev",
-              "votes": 16,
+              "votes": 30,
               "pct": 0.02,
               "party": "No Party Preference",
               "profession": ""
             },
             {
               "name": "Xavier Becerra",
-              "votes": 28253,
-              "pct": 32.25,
+              "votes": 41909,
+              "pct": 32.93,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Carolina Buhler",
-              "votes": 130,
-              "pct": 0.15,
+              "votes": 165,
+              "pct": 0.13,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Chad Bianco",
-              "votes": 6882,
-              "pct": 7.86,
+              "votes": 9165,
+              "pct": 7.2,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Joseph Cabrera",
-              "votes": 51,
+              "votes": 75,
               "pct": 0.06,
               "party": "No Party Preference",
               "profession": ""
             },
             {
               "name": "Elaine Culotti",
-              "votes": 57,
-              "pct": 0.07,
+              "votes": 77,
+              "pct": 0.06,
               "party": "No Party Preference",
               "profession": ""
             },
             {
               "name": "Joel E. Jacob",
-              "votes": 6,
+              "votes": 7,
               "pct": 0.01,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Max Fomin",
-              "votes": 6,
+              "votes": 7,
               "pct": 0.01,
               "party": "No Party Preference",
               "profession": ""
@@ -17259,112 +17259,112 @@
             },
             {
               "name": "Serge Fiankan",
-              "votes": 3,
-              "pct": 0.0,
-              "party": "No Party Preference",
-              "profession": ""
-            },
-            {
-              "name": "Leo Naranjo IV",
-              "votes": 62,
-              "pct": 0.07,
-              "party": "Republican",
-              "profession": ""
-            },
-            {
-              "name": "Tim Nelson",
-              "votes": 117,
-              "pct": 0.13,
-              "party": "Republican",
-              "profession": ""
-            },
-            {
-              "name": "Tom Steyer",
-              "votes": 21445,
-              "pct": 24.48,
-              "party": "Democrat",
-              "profession": ""
-            },
-            {
-              "name": "Eric Swalwell",
-              "votes": 272,
-              "pct": 0.31,
-              "party": "Democrat",
-              "profession": ""
-            },
-            {
-              "name": "Scott P Shields",
-              "votes": 20,
-              "pct": 0.02,
-              "party": "Democrat",
-              "profession": ""
-            },
-            {
-              "name": "Frederic C. Schultz",
-              "votes": 46,
-              "pct": 0.05,
-              "party": "No Party Preference",
-              "profession": ""
-            },
-            {
-              "name": "Christine R. Sarmiento",
-              "votes": 38,
-              "pct": 0.04,
-              "party": "No Party Preference",
-              "profession": ""
-            },
-            {
-              "name": "Reza Safarnejad",
-              "votes": 5,
-              "pct": 0.01,
-              "party": "No Party Preference",
-              "profession": ""
-            },
-            {
-              "name": "Sam Sandak",
               "votes": 4,
               "pct": 0.0,
               "party": "No Party Preference",
               "profession": ""
             },
             {
+              "name": "Leo Naranjo IV",
+              "votes": 72,
+              "pct": 0.06,
+              "party": "Republican",
+              "profession": ""
+            },
+            {
+              "name": "Tim Nelson",
+              "votes": 150,
+              "pct": 0.12,
+              "party": "Republican",
+              "profession": ""
+            },
+            {
+              "name": "Tom Steyer",
+              "votes": 34581,
+              "pct": 27.18,
+              "party": "Democrat",
+              "profession": ""
+            },
+            {
+              "name": "Eric Swalwell",
+              "votes": 350,
+              "pct": 0.28,
+              "party": "Democrat",
+              "profession": ""
+            },
+            {
+              "name": "Scott P Shields",
+              "votes": 26,
+              "pct": 0.02,
+              "party": "Democrat",
+              "profession": ""
+            },
+            {
+              "name": "Frederic C. Schultz",
+              "votes": 56,
+              "pct": 0.04,
+              "party": "No Party Preference",
+              "profession": ""
+            },
+            {
+              "name": "Christine R. Sarmiento",
+              "votes": 47,
+              "pct": 0.04,
+              "party": "No Party Preference",
+              "profession": ""
+            },
+            {
+              "name": "Reza Safarnejad",
+              "votes": 6,
+              "pct": 0.0,
+              "party": "No Party Preference",
+              "profession": ""
+            },
+            {
+              "name": "Sam Sandak",
+              "votes": 6,
+              "pct": 0.0,
+              "party": "No Party Preference",
+              "profession": ""
+            },
+            {
               "name": "Gretha Solórzano",
-              "votes": 59,
-              "pct": 0.07,
+              "votes": 78,
+              "pct": 0.06,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "James Athans Jr.",
-              "votes": 66,
-              "pct": 0.08,
+              "votes": 79,
+              "pct": 0.06,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Larry Azevedo",
-              "votes": 19,
+              "votes": 27,
               "pct": 0.02,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Mohammad Arif",
-              "votes": 75,
-              "pct": 0.09,
+              "votes": 95,
+              "pct": 0.07,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Akinyemi Agbede",
-              "votes": 9,
+              "votes": 13,
               "pct": 0.01,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Derek Grasty",
-              "votes": 28,
+              "votes": 33,
               "pct": 0.03,
               "party": "Democrat",
               "profession": ""
@@ -17372,13 +17372,13 @@
             {
               "name": "Don J. Grundmann",
               "votes": 15,
-              "pct": 0.02,
+              "pct": 0.01,
               "party": "No Party Preference",
               "profession": ""
             },
             {
               "name": "Dawit Kellel",
-              "votes": 3,
+              "votes": 4,
               "pct": 0.0,
               "party": "No Party Preference",
               "profession": ""
@@ -17392,36 +17392,36 @@
             },
             {
               "name": "Gary Howard Kidgell",
-              "votes": 4,
+              "votes": 5,
               "pct": 0.0,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Sophia Edum-A-Sam",
-              "votes": 14,
-              "pct": 0.02,
+              "votes": 17,
+              "pct": 0.01,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Mauro Alberto Orozco",
-              "votes": 6,
+              "votes": 7,
               "pct": 0.01,
               "party": "No Party Preference",
               "profession": ""
             },
             {
               "name": "Barack D. Obama Shaw",
-              "votes": 56,
+              "votes": 79,
               "pct": 0.06,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Antonio Villaraigosa",
-              "votes": 391,
-              "pct": 0.45,
+              "votes": 509,
+              "pct": 0.4,
               "party": "Democrat",
               "profession": ""
             },
@@ -17441,15 +17441,15 @@
             },
             {
               "name": "Che Ahn",
-              "votes": 3,
-              "pct": 0.0,
+              "votes": 10,
+              "pct": 0.01,
               "party": "",
               "profession": ""
             },
             {
               "name": "Butch Ware",
-              "votes": 129,
-              "pct": 0.15,
+              "votes": 222,
+              "pct": 0.17,
               "party": "",
               "profession": ""
             },
@@ -17485,113 +17485,113 @@
           "choices": [
             {
               "name": "Michael Tubbs",
-              "votes": 10563,
-              "pct": 12.7,
+              "votes": 16795,
+              "pct": 14.01,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Tim Myers",
-              "votes": 2036,
-              "pct": 2.45,
+              "votes": 2947,
+              "pct": 2.46,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Fiona Ma",
-              "votes": 22681,
-              "pct": 27.27,
+              "votes": 32150,
+              "pct": 26.82,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Oliver Ma",
-              "votes": 3031,
-              "pct": 3.64,
+              "votes": 4872,
+              "pct": 4.06,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Ebie Lynch",
-              "votes": 1779,
-              "pct": 2.14,
+              "votes": 2322,
+              "pct": 1.94,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Jeyson Lopez",
-              "votes": 341,
-              "pct": 0.41,
+              "votes": 498,
+              "pct": 0.42,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Gloria Romero",
-              "votes": 8287,
-              "pct": 9.96,
+              "votes": 11317,
+              "pct": 9.44,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Rakesh Christian",
-              "votes": 109,
-              "pct": 0.13,
+              "votes": 144,
+              "pct": 0.12,
               "party": "No Party Preference",
               "profession": ""
             },
             {
               "name": "David Collenberg",
-              "votes": 5016,
-              "pct": 6.03,
+              "votes": 6745,
+              "pct": 5.63,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Sean Collinson",
-              "votes": 205,
+              "votes": 300,
               "pct": 0.25,
               "party": "No Party Preference",
               "profession": ""
             },
             {
               "name": "Josh Fryday",
-              "votes": 17110,
-              "pct": 20.57,
+              "votes": 25473,
+              "pct": 21.25,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "David Fennell",
-              "votes": 4737,
-              "pct": 5.7,
+              "votes": 6132,
+              "pct": 5.11,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Alice Stek",
-              "votes": 1102,
-              "pct": 1.33,
+              "votes": 1695,
+              "pct": 1.41,
               "party": "Peace and Freedom",
               "profession": ""
             },
             {
               "name": "Skip Shelton",
-              "votes": 2700,
-              "pct": 3.25,
+              "votes": 3490,
+              "pct": 2.91,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Abdur Rahman Sikder",
-              "votes": 359,
-              "pct": 0.43,
+              "votes": 474,
+              "pct": 0.4,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Janelle Kellman",
-              "votes": 3109,
-              "pct": 3.74,
+              "votes": 4534,
+              "pct": 3.78,
               "party": "Democrat",
               "profession": ""
             },
@@ -17620,29 +17620,29 @@
           "choices": [
             {
               "name": "Donald P. (Don) Wagner",
-              "votes": 22271,
-              "pct": 27.27,
+              "votes": 29719,
+              "pct": 25.18,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Shirley N. Weber",
-              "votes": 55283,
-              "pct": 67.68,
+              "votes": 82280,
+              "pct": 69.7,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Gary N. Blenner",
-              "votes": 1459,
-              "pct": 1.79,
+              "votes": 2283,
+              "pct": 1.93,
               "party": "Green",
               "profession": ""
             },
             {
               "name": "Michael Feinstein",
-              "votes": 2667,
-              "pct": 3.27,
+              "votes": 3764,
+              "pct": 3.19,
               "party": "Green",
               "profession": ""
             }
@@ -17657,22 +17657,22 @@
           "choices": [
             {
               "name": "Herb W Morgan",
-              "votes": 22880,
-              "pct": 28.05,
+              "votes": 30611,
+              "pct": 26.0,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Malia M. Cohen",
-              "votes": 55270,
-              "pct": 67.77,
+              "votes": 81720,
+              "pct": 69.41,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Meghann Adams",
-              "votes": 3406,
-              "pct": 4.18,
+              "votes": 5404,
+              "pct": 4.59,
               "party": "Peace and Freedom",
               "profession": ""
             }
@@ -17687,43 +17687,43 @@
           "choices": [
             {
               "name": "Glenn Turner",
-              "votes": 1381,
-              "pct": 1.68,
+              "votes": 2215,
+              "pct": 1.87,
               "party": "Green",
               "profession": ""
             },
             {
               "name": "Jennifer Hawks",
-              "votes": 14692,
-              "pct": 17.82,
+              "votes": 19854,
+              "pct": 16.74,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Anna M. Caballero",
-              "votes": 11555,
-              "pct": 14.02,
+              "votes": 17776,
+              "pct": 14.99,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "David Serpa",
-              "votes": 8160,
-              "pct": 9.9,
+              "votes": 10686,
+              "pct": 9.01,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Eleni Kounalakis",
-              "votes": 41582,
-              "pct": 50.45,
+              "votes": 60826,
+              "pct": 51.29,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Tony Vazquez",
-              "votes": 5054,
-              "pct": 6.13,
+              "votes": 7234,
+              "pct": 6.1,
               "party": "Democrat",
               "profession": ""
             }
@@ -17738,22 +17738,22 @@
           "choices": [
             {
               "name": "Marjorie Mikels",
-              "votes": 4233,
-              "pct": 5.02,
+              "votes": 6496,
+              "pct": 5.34,
               "party": "Green",
               "profession": ""
             },
             {
               "name": "Rob Bonta",
-              "votes": 56129,
-              "pct": 66.61,
+              "votes": 83267,
+              "pct": 68.4,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Michael E. Gates",
-              "votes": 23901,
-              "pct": 28.36,
+              "votes": 31974,
+              "pct": 26.26,
               "party": "Republican",
               "profession": ""
             }
@@ -17768,78 +17768,78 @@
           "choices": [
             {
               "name": "Patrick Wolff",
-              "votes": 7177,
-              "pct": 8.83,
+              "votes": 10055,
+              "pct": 8.59,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Sean Lee",
-              "votes": 4847,
-              "pct": 5.97,
+              "votes": 6244,
+              "pct": 5.34,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Keith W. Davis",
-              "votes": 947,
+              "votes": 1374,
               "pct": 1.17,
               "party": "American Independent",
               "profession": ""
             },
             {
               "name": "Robert P Howell",
-              "votes": 5204,
-              "pct": 6.41,
+              "votes": 6734,
+              "pct": 5.76,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Steven Craig Bradford",
-              "votes": 2900,
-              "pct": 3.57,
+              "votes": 4229,
+              "pct": 3.61,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Merritt Farren",
-              "votes": 3742,
-              "pct": 4.61,
+              "votes": 5161,
+              "pct": 4.41,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Ben Allen",
-              "votes": 22445,
-              "pct": 27.63,
+              "votes": 32668,
+              "pct": 27.92,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Eric Thor Aarnio",
-              "votes": 1336,
-              "pct": 1.64,
+              "votes": 1832,
+              "pct": 1.57,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Stacy A. Korsgaden",
-              "votes": 7657,
-              "pct": 9.43,
+              "votes": 10334,
+              "pct": 8.83,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Jane Kim",
-              "votes": 23364,
-              "pct": 28.76,
+              "votes": 35842,
+              "pct": 30.63,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Eduardo ''Lalo'' Vargas",
-              "votes": 1616,
-              "pct": 1.99,
+              "votes": 2537,
+              "pct": 2.17,
               "party": "Peace and Freedom",
               "profession": ""
             }
@@ -17854,43 +17854,43 @@
           "choices": [
             {
               "name": "John Pimentel",
-              "votes": 12339,
-              "pct": 15.43,
+              "votes": 18224,
+              "pct": 15.85,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "John W. Zaruka",
-              "votes": 2012,
-              "pct": 2.52,
+              "votes": 2645,
+              "pct": 2.3,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Mark Mccomas",
-              "votes": 5630,
-              "pct": 7.04,
+              "votes": 7524,
+              "pct": 6.54,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "J Brett Marymee",
-              "votes": 6725,
-              "pct": 8.41,
+              "votes": 9018,
+              "pct": 7.84,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Sally J. Lieber",
-              "votes": 45077,
-              "pct": 56.38,
+              "votes": 66735,
+              "pct": 58.03,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Bill Shireman",
-              "votes": 8176,
-              "pct": 10.23,
+              "votes": 10847,
+              "pct": 9.43,
               "party": "Republican",
               "profession": ""
             }
@@ -17905,43 +17905,43 @@
           "choices": [
             {
               "name": "Mike Mcguire",
-              "votes": 29700,
-              "pct": 64.14,
+              "votes": 47257,
+              "pct": 65.63,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Richard T. Minner",
-              "votes": 200,
-              "pct": 0.43,
+              "votes": 293,
+              "pct": 0.41,
               "party": "No Party Preference",
               "profession": ""
             },
             {
               "name": "Audrey Denney",
-              "votes": 3461,
-              "pct": 7.47,
+              "votes": 6081,
+              "pct": 8.45,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "James Gallagher",
-              "votes": 12045,
-              "pct": 26.01,
+              "votes": 17043,
+              "pct": 23.67,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Janice Karrman",
-              "votes": 471,
-              "pct": 1.02,
+              "votes": 671,
+              "pct": 0.93,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Timothy Sean Kelly",
-              "votes": 426,
-              "pct": 0.92,
+              "votes": 657,
+              "pct": 0.91,
               "party": "No Party Preference",
               "profession": ""
             }
@@ -17956,57 +17956,57 @@
           "choices": [
             {
               "name": "Rose Penelope Yee",
-              "votes": 792,
-              "pct": 6.22,
+              "votes": 1286,
+              "pct": 6.6,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Robin Littau",
-              "votes": 557,
-              "pct": 4.37,
+              "votes": 804,
+              "pct": 4.13,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Nicolette Hahn Niman",
-              "votes": 509,
-              "pct": 4.0,
+              "votes": 745,
+              "pct": 3.83,
               "party": "No Party Preference",
               "profession": ""
             },
             {
               "name": "Jared Huffman",
-              "votes": 8862,
-              "pct": 69.59,
+              "votes": 13946,
+              "pct": 71.61,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Gregory Burgess",
-              "votes": 110,
-              "pct": 0.86,
+              "votes": 154,
+              "pct": 0.79,
               "party": "No Party Preference",
               "profession": ""
             },
             {
               "name": "Paul Saulsbury",
-              "votes": 761,
-              "pct": 5.98,
+              "votes": 997,
+              "pct": 5.12,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Tim Geist",
-              "votes": 616,
-              "pct": 4.84,
+              "votes": 841,
+              "pct": 4.32,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Angelita Valles",
-              "votes": 528,
-              "pct": 4.15,
+              "votes": 703,
+              "pct": 3.61,
               "party": "Republican",
               "profession": ""
             }
@@ -18021,64 +18021,64 @@
           "choices": [
             {
               "name": "Mike Thompson",
-              "votes": 13143,
-              "pct": 50.37,
+              "votes": 16299,
+              "pct": 50.96,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "John Mackenzie",
-              "votes": 1068,
-              "pct": 4.09,
+              "votes": 1272,
+              "pct": 3.98,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Thomas M Roach",
-              "votes": 121,
+              "votes": 147,
               "pct": 0.46,
               "party": "No Party Preference",
               "profession": ""
             },
             {
               "name": "Ray Riehle",
-              "votes": 3336,
-              "pct": 12.79,
+              "votes": 3966,
+              "pct": 12.4,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Sharon Brown",
-              "votes": 696,
-              "pct": 2.67,
+              "votes": 803,
+              "pct": 2.51,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Jimih Jones",
-              "votes": 225,
+              "votes": 274,
               "pct": 0.86,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Eric Jones",
-              "votes": 6218,
-              "pct": 23.83,
+              "votes": 7715,
+              "pct": 24.12,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Mandy Ghusar",
-              "votes": 407,
-              "pct": 1.56,
+              "votes": 473,
+              "pct": 1.48,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Chuck Uribe",
-              "votes": 879,
-              "pct": 3.37,
+              "votes": 1037,
+              "pct": 3.24,
               "party": "Republican",
               "profession": ""
             }
@@ -18093,22 +18093,22 @@
           "choices": [
             {
               "name": "Aaron Smith",
-              "votes": 7936,
-              "pct": 11.81,
+              "votes": 10933,
+              "pct": 10.85,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Tief Gibbs",
-              "votes": 10816,
-              "pct": 16.1,
+              "votes": 14782,
+              "pct": 14.67,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Damon Connolly",
-              "votes": 48424,
-              "pct": 72.09,
+              "votes": 75067,
+              "pct": 74.48,
               "party": "Democrat",
               "profession": ""
             }
@@ -18123,15 +18123,15 @@
           "choices": [
             {
               "name": "Michael Greer",
-              "votes": 11451,
-              "pct": 27.68,
+              "votes": 16357,
+              "pct": 25.1,
               "party": "Republican",
               "profession": ""
             },
             {
               "name": "Chris Rogers",
-              "votes": 29914,
-              "pct": 72.32,
+              "votes": 48803,
+              "pct": 74.9,
               "party": "Democrat",
               "profession": ""
             }
@@ -18146,7 +18146,7 @@
           "choices": [
             {
               "name": "Cecilia M. Aguiar-Curry",
-              "votes": 4372,
+              "votes": 5778,
               "pct": 100.0,
               "party": "Democrat",
               "profession": ""
@@ -18162,43 +18162,43 @@
           "choices": [
             {
               "name": "Steve Schwartz",
-              "votes": 3878,
-              "pct": 10.92,
+              "votes": 5103,
+              "pct": 10.89,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Eric Lucan",
-              "votes": 6362,
-              "pct": 17.91,
+              "votes": 8784,
+              "pct": 18.74,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Eli Beckman",
-              "votes": 1879,
-              "pct": 5.29,
+              "votes": 2483,
+              "pct": 5.3,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Jackie Elward",
-              "votes": 10021,
-              "pct": 28.21,
+              "votes": 13731,
+              "pct": 29.29,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Holli Thier",
-              "votes": 3771,
-              "pct": 10.62,
+              "votes": 4918,
+              "pct": 10.49,
               "party": "Democrat",
               "profession": ""
             },
             {
               "name": "Eryn Cervantes",
-              "votes": 9606,
-              "pct": 27.05,
+              "votes": 11862,
+              "pct": 25.3,
               "party": "Republican",
               "profession": ""
             }
@@ -18213,7 +18213,7 @@
           "choices": [
             {
               "name": "David Kim",
-              "votes": 58398,
+              "votes": 83950,
               "pct": 100.0,
               "party": "",
               "profession": ""
@@ -18229,71 +18229,71 @@
           "choices": [
             {
               "name": "Gus Mattammal",
-              "votes": 1428,
-              "pct": 2.04,
+              "votes": 1893,
+              "pct": 1.88,
               "party": "",
               "profession": ""
             },
             {
               "name": "Al Muratsuchi",
-              "votes": 7449,
-              "pct": 10.65,
+              "votes": 10998,
+              "pct": 10.93,
               "party": "",
               "profession": ""
             },
             {
               "name": "Frank Lara",
-              "votes": 5256,
-              "pct": 7.52,
+              "votes": 7558,
+              "pct": 7.51,
               "party": "",
               "profession": ""
             },
             {
               "name": "Ainye Long",
-              "votes": 5313,
-              "pct": 7.6,
+              "votes": 7570,
+              "pct": 7.52,
               "party": "",
               "profession": ""
             },
             {
               "name": "Anthony Rendon",
-              "votes": 6317,
-              "pct": 9.03,
+              "votes": 8994,
+              "pct": 8.94,
               "party": "",
               "profession": ""
             },
             {
               "name": "Nichelle M. Henderson",
-              "votes": 5702,
-              "pct": 8.16,
+              "votes": 9090,
+              "pct": 9.03,
               "party": "",
               "profession": ""
             },
             {
               "name": "Richard Barrera",
-              "votes": 16259,
-              "pct": 23.25,
+              "votes": 24561,
+              "pct": 24.41,
               "party": "",
               "profession": ""
             },
             {
               "name": "Wendy Castaneda Leal",
-              "votes": 6225,
-              "pct": 8.9,
+              "votes": 8311,
+              "pct": 8.26,
               "party": "",
               "profession": ""
             },
             {
               "name": "Josh Newman",
-              "votes": 4213,
-              "pct": 6.03,
+              "votes": 5781,
+              "pct": 5.75,
               "party": "",
               "profession": ""
             },
             {
               "name": "Sonja Shaw",
-              "votes": 11758,
-              "pct": 16.82,
+              "votes": 15868,
+              "pct": 15.77,
               "party": "",
               "profession": ""
             }
@@ -18308,7 +18308,7 @@
           "choices": [
             {
               "name": "Amie Carter",
-              "votes": 57213,
+              "votes": 81837,
               "pct": 100.0,
               "party": "",
               "profession": ""
@@ -18324,29 +18324,29 @@
           "choices": [
             {
               "name": "Joanna Paun",
-              "votes": 6631,
-              "pct": 38.32,
+              "votes": 9050,
+              "pct": 40.15,
               "party": "",
               "profession": "Trustee, Petaluma Jt. Union High School District, Area 5"
             },
             {
               "name": "Shelina Moreda",
-              "votes": 3329,
-              "pct": 19.24,
+              "votes": 4288,
+              "pct": 19.02,
               "party": "",
               "profession": "Professional Athlete/Farmer"
             },
             {
               "name": "Sylvia Lemus",
-              "votes": 4392,
-              "pct": 25.38,
+              "votes": 5635,
+              "pct": 25.0,
               "party": "",
               "profession": "Councilmember/Businesswoman/Mom"
             },
             {
               "name": "John E. King",
-              "votes": 2954,
-              "pct": 17.07,
+              "votes": 3569,
+              "pct": 15.83,
               "party": "",
               "profession": "Operating Engineer/Farmer"
             }
@@ -18361,22 +18361,22 @@
           "choices": [
             {
               "name": "Todd Lands",
-              "votes": 5349,
-              "pct": 32.62,
+              "votes": 7724,
+              "pct": 30.66,
               "party": "",
               "profession": "Councilman/Small Businessman"
             },
             {
               "name": "Melanie Bagby",
-              "votes": 5672,
-              "pct": 34.59,
+              "votes": 9396,
+              "pct": 37.3,
               "party": "",
               "profession": "Business Owner"
             },
             {
               "name": "Tom Schwedhelm",
-              "votes": 5378,
-              "pct": 32.79,
+              "votes": 8073,
+              "pct": 32.04,
               "party": "",
               "profession": "Small Business Owner"
             }
