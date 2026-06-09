@@ -1,6 +1,6 @@
 {
   "Alameda": {
-    "ballots_cast": 244535,
+    "ballots_cast": 394910,
     "timestamp": ""
   },
   "Contra_Costa": {
@@ -8,7 +8,7 @@
     "timestamp": ""
   },
   "Marin": {
-    "ballots_cast": 44159,
+    "ballots_cast": 59615,
     "timestamp": ""
   },
   "Mendocino": {
@@ -20,11 +20,11 @@
     "timestamp": ""
   },
   "Napa": {
-    "ballots_cast": 19120,
+    "ballots_cast": 23351,
     "timestamp": ""
   },
   "San_Francisco": {
-    "ballots_cast": 352553,
+    "ballots_cast": 445615,
     "timestamp": ""
   },
   "San_Joaquin": {
@@ -36,15 +36,15 @@
     "timestamp": ""
   },
   "Santa_Clara": {
-    "ballots_cast": 361880,
+    "ballots_cast": 415321,
     "timestamp": ""
   },
   "Santa_Cruz": {
-    "ballots_cast": 52763,
+    "ballots_cast": 68908,
     "timestamp": ""
   },
   "Solano": {
-    "ballots_cast": 107944,
+    "ballots_cast": 108652,
     "timestamp": ""
   },
   "Sonoma": {
