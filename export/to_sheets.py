@@ -214,19 +214,29 @@ STATUS_HEADERS = [
     "Last Scraped",
     "Site Last Updated",
     "Contests",
+    "Ballots Cast",
+    "Registered Voters",
+    "Turnout %",
 ]
 
 
 def _update_status_dashboard(ws: gspread.Worksheet, counties: dict) -> None:
-    """Rewrite the STATUS DASHBOARD tab — one row per county, last-scraped time only."""
+    """Rewrite the STATUS DASHBOARD tab — one row per county."""
     rows = [STATUS_HEADERS]
     for county_name, data in sorted(counties.items()):
+        vt = data.get("voter_turnout") or {}
+        ballots   = vt.get("ballots_cast") or ""
+        registered = vt.get("registered_voters") or ""
+        turnout_pct = vt.get("turnout_percentage")
         rows.append([
             county_name.replace("_", " "),
             data.get("scrape_status", "FAIL"),
             data.get("scrape_timestamp", ""),
             data.get("last_updated", ""),
             len(data.get("contests", [])),
+            ballots,
+            registered,
+            round(turnout_pct) if turnout_pct is not None else "",
         ])
     ws.clear()
     ws.update(rows, value_input_option="USER_ENTERED")
