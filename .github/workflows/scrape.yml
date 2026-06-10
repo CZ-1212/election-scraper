@@ -1,15 +1,17 @@
 name: Scrape Election Results
 
-# This workflow runs automatically every 15 minutes on election night.
-# It scrapes all county websites, normalizes the data, and pushes to the Google Sheet.
-# It NEVER pushes to WordPress — that requires a human to trigger publish.yml separately.
+# Manual trigger only — run from the GitHub Actions UI when needed.
+# To run: GitHub → Actions → "Scrape Election Results" → "Run workflow"
+#
+# The automatic schedule has been turned off. Re-enable by uncommenting
+# the schedule block below and pushing to main.
+#
+# on:
+#   schedule:
+#     - cron: "*/15 * * * *"   # every 15 minutes
+#   workflow_dispatch:
 
 on:
-  schedule:
-    # Every 15 minutes. Cron syntax: minute hour day-of-month month day-of-week
-    - cron: "*/15 * * * *"
-
-  # Also allow manual triggering from the GitHub Actions UI (useful for testing).
   workflow_dispatch:
 
 # Allow the workflow to write back to the repo (needed to commit updated data files).
