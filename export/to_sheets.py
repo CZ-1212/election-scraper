@@ -238,6 +238,15 @@ def _update_status_dashboard(ws: gspread.Worksheet, counties: dict) -> None:
             registered,
             round(turnout_pct) if turnout_pct is not None else "",
         ])
+    ws.spreadsheet.batch_update({"requests": [{
+        "repeatCell": {
+            "range": {"sheetId": ws.id},
+            "cell": {"userEnteredFormat": {
+                "numberFormat": {"type": "NUMBER", "pattern": ""},
+            }},
+            "fields": "userEnteredFormat.numberFormat",
+        }
+    }]})
     ws.clear()
     ws.update(rows, value_input_option="USER_ENTERED")
     print(f"[sheets] STATUS DASHBOARD updated: {len(rows) - 1} counties.")
