@@ -1,50 +1,86 @@
 name: Scrape Election Results
 
-# Manual trigger only — run from the GitHub Actions UI when needed.
-# To run: GitHub → Actions → "Scrape Election Results" → "Run workflow"
+# MANUAL TRIGGER ONLY — no automatic schedule.
 #
-# The automatic schedule has been turned off. Re-enable by uncommenting
-# the schedule block below and pushing to main.
+# How to run:
+#   1. GitHub → Actions → "Scrape Election Results" → "Run workflow"
+#   2. Fill in the options below and click the green "Run workflow" button.
 #
-# on:
-#   schedule:
-#     - cron: "*/15 * * * *"   # every 15 minutes
-#   workflow_dispatch:
+# Reporters: use the defaults for a standard election night update.
+# The only input you typically need to change is "Counties to scrape"
+# if you only want to refresh a subset.
 
 on:
   workflow_dispatch:
+    inputs:
 
-# Allow the workflow to write back to the repo (needed to commit updated data files).
+      scraper:
+        description: >
+          Counties to scrape.
+          "both" runs all 13 counties.
+          "clarity" runs only Contra Costa, Marin, Santa Clara, Sonoma (fastest, ~5 min).
+          "non-clarity" runs the other 9 counties.
+        required: true
+        default: "both"
+        type: choice
+        options:
+          - both
+          - clarity
+          - non-clarity
+
+      use_live_urls:
+        description: >
+          Use election-night live URLs (checked = yes, live results).
+          Uncheck to use test/zero-report URLs instead.
+        required: true
+        default: true
+        type: boolean
+
+      update_sheets:
+        description: >
+          Update the Google Sheets dashboard after scraping.
+          Uncheck to scrape and normalize only (useful for quick data checks).
+        required: true
+        default: true
+        type: boolean
+
+# Allow writing back to the repo (for the data file commit).
 permissions:
   contents: write
 
 jobs:
   scrape-and-update:
     runs-on: ubuntu-latest
-    # Keep running even if individual steps fail so we always attempt normalize + sheets.
-    # Each step records its own outcome and the final summary step reports everything.
 
-    # Render every timestamp in this job (git commit messages, summary echoes) in
-    # Pacific time to match the Google Sheet and the master JSON, which are already
-    # Pacific. GitHub runners default to UTC; this overrides that for the whole job.
+    # Render every timestamp in Pacific time to match the master JSON and Google Sheet.
     env:
       TZ: America/Los_Angeles
 
     steps:
-      # 1. Check out the repo so we have all the source files.
+
+      # 1. Log what this run will do — creates a clear audit trail in the Actions log.
+      - name: Log run parameters
+        run: |
+          echo "============================================================"
+          echo "SCRAPE RUN — $(date '+%Y-%m-%d %H:%M %Z')"
+          echo "  Triggered by : ${{ github.actor }}"
+          echo "  Scraper      : ${{ inputs.scraper }}"
+          echo "  Live URLs    : ${{ inputs.use_live_urls }}"
+          echo "  Update Sheets: ${{ inputs.update_sheets }}"
+          echo "============================================================"
+
+      # 2. Check out the repo.
       - name: Check out repository
         uses: actions/checkout@v4
 
-      # 2. Set up Python. Match the version used locally.
+      # 3. Set up Python to match local development.
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # 3. Install Chrome for Selenium (required by the Clarity scraper).
-      #    Uses the modern signed-by method — apt-key add is deprecated on Ubuntu 22.04.
-      #    Selenium 4.6+ includes Selenium Manager which auto-downloads the matching
-      #    ChromeDriver once Chrome is installed, so no separate chromedriver step needed.
+      # 4. Install Chrome for the Clarity scraper (Selenium).
+      #    Selenium 4.6+ auto-downloads a matching ChromeDriver once Chrome is installed.
       - name: Install Google Chrome
         id: install_chrome
         continue-on-error: true
@@ -57,20 +93,17 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/google-chrome.list
           sudo apt-get update -q
           sudo apt-get install -y google-chrome-stable
-          google-chrome --version
+          echo "Chrome version: $(google-chrome --version)"
 
-      # 4. Create the virtual environment and install all Python dependencies.
-      - name: Create venv and install dependencies
-        id: install_deps
+      # 5. Create the virtual environment and install all dependencies.
+      - name: Install dependencies
         run: |
           python -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 5. Write the .env file from GitHub Secrets.
-      #    Secrets are set in the repo Settings → Secrets and variables → Actions.
-      #    They are never printed to the log — GitHub masks them automatically.
+      # 6. Write the .env file from GitHub Secrets.
       - name: Write .env from secrets
         run: |
           cat > .env << 'EOF'
@@ -79,87 +112,78 @@ jobs:
           WP_SITE_URL=${{ secrets.WP_SITE_URL }}
           WP_USERNAME=${{ secrets.WP_USERNAME }}
           WP_APP_PASSWORD=${{ secrets.WP_APP_PASSWORD }}
-          WP_PAGE_ID=${{ secrets.WP_PAGE_ID }}
+          WP_PAGE_IDS=${{ secrets.WP_PAGE_IDS }}
           EOF
 
-      # 6. Write the Google service account key file from the secret.
+      # 7. Write the Google service account key from the secret.
       - name: Write Google service account key
         run: |
           echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}' > service-account-key.json
 
-      # 7. Scrape all county websites and save raw JSON files to data/.
-      #    --live uses live_url from county_links.csv (the actual election-night
-      #    endpoints) instead of test_url (zero reports / past-election links).
-      #    continue-on-error so one county being down never blocks the rest.
-      - name: Scrape county websites
-        id: scrape
+      # 8. Run the full pipeline: sync county links → scrape → normalize → render → sheets.
+      #    Flags are built from the workflow inputs above.
+      #    run_all.py chains all steps internally — no need for separate normalize or sheets calls.
+      - name: Run pipeline
+        id: pipeline
         continue-on-error: true
         run: |
           source venv/bin/activate
-          python run_all.py --scraper both --no-sheets --live
+
+          # Build the command from inputs
+          CMD="python run_all.py --scraper ${{ inputs.scraper }}"
+
+          # Live vs test URLs
+          if [ "${{ inputs.use_live_urls }}" != "true" ]; then
+            CMD="$CMD --no-live"
+          fi
+
+          # Google Sheets update
+          if [ "${{ inputs.update_sheets }}" != "true" ]; then
+            CMD="$CMD --no-sheets"
+          fi
+
+          echo "Running: $CMD"
+          eval $CMD
         env:
           DISPLAY: ""
 
-      # 8. Normalize whatever landed in data/ into election_results_master.json.
-      #    Runs separately so it executes even if scrape had errors — partial
-      #    data is still better than nothing.
-      - name: Normalize scraped data
-        id: normalize
-        continue-on-error: true
-        run: |
-          source venv/bin/activate
-          python src/normalize.py
-
-      # 9. Push normalized data to the Google Sheet dashboard.
-      #    Runs regardless of prior step outcomes.
-      - name: Update Google Sheet
-        id: sheets
-        continue-on-error: true
-        run: |
-          source venv/bin/activate
-          python export/to_sheets.py
-
-      # 10. Commit the normalized master JSON back to the repo so editors and
-      #     the publish workflow can read the latest data from disk.
+      # 9. Commit the updated data files back to the repo.
+      #    Only commits when there are actual changes — avoids empty commits.
+      #    Reporters pulling the repo locally will then see the latest data.
       - name: Commit updated election data
         id: commit
         continue-on-error: true
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/processed/election_results_master.json data/processed/vote_count_state.json
-          # Only commit if there's actually something new — avoids empty commits.
-          git diff --staged --quiet || git commit -m "chore: auto-update election results [$(date '+%Y-%m-%d %H:%M %Z')]"
+          git add data/processed/election_results_master.json \
+                  data/processed/vote_count_state.json \
+                  data/processed/wp_inject_state.json
+          git diff --staged --quiet || \
+            git commit -m "chore: auto-update election results [$(date '+%Y-%m-%d %H:%M %Z')]"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 11. Print a clear summary of every step's outcome.
-      #     This always runs (even if earlier steps failed) so the log is never silent.
+      # 10. Print a final summary of every step.
       - name: Pipeline summary
         if: always()
         run: |
           echo "============================================================"
           echo "PIPELINE SUMMARY — $(date '+%Y-%m-%d %H:%M %Z')"
-          echo "============================================================"
-          echo "Chrome install : ${{ steps.install_chrome.outcome }}"
-          echo "Scrape         : ${{ steps.scrape.outcome }}"
-          echo "Normalize      : ${{ steps.normalize.outcome }}"
-          echo "Google Sheets  : ${{ steps.sheets.outcome }}"
-          echo "Git commit     : ${{ steps.commit.outcome }}"
+          echo "  Triggered by : ${{ github.actor }}"
+          echo "  Scraper      : ${{ inputs.scraper }}"
+          echo "  Live URLs    : ${{ inputs.use_live_urls }}"
+          echo "  Update Sheets: ${{ inputs.update_sheets }}"
+          echo "------------------------------------------------------------"
+          echo "  Chrome install : ${{ steps.install_chrome.outcome }}"
+          echo "  Pipeline run   : ${{ steps.pipeline.outcome }}"
+          echo "  Git commit     : ${{ steps.commit.outcome }}"
           echo "============================================================"
 
-          # Exit with failure if any critical step failed, so GitHub marks
-          # the run as failed and sends email/Slack alerts.
-          if [ "${{ steps.normalize.outcome }}" = "failure" ] || \
-             [ "${{ steps.sheets.outcome }}"   = "failure" ]; then
-            echo "ERROR: A critical pipeline step failed. Check the logs above."
+          if [ "${{ steps.pipeline.outcome }}" = "failure" ]; then
+            echo "::error::Pipeline step failed. Check the 'Run pipeline' log above for details."
             exit 1
           fi
 
-          if [ "${{ steps.scrape.outcome }}" = "failure" ]; then
-            echo "WARNING: The scrape step had errors. Some counties may be missing."
-            echo "         Check the normalize output — partial data was still published."
-          fi
-
-          echo "Pipeline completed."
+          echo "Scrape complete."

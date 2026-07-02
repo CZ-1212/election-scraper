@@ -1,38 +1,44 @@
 name: Publish to WordPress
 
-# This workflow is MANUAL ONLY — it has no schedule.
-# An editor triggers it from the GitHub Actions UI after reviewing the Google Sheet.
+# MANUAL TRIGGER ONLY — this workflow has no automatic schedule.
 #
-# How to run it:
-#   1. Go to the repo on GitHub.
-#   2. Click the "Actions" tab.
-#   3. Click "Publish to WordPress" in the left sidebar.
-#   4. Click "Run workflow" (top right).
-#   5. Fill in the inputs (confirmation message + optional county list).
-#   6. Click the green "Run workflow" button.
+# How to run:
+#   1. Run "Scrape Election Results" first to get fresh data.
+#   2. Review the Google Sheet to confirm the numbers look correct.
+#   3. GitHub → Actions → "Publish to WordPress" → "Run workflow"
+#   4. Fill in the confirmation message exactly as shown, then click "Run workflow".
 #
-# The workflow pushes EXISTING normalized data to WordPress — it does NOT re-scrape.
-# Use the "Scrape Election Results" workflow to refresh the data first.
+# This workflow reads the master JSON already committed to the repo —
+# it does NOT re-scrape. Run the scrape workflow first if you want fresh data.
 
 on:
   workflow_dispatch:
     inputs:
+
       confirmation:
         description: >
-          Type exactly: "I have reviewed the Google Sheet and data is ready to publish"
+          Type exactly: I have reviewed the Google Sheet and data is ready to publish
         required: true
         type: string
 
       counties:
         description: >
           Counties to publish (comma-separated, e.g. "Marin,Santa_Clara,San_Mateo").
-          Leave blank to publish ALL counties with OK or WARN status.
-          Use this to exclude a county that is showing bad data.
+          Leave blank to publish ALL 13 counties.
+          Use this to hold back a county that is showing bad data.
         required: false
         default: ""
         type: string
 
-# Write permission needed to commit wp_inject_state.json back to the repo.
+      force:
+        description: >
+          Force push even if vote tallies have not changed since the last publish.
+          Use this after a template update or when troubleshooting a county page.
+        required: false
+        default: false
+        type: boolean
+
+# Write permission needed to commit the inject state file back to the repo.
 permissions:
   contents: write
 
@@ -40,37 +46,37 @@ jobs:
   publish:
     runs-on: ubuntu-latest
 
+    env:
+      TZ: America/Los_Angeles
+
     steps:
-      # 1. Validate the confirmation message before doing anything at all.
-      #    If the editor didn't type it exactly, the job fails immediately and
-      #    nothing is touched on the live site.
+
+      # 1. Validate the confirmation message before touching anything.
+      #    If the text doesn't match exactly, the job fails immediately.
       - name: Validate confirmation
         run: |
           EXPECTED="I have reviewed the Google Sheet and data is ready to publish"
           ACTUAL="${{ github.event.inputs.confirmation }}"
           if [ "$ACTUAL" != "$EXPECTED" ]; then
-            echo "::error::Confirmation message did not match."
+            echo "::error::Confirmation message did not match. Nothing was published."
             echo "  Expected: $EXPECTED"
             echo "  Got:      $ACTUAL"
-            echo ""
-            echo "The publish was ABORTED. Nothing was posted to WordPress."
             exit 1
           fi
-          echo "Confirmation accepted. Proceeding with publish."
+          echo "Confirmation accepted."
 
-      # 2. Log which counties will be published so there's a clear audit trail.
-      - name: Log county selection
+      # 2. Log this run for the audit trail.
+      - name: Log publish parameters
         run: |
+          echo "============================================================"
+          echo "WORDPRESS PUBLISH — $(date '+%Y-%m-%d %H:%M %Z')"
+          echo "  Triggered by : ${{ github.actor }}"
           COUNTIES="${{ github.event.inputs.counties }}"
-          if [ -z "$COUNTIES" ]; then
-            echo "County selection: ALL counties with OK/WARN status"
-          else
-            echo "County selection: $COUNTIES"
-          fi
-          echo "Triggered by: ${{ github.actor }}"
+          echo "  Counties     : ${COUNTIES:-ALL}"
+          echo "  Force push   : ${{ inputs.force }}"
+          echo "============================================================"
 
-      # 3. Check out the repo (includes the latest normalized master JSON committed
-      #    by the scrape workflow).
+      # 3. Check out the repo — this gives us the master JSON committed by the scrape workflow.
       - name: Check out repository
         uses: actions/checkout@v4
 
@@ -81,16 +87,14 @@ jobs:
           python-version: "3.11"
 
       # 5. Install dependencies.
-      - name: Create venv and install dependencies
+      - name: Install dependencies
         run: |
           python -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 6. Write the .env file from GitHub Secrets.
-      #    Secrets are set in Settings → Secrets and variables → Actions.
-      #    GitHub automatically masks secret values in log output.
+      # 6. Write .env from GitHub Secrets.
       - name: Write .env from secrets
         run: |
           cat > .env << 'EOF'
@@ -99,94 +103,96 @@ jobs:
           WP_SITE_URL=${{ secrets.WP_SITE_URL }}
           WP_USERNAME=${{ secrets.WP_USERNAME }}
           WP_APP_PASSWORD=${{ secrets.WP_APP_PASSWORD }}
-          WP_PAGE_ID=${{ secrets.WP_PAGE_ID }}
           WP_PAGE_IDS=${{ secrets.WP_PAGE_IDS }}
           EOF
 
-      # 7. Write the Google service account key file from the secret.
+      # 7. Write the Google service account key.
       - name: Write Google service account key
         run: |
           echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}' > service-account-key.json
 
-      # 8. Build the counties flag if specific counties were requested.
-      #    If the input was blank, we don't pass --counties so all counties publish.
-      - name: Build counties flag
-        id: counties_flag
+      # 8. Re-render per-county HTML from the committed master JSON.
+      #    This always uses the current template — no stale HTML carried over from the scrape run.
+      #    --dry-run skips scraping; --render builds output/election_night/{County}.html.
+      - name: Render per-county HTML
+        id: render
         run: |
-          COUNTIES="${{ github.event.inputs.counties }}"
-          if [ -z "$COUNTIES" ]; then
-            echo "flag=" >> $GITHUB_OUTPUT
-          else
-            echo "flag=--counties \"$COUNTIES\"" >> $GITHUB_OUTPUT
-          fi
+          source venv/bin/activate
+          python run_all.py --dry-run --render --no-sheets
+        env:
+          DISPLAY: ""
 
-      # 9. Push the summary results table to the combined WordPress results page.
-      #    Calls to_wordpress.py directly — bypasses normalize so the committed
-      #    master JSON is used as-is without needing raw county data files.
-      #    WP_CI_CONFIRMED=YES skips the interactive prompt (editor confirmed above).
-      - name: Publish to WordPress
+      # 9. Push rendered HTML to each county's WordPress page.
+      #    Reads WP_PAGE_IDS from .env to map county name → page ID.
+      #    Uses the Gutenberg Custom HTML block so <style> tags survive WordPress's kses filter.
+      #    Hash-based skip: only pushes a county if vote tallies changed since the last publish
+      #    (or if --force is checked above).
+      - name: Push to WordPress
         id: publish
         run: |
           source venv/bin/activate
+
           COUNTIES="${{ github.event.inputs.counties }}"
-          if [ -z "$COUNTIES" ]; then
-            python export/to_wordpress.py \
-              --master-json data/processed/election_results_master.json
-          else
-            python export/to_wordpress.py \
-              --master-json data/processed/election_results_master.json \
-              --counties "$COUNTIES"
+          FORCE="${{ inputs.force }}"
+
+          CMD="python export/to_wordpress.py --push-rendered"
+
+          if [ -n "$COUNTIES" ]; then
+            CMD="$CMD --counties \"$COUNTIES\""
           fi
+
+          if [ "$FORCE" = "true" ]; then
+            CMD="$CMD --force"
+          fi
+
+          echo "Running: $CMD"
+          eval $CMD
         env:
           WP_CI_CONFIRMED: "YES"
 
-      # 10. Inject live tallies into each county's ballot-preview page.
-      #     Calls to_wordpress.py --inject-wp directly — no normalize, no scrape.
-      #     Only pushes a page when vote tallies have changed (hash check).
-      #     continue-on-error so one bad county never blocks the state commit.
-      - name: Inject results into ballot-preview pages
-        id: inject
-        continue-on-error: true
-        run: |
-          source venv/bin/activate
-          python export/to_wordpress.py \
-            --inject-wp \
-            --master-json data/processed/election_results_master.json
-
-      # 11. Commit the inject state file so the next run knows which counties
-      #     were already up-to-date and can skip them.
-      - name: Commit inject state
+      # 10. Commit the updated inject state file so the next run knows
+      #     which counties were already published and can skip unchanged ones.
+      - name: Commit publish state
         id: commit_state
         continue-on-error: true
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/processed/wp_inject_state.json
-          git diff --staged --quiet || git commit -m "chore: update wp inject state [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+          git diff --staged --quiet || \
+            git commit -m "chore: update wp publish state [$(date '+%Y-%m-%d %H:%M %Z')]"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 12. Always print a final summary — even if publish failed — so editors
-      #     see exactly what happened without having to dig through log lines.
+      # 11. Final summary — always runs even if publish failed.
       - name: Publish summary
         if: always()
         run: |
           echo "============================================================"
-          echo "WORDPRESS PUBLISH SUMMARY"
-          echo "  Time:      $(date -u '+%Y-%m-%d %H:%M UTC')"
-          echo "  Triggered: ${{ github.actor }}"
+          echo "PUBLISH SUMMARY — $(date '+%Y-%m-%d %H:%M %Z')"
+          echo "  Triggered by : ${{ github.actor }}"
           COUNTIES="${{ github.event.inputs.counties }}"
-          echo "  Counties:  ${COUNTIES:-ALL}"
-          echo "  Publish:   ${{ steps.publish.outcome }}"
-          echo "  Inject:    ${{ steps.inject.outcome }}"
-          echo "  State commit: ${{ steps.commit_state.outcome }}"
+          echo "  Counties     : ${COUNTIES:-ALL}"
+          echo "  Force push   : ${{ inputs.force }}"
+          echo "------------------------------------------------------------"
+          echo "  Render HTML  : ${{ steps.render.outcome }}"
+          echo "  WP publish   : ${{ steps.publish.outcome }}"
+          echo "  State commit : ${{ steps.commit_state.outcome }}"
           echo "============================================================"
-          if [ "${{ steps.publish.outcome }}" = "failure" ]; then
-            echo "::error::WordPress publish FAILED. See the 'Publish to WordPress' step above for the full error."
-            echo "Common causes:"
-            echo "  - WP_APP_PASSWORD secret is wrong or expired"
-            echo "  - WP_PAGE_ID doesn't exist on the target site"
-            echo "  - data/processed/election_results_master.json is missing (run the scrape workflow first)"
+
+          if [ "${{ steps.render.outcome }}" = "failure" ]; then
+            echo "::error::HTML render failed — nothing was published to WordPress."
+            echo "Check that data/processed/election_results_master.json exists (run the scrape workflow first)."
             exit 1
           fi
+
+          if [ "${{ steps.publish.outcome }}" = "failure" ]; then
+            echo "::error::WordPress publish failed. Common causes:"
+            echo "  - WP_APP_PASSWORD secret is wrong or expired"
+            echo "  - WP_PAGE_IDS secret is missing or malformed JSON"
+            echo "  - A county page ID no longer exists on the site"
+            exit 1
+          fi
+
+          echo "Publish complete."
