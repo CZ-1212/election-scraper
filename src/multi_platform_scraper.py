@@ -1384,10 +1384,10 @@ class NapaScraper(BaseScraper):
             # Split by "Total Votes" to isolate each contest
             contest_blocks = re.split(r'Total Votes\s+[\d,]+', text)
 
-            # Find contest titles: lines like "State Proposition 50 (Vote for 1)"
+            # Match any line that ends with "(Vote for N)" — covers all contest types.
             title_pattern = re.compile(
-                r'((?:State\s+)?(?:Proposition|Measure|Assessment|Director|Board|District)\s+[^\n]+?\(Vote for\s+\d+\))',
-                re.IGNORECASE
+                r'^([^\n]+?\(Vote for\s+\d+\))',
+                re.IGNORECASE | re.MULTILINE,
             )
 
             for block in contest_blocks:

@@ -92,6 +92,7 @@ _PARTY_PREFIXES = {
     "LIB": "Libertarian",
     "GRN": "Green",
     "PFR": "Peace and Freedom",
+    "PF":  "Peace and Freedom",   # Napa PDF uses PF, SoS uses P&F
     "AI":  "American Independent",
     "IND": "Independent",
 }
@@ -109,14 +110,71 @@ def _split_party_prefix(name: str) -> tuple[str, str]:
     return "", name.strip()
 
 
+def _strip_party_suffix(name: str) -> tuple[str, str]:
+    """
+    If the candidate name ends with a known party abbreviation (e.g. 'DEM'),
+    return (party_full_name, clean_name_without_suffix).
+    Otherwise return ('', original_name).
+
+    Handles the Napa PDF format where party follows the name:
+      'SALLY J. LIEBER DEM' → ('Democrat', 'SALLY J. LIEBER')
+    """
+    parts = name.strip().rsplit(None, 1)  # split on last whitespace only
+    if len(parts) == 2 and parts[1].upper().rstrip(".") in _PARTY_PREFIXES:
+        return _PARTY_PREFIXES[parts[1].upper().rstrip(".")], parts[0].strip()
+    return "", name.strip()
+
+
+# Words that should stay uppercase inside a Title-Cased name.
+_KEEP_UPPER = {
+    "II", "III", "IV", "VI", "VII", "VIII", "IX", "XI", "XII", "XIII",
+}
+
+
+def _normalize_name(name: str) -> str:
+    """
+    Convert an all-uppercase candidate name to Title Case.
+
+    Only modifies names that are entirely uppercase — names from counties
+    that already post proper casing (Alameda, Marin, Santa Clara, Santa Cruz)
+    are left completely untouched.
+
+    Handles:
+      - Quoted nicknames:   MICHAEL "MIKE" SILVA  → Michael "Mike" Silva
+      - Hyphenated names:   SMITH-JONES           → Smith-Jones
+      - Apostrophes:        O'BRIEN               → O'Brien
+      - Periods:            TONY K. THURMOND      → Tony K. Thurmond
+      - Roman numerals:     JOHN DOE III          → John Doe III  (kept upper)
+      - Write-in:           WRITE-IN              → Write-In
+    """
+    if not name:
+        return name
+    # Leave names that already have mixed case exactly as the county posted them.
+    if name != name.upper():
+        return name
+    # Apply Python's title() as the base — correctly handles apostrophes,
+    # hyphens, and quoted substrings.
+    result = name.title()
+    # Re-uppercase any Roman numerals that title() lowercased.
+    fixed = []
+    for word in result.split():
+        bare = word.strip('"\'.,()')
+        if bare.upper() in _KEEP_UPPER:
+            fixed.append(word.upper())
+        else:
+            fixed.append(word)
+    return " ".join(fixed)
+
+
 def _enrich_choices(choices: list, county: str, race_title: str) -> list:
     """
-    Add party and profession to each candidate choice.
+    Add party, profession, and normalized display name to each candidate choice.
 
-    Two sources in priority order:
-    1. Party abbreviation embedded in the choice name by Clarity scrapers
-       (e.g. 'DEM BETTY T. YEE' → party='Democrat', name='BETTY T. YEE').
-    2. Local races CSV lookup by (county, race, candidate name).
+    Processing order:
+    1. Strip trailing party suffix  (Napa: 'SALLY J. LIEBER DEM')
+    2. Strip leading party prefix   (Clarity: 'DEM BETTY T. YEE')
+    3. Normalize name to Title Case (only if currently all-uppercase)
+    4. Roster lookup for party / profession using the clean name
     """
     def _key(*parts):
         return re.sub(r"\s+", " ", " ".join(str(p or "").strip().lower() for p in parts)).strip()
@@ -126,10 +184,18 @@ def _enrich_choices(choices: list, county: str, race_title: str) -> list:
     for choice in choices:
         raw_name = choice.get("name", "")
 
-        # Try to extract party from embedded prefix first.
-        inline_party, clean_name = _split_party_prefix(raw_name)
+        # 1. Strip trailing party suffix (Napa format).
+        suffix_party, name_no_suffix = _strip_party_suffix(raw_name)
 
-        # Look up in the roster using the clean name (without party prefix).
+        # 2. Strip leading party prefix (Clarity format).
+        prefix_party, clean_name = _split_party_prefix(name_no_suffix)
+
+        party_from_name = prefix_party or suffix_party
+
+        # 3. Normalize to Title Case (no-op for counties already using proper case).
+        display_name = _normalize_name(clean_name)
+
+        # 4. Roster lookup — uses lowercase key so case doesn't matter.
         info = (
             _CANDIDATE_LOOKUP.get(_key(county_clean, race_title, clean_name))
             or _CANDIDATE_LOOKUP.get(_key(county_clean, race_title, raw_name))
@@ -138,7 +204,8 @@ def _enrich_choices(choices: list, county: str, race_title: str) -> list:
 
         enriched.append({
             **choice,
-            "party":      inline_party or info.get("party", ""),
+            "name":       display_name,
+            "party":      party_from_name or info.get("party", ""),
             "profession": info.get("profession", ""),
         })
     return enriched
